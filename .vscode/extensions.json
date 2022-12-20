@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-toolsai.jupyter",
+        "yzhang.markdown-all-in-one",
+        "EditorConfig.EditorConfig",
+        "bierner.github-markdown-preview"
+    ]
+}

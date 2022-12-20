@@ -17,6 +17,7 @@ dependencies:
   - ipykernel
   - ipywidgets # Silence warning, see https://github.com/tqdm/tqdm/issues/187
   - nb_conda_kernels
+  - pre-commit
   - black=22.6.*
   - black-jupyter=22.6.*
   - isort=5.10.*
