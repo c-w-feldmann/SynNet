@@ -1,0 +1,19 @@
+{
+    // Show .git folder (See https://stackoverflow.com/a/40828248)
+    "files.exclude": {
+        "**/.git": false
+    },
+    "files.trimTrailingWhitespace": true,
+    "files.eol": "\n",
+    "files.trimFinalNewlines": true,
+    "jupyter.debugJustMyCode": false,
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "markdown-preview-github-styles.colorTheme": "light",
+    "python.analysis.typeCheckingMode": "off",
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "terminal.integrated.defaultProfile.linux": "zsh",
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
