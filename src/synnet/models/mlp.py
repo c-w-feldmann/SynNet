@@ -68,11 +68,13 @@ class MLP(pl.LightningModule):
 
         # Input layer
         modules.append(nn.Linear(input_dim, hidden_dim))
+        modules.append(nn.BatchNorm1d(hidden_dim))
         modules.append(nn.ReLU())
 
         # Hidden layers
         for i in range(num_layers - 2):  # "-2" for first & last layer
             modules.append(nn.Linear(hidden_dim, hidden_dim))
+            modules.append(nn.BatchNorm1d(hidden_dim))
             modules.append(nn.ReLU())
             # Add dropout, starting from last layer
             if i >= num_layers - 2 - num_dropout_layers:
