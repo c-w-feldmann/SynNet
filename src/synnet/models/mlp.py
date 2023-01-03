@@ -158,11 +158,17 @@ class MLP(pl.LightningModule):
 
     def configure_optimizers(self):
         """Define Optimerzers and LR schedulers."""
+        out = dict()
         if self.optimizer == "adam":
             optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         elif self.optimizer == "sgd":
             optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        out["optimizer"] = optimizer
+
+        # if (lr_scheduler := self.hparams.get("lr_scheduler_config",None)) is not None:
+        # out["lr_scheduler"] = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1,verbose=True)
+
+        return out
 
 
 def nn_search_list(y, kdtree):
