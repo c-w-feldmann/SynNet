@@ -317,6 +317,28 @@ class SynTreeGenerator:
         logger.debug(f"🙌 SynTree completed.")
         return syntree
 
+    def generate_safe(
+        self, *args, max_depth: int = 8, min_actions: int = 1
+    ) -> Tuple[Union[SyntheticTree, None], Union[Exception, None]]:
+        """Wrapper for `self.generate()` to catch all errors."""
+        try:
+            st = self.generate(max_depth=max_depth, min_actions=min_actions)
+        except (
+            NoReactantAvailableError,
+            NoBiReactionAvailableError,
+            NoReactionAvailableError,
+            NoReactionPossibleError,
+            NoMergeReactionPossibleError,
+            MaxNumberOfActionsError,
+        ) as e:
+            logger.error(e)
+            return None, e
+
+        except Exception as e:
+            logger.error(e, exc_info=e, stack_info=False)
+            return None, e
+        else:
+            return st, None
 
 def wraps_syntreegenerator_generate(
     stgen: SynTreeGenerator,
