@@ -21,7 +21,7 @@ def compute_chunksize(iterable: Iterable, cpus: int) -> int:
 def simple_parallel(
     input_list: Iterable,
     function: Callable,
-    max_cpu: int = 4,
+    max_cpu: int = MAX_PROCESSES,
     timeout: int = 4000,
     max_retries: int = 3,
     verbose: bool = False,
