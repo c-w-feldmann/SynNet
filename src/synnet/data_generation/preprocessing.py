@@ -1,11 +1,43 @@
 from functools import partial
 from pathlib import Path
+from typing import Iterable, List, Tuple, Union
 
+import pandas as pd
+import rdkit
 from pathos import multiprocessing as mp
+from rdkit.Chem import AllChem as Chem
+from rdkit.Chem import PandasTools
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import Reaction
+from synnet.utils.parallel import chunked_parallel
+
+
+def parse_sdf_file(file: str) -> pd.DataFrame:
+    """Parse `*.sdf` file and return a pandas dataframe."""
+    df = rdkit.Chem.PandasTools.LoadSDF(
+        file,
+        idName="ID",
+        molColName=None,
+        includeFingerprints=False,
+        isomericSmiles=False,
+        smilesName="raw_smiles",
+        embedProps=False,
+        removeHs=True,
+        strictParsing=True,
+    )
+
+    # Supplier specifies available building blocks with an "X".
+    # Let us convert this to a boolean.
+    availability_cols = [col for col in df.columns if col.startswith("avail")]
+    df[availability_cols] = df[availability_cols].apply(lambda x: x == "X")
+
+    # Canonicalize Smiles
+    df["SMILES"] = df["raw_smiles"].apply(
+        lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x), canonical=True, isomericSmiles=False)
+    )
+    return df
 
 
 class BuildingBlockFilter:
@@ -17,17 +49,17 @@ class BuildingBlockFilter:
     def __init__(
         self,
         *,
-        building_blocks: list[str],
+        building_blocks: list[Union[str, Chem.rdchem.Mol]],
         rxn_templates: list[str],
         processes: int = MAX_PROCESSES,
-        verbose: bool = False
+        verbose: bool = False,
     ) -> None:
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
 
         # Init reactions
         self.rxns = [Reaction(template=template) for template in self.rxn_templates]
-        # Init other stuff
+
         self.processes = processes
         self.verbose = verbose
 
@@ -87,7 +119,7 @@ class BuildingBlockFileHandler:
         file = (file_no_ext).with_suffix(".csv.gz")
         # Save
         df = pd.DataFrame({"SMILES": building_blocks})
-        df.to_csv(file, compression="gzip",index=False)
+        df.to_csv(file, compression="gzip", index=False)
         return None
 
     def save(self, file: str, building_blocks: list[str]):
@@ -113,10 +145,10 @@ class ReactionTemplateFileHandler:
 
         return rxn_templates
 
-    def save(self,file: str, rxn_templates: list[str]):
+    def save(self, file: str, rxn_templates: list[str]):
         """Save reaction templates to file."""
         with open(file, "wt") as f:
-            f.writelines(t + '\n' for t in rxn_templates)
+            f.writelines(t + "\n" for t in rxn_templates)
 
     def _validate(self, rxn_template: str) -> bool:
         """Validate reaction templates.
