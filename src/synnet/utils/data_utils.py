@@ -177,9 +177,7 @@ class Reaction:
             # Provided two reactants for unimolecular reaction -> no rxn possible
             raise AssertionError(f"Provided two reactants ({r=}) for this unimolecular reaction.")
         if self.num_reactant == 1 and not self.is_reactant(r[0]):
-            raise AssertionError(
-                f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction."
-            )
+            raise AssertionError(f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction.")
 
         if self.num_reactant == 2:
             # Match reactant order with reaction template
@@ -189,9 +187,7 @@ class Reaction:
                 r = tuple(reversed(r))
             else:  # No reaction possible
                 # TODO: Fix: Can happen if both are 1st or 2nd reactant simultanouesly
-                raise AssertionError(
-                    f"Reactants ({reactants=}) do not match this bimolecular reaction."
-                )
+                raise AssertionError(f"Reactants ({reactants=}) do not match this bimolecular reaction.")
 
         # Run reaction with rdkit magic
         ps = self.rxn.RunReactants(r)
@@ -218,9 +214,7 @@ class Reaction:
             raise ValueError(f"rdkit.RunReactants() produced invalid product: {uniqps}")
         return smiles
 
-    def _filter_reactants(
-        self, smiles: list[str], verbose: bool = False
-    ) -> Tuple[list[str], list[str]]:
+    def _filter_reactants(self, smiles: list[str], verbose: bool = False) -> Tuple[list[str], list[str]]:
         """Filters reactants which do not match the reaction."""
         smiles = tqdm(smiles) if verbose else smiles
 
