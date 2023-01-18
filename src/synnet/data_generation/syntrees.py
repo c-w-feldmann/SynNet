@@ -340,6 +340,31 @@ class SynTreeGenerator:
         else:
             return st, None
 
+
+class SynTreeGeneratorPostProc:
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def parse_generate_safe(
+        results: List[Tuple[Union[SyntheticTree, None], Union[Exception, None]]]
+    ):
+        """Parses the result from `SynTreeGenerator.generate_safe`.
+        In particular:
+            - parses valid SynTrees and returns a `SyntheticTreeSet`
+            - counts error messages and returns a `dict`
+        """
+        from collections import Counter
+
+        if isinstance(results, tuple):
+            results = [results]
+
+        syntrees, exits = zip(*results)
+        exit_codes = [e.__class__.__name__ if e is not None else "success" for e in exits]
+        syntrees = [st for st in syntrees if st is not None]
+        return SyntheticTreeSet(syntrees), dict(Counter(exit_codes))
+
+
 def wraps_syntreegenerator_generate(
     stgen: SynTreeGenerator,
     **kwargs,
