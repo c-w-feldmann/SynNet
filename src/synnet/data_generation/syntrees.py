@@ -431,6 +431,10 @@ class Encoder(ABC):
     def __repr__(self) -> str:
         return f"'{self.__class__.__name__}': {self.__dict__}"
 
+    @property
+    def args(self) -> dict:
+        return {**self.__dict__, **{"name": self.__class__.__name__}}
+
 
 class OneHotEncoder(Encoder):
     def __init__(self, d: int) -> None:
@@ -460,6 +464,14 @@ class MorganFingerprintEncoder(Encoder):
             Chem.DataStructs.ConvertToNumpyArray(bv, fp)
             fp = fp[None, :]
         return fp  # (1,d)
+
+    def encode_batch(self, smis: Iterable[Union[str, None]], **kwargs) -> np.ndarray:
+        """Encode a batch.
+
+        Info: Added for convenience for datasets to encode a state (target,root1,root2) in one go"""
+        return np.asarray(
+            [self.encode(smi, **kwargs) for smi in smis]
+        ).squeeze()  # (num_items, nbits)
 
 
 class IdentityIntEncoder(Encoder):
