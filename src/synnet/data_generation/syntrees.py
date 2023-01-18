@@ -190,19 +190,41 @@ class SynTreeGenerator:
         nTrees = len(state)
         if nTrees == 0:  # base case
             canAdd = True
-        elif nTrees == 1 and (syntree.depth == self.max_depth - 1):
-            logger.debug(f"  Only allow action=end, {syntree.depth=} and {(self.max_depth - 1)=}")
-            # syntree is 1 update apart from its max depth, only allow to end it.
-            canEnd = True
         elif nTrees == 1:
             canAdd = True
             canExpand = True
             canEnd = True
         elif nTrees == 2:
-            canExpand = True  # TODO: do not expand when we're 2 steps away from max depth?
+            canExpand = True
             canMerge = any(self._get_rxn_mask(tuple(state), raise_exc=False))
         else:
             raise ValueError
+
+        # Special cases.
+        # Case: Syntree is 1 update apart from its max size, only allow to end it.
+        if nTrees == 1 and (syntree.num_actions == self.max_depth - 1):
+            logger.debug(
+                f"  Overriding action space to only allow action=end."
+                + f"({nTrees=}, {syntree.num_actions=}, {self.max_depth=})"
+            )
+            canAdd, canMerge, canExpand = False, False, False
+            canEnd = True
+        elif nTrees == 2 and (syntree.num_actions == self.max_depth - 2):
+            # ATTN: This might result in an Exception,
+            #       i.e. when no rxn template matches or the product is invalid etc.
+            logger.debug(
+                f"  Overriding action space to forcefully merge trees."
+                + f"({nTrees=}, {syntree.num_actions=}, {self.max_depth=})"
+            )
+            canAdd, canExpand, canEnd = False, False, False
+            canMerge = True
+        elif nTrees == 1 and (syntree.num_actions == self.max_depth - 3):
+            # Handle case for max_depth=6 and [0, 1, 1, 1, 0, 2, 3] ?
+            #                                              ^-- prevent this
+            pass
+        # Case: Syntree is 2 updates away from its max size, only allow to merge it.
+        if syntree.num_actions < self.min_actions:
+            canEnd = False
 
         return np.array((canAdd, canExpand, canMerge, canEnd), dtype=bool)
 
