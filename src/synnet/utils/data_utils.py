@@ -90,14 +90,14 @@ class Reaction:
         return out
 
     @functools.lru_cache(maxsize=20_000)
-    def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
-        """Convert smiles to  `RDKit.Chem.Mol`."""
+    def get_mol(self, smi: Union[str, Chem.rdchem.Mol]) -> Chem.rdchem.Mol:
+        """Convert smiles to  `RDKit.Chem.rdchem.Mol`."""
         if isinstance(smi, str):
             return dm.to_mol(smi)
-        elif isinstance(smi, Chem.Mol):
+        elif isinstance(smi, Chem.rdchem.Mol):
             return smi
         else:
-            raise TypeError(f"{type(smi)} not supported, only `str` or `rdkit.Chem.Mol`")
+            raise TypeError(f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`")
 
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
@@ -121,12 +121,12 @@ class Reaction:
         image = d2d.GetDrawingText()
         return image
 
-    def is_reactant(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_reactant(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Checks if `smi` is a reactant of this reaction."""
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeReactant(mol)
 
-    def is_agent(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_agent(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Checks if `smi` is an agent of this reaction."""
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeAgent(mol)
@@ -136,13 +136,13 @@ class Reaction:
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeProduct(mol)
 
-    def is_reactant_first(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_reactant_first(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Check if `smi` is the first reactant in this reaction"""
         mol = self.get_mol(smi)
         pattern = Chem.MolFromSmarts(self.reactant_template[0])
         return mol.HasSubstructMatch(pattern)
 
-    def is_reactant_second(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_reactant_second(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Check if `smi` the second reactant in this reaction"""
         mol = self.get_mol(smi)
         pattern = Chem.MolFromSmarts(self.reactant_template[1])
@@ -150,7 +150,7 @@ class Reaction:
 
     def run_reaction(
         self,
-        reactants: Tuple[Union[str, Chem.Mol, None]],
+        reactants: Tuple[Union[str, Chem.rdchem.Mol, None]],
         keep_main: bool = True,
         allow_to_fail: bool = False,
     ) -> Union[str, None]:
@@ -169,7 +169,7 @@ class Reaction:
         if not len(reactants) in (1, 2):
             raise ValueError(f"Can only run reactions with 1 or 2 reactants, not {len(reactants)}.")
 
-        # Convert all reactants to `Chem.Mol`
+        # Convert all reactants to `Chem.rdchem.Mol`
         r = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
 
         # Validate reaction for these reactants
@@ -211,7 +211,7 @@ class Reaction:
         uniqps = uniqps[0]
         # <<< ^ delete this line if resolved.
 
-        # Sanity check: Convert SMILES to `Chem.Mol`, then to SMILES again.
+        # Sanity check: Convert SMILES to `Chem.rdchem.Mol`, then to SMILES again.
         mol = dm.to_mol(uniqps)
         smiles = dm.to_smiles(mol, isomeric=False, allow_to_fail=False)
         if allow_to_fail and smiles is None:
