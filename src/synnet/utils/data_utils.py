@@ -426,7 +426,7 @@ class SyntheticTree:
 
         If the query moleucle is not in the tree, return None.
         """
-        for node in self.chemicals:
+        for node in reversed(self.chemicals):  # Info: Prelim fix for a bug that caused three mols in the state!
             if smi == node.smiles:
                 return node.index
         return None
