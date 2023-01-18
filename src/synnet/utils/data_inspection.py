@@ -71,7 +71,9 @@ def count_num_actions(sts: SyntheticTreeSet) -> Counter:
     return num_actions
 
 
-def plot_num_actions(sts: SyntheticTreeSet, ax: Optional[plt.Axes] = None, **plt_kwargs) -> plt.Axes:
+def plot_num_actions(
+    sts: SyntheticTreeSet, ax: Optional[plt.Axes] = None, **plt_kwargs
+) -> plt.Axes:
     actions = count_num_actions(sts)
     # Plot actions (type `Counter`) as barplot:
     if ax is None:
@@ -125,7 +127,9 @@ def reactions_used_less_than(data: dict[int, int], n: int) -> List[int]:
     return [i for i, count in data.items() if count < n]
 
 
-def plot_reaction_heatmap(data: dict[int, int], nReactions: int = 91, relative: bool = False, **kwargs):
+def plot_reaction_heatmap(
+    data: dict[int, int], nReactions: int = 91, relative: bool = False, **kwargs
+):
     """Plot heatmap of reactions
 
     See:

@@ -186,7 +186,9 @@ class Reaction:
             # Provided two reactants for unimolecular reaction -> no rxn possible
             raise AssertionError(f"Provided two reactants ({r=}) for this unimolecular reaction.")
         if self.num_reactant == 1 and not self.is_reactant(r[0]):
-            raise AssertionError(f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction.")
+            raise AssertionError(
+                f"Reactant ({r[0]=}) is not a reactant for this unimolecular reaction."
+            )
 
         if self.num_reactant == 2:
             # Match reactant order with reaction template
@@ -196,7 +198,9 @@ class Reaction:
                 r = tuple(reversed(r))
             else:  # No reaction possible
                 # TODO: Fix: Can happen if both are 1st or 2nd reactant simultanouesly
-                raise AssertionError(f"Reactants ({reactants=}) do not match this bimolecular reaction.")
+                raise AssertionError(
+                    f"Reactants ({reactants=}) do not match this bimolecular reaction."
+                )
 
         # Run reaction with rdkit magic
         ps = self.rxn.RunReactants(r)
@@ -223,7 +227,9 @@ class Reaction:
             raise ValueError(f"rdkit.RunReactants() produced invalid product: {uniqps}")
         return smiles
 
-    def _filter_reactants(self, smiles: list[str], verbose: bool = False) -> Tuple[list[str], list[str]]:
+    def _filter_reactants(
+        self, smiles: list[str], verbose: bool = False
+    ) -> Tuple[list[str], list[str]]:
         """Filters reactants which do not match the reaction."""
         smiles = tqdm(smiles) if verbose else smiles
 
@@ -239,7 +245,9 @@ class Reaction:
 
         return reactants
 
-    def set_available_reactants(self, building_blocks: list[Union[str, Chem.rdchem.Mol]], verbose: bool = False):
+    def set_available_reactants(
+        self, building_blocks: list[Union[str, Chem.rdchem.Mol]], verbose: bool = False
+    ):
         """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
         """
@@ -248,7 +256,9 @@ class Reaction:
         _avail_r1 = [self.get_smiles(mol) for mol in _available_reactants[0]]
         if self.num_reactant == 2:
             _avail_r2 = [self.get_smiles(mol) for mol in _available_reactants[1]]
-        self.available_reactants = (_avail_r1, _avail_r2) if self.num_reactant == 2 else (_avail_r1,)
+        self.available_reactants = (
+            (_avail_r1, _avail_r2) if self.num_reactant == 2 else (_avail_r1,)
+        )
         return self
 
     @property
@@ -375,7 +385,9 @@ class SyntheticTree:
         self.depth: float = 0
         self.actions: list[int] = []
         self.rxn_id2type: dict = None
-        self.ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
+        self.ACTIONS: dict[int, str] = {
+            i: action for i, action in enumerate("add expand merge end".split())
+        }
 
     def __repr__(self) -> str:
         return f"SynTree(num_actions={self.num_actions})"  # This is including the end action

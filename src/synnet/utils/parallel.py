@@ -105,7 +105,9 @@ def chunked_parallel(
     step_size = len(input_list) // num_chunks
 
     chunked_list = [input_list[i : i + step_size] for i in range(0, len(input_list), step_size)]
-    logging.debug(f"{max_cpu=}, {len(input_list)=}, {num_chunks=}, {step_size=}, {len(chunked_list)=}")
+    logging.debug(
+        f"{max_cpu=}, {len(input_list)=}, {num_chunks=}, {step_size=}, {len(chunked_list)=}"
+    )
 
     list_outputs = simple_parallel(
         chunked_list,
