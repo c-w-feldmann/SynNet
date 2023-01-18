@@ -379,9 +379,12 @@ class SyntheticTree:
         self.depth: float = 0
         self.actions: list[int] = []
         self.rxn_id2type: dict = None
+        self.ACTIONS: dict[int, str] = {
+            i: action for i, action in enumerate("add expand merge end".split())
+        }
 
     def __repr__(self) -> str:
-        return f"SynTree(depth={self.depth})"
+        return f"SynTree(num_actions={self.num_actions})"  # This is including the end action
 
     @classmethod
     def from_dict(cls, attrs: dict):
