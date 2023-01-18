@@ -105,7 +105,7 @@ def chunked_parallel(
     def batch_func(list_inputs):
         return [function(i) for i in list_inputs]
 
-    num_chunks = compute_chunksize(input_list, max_cpu) if chunks is None else 1
+    num_chunks = compute_chunksize(input_list, max_cpu) if chunks is None else chunks
     step_size = len(input_list) // num_chunks
 
     chunked_list = [input_list[i : i + step_size] for i in range(0, len(input_list), step_size)]
