@@ -45,13 +45,9 @@ def simple_parallel(
     retries = 0
     while True:
         try:
-            list_outputs = []
             if verbose:
                 async_results = tqdm(async_results, total=len(input_list))
-            for async_result in async_results:
-                result = async_result.get(timeout)
-                list_outputs.append(result)
-
+            list_outputs = [async_result.get(timeout) for async_result in async_results]
             break
         except TimeoutError:
             retries += 1
