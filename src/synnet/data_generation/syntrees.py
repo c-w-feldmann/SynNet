@@ -12,49 +12,14 @@ from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
 
-from synnet.utils.data_utils import Reaction, SyntheticTree
-
-
-class NoReactantAvailableError(Exception):
-    """No second reactant available for the bimolecular reaction."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class NoReactionAvailableError(Exception):
-    """Reactant does not match any reaction template."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class NoBiReactionAvailableError(Exception):
-    """Reactants do not match any reaction template."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class NoReactionPossibleError(Exception):
-    """`rdkit` can not yield a valid reaction product."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class NoMergeReactionPossibleError(Exception):
-    """Cannot merge because `rdkit` can not yield a valid reaction product."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
-
-class MaxDepthError(Exception):
-    """Synthetic Tree has exceeded its maximum depth."""
-
-    def __init__(self, message):
-        super().__init__(message)
+from synnet.data_generation.exceptions import (
+    NoReactantAvailableError,
+    NoBiReactionAvailableError,
+    NoReactionAvailableError,
+    NoReactionPossibleError,
+    NoMergeReactionPossibleError,
+    MaxNumberOfActionsError,
+)
 
 
 class SynTreeGenerator:
@@ -328,8 +293,10 @@ class SynTreeGenerator:
             if action == "end":
                 break
 
-        if syntree.depth == max_depth and not action == "end":
-            raise MaxDepthError(f"Maximum depth {max_depth} exceeded ({syntree.actions=}).")
+        if syntree.num_actions > max_depth and not action == "end":
+            raise MaxNumberOfActionsError(
+                f"Maximum number of actions exceeded. ({syntree.actions=}>{max_depth})."
+            )
         logger.debug(f"🙌 SynTree completed.")
         return syntree
 
@@ -352,7 +319,7 @@ def wraps_syntreegenerator_generate(
     except NoReactionPossibleError as e:
         logger.error(e)
         return None, e
-    except MaxDepthError as e:
+    except MaxNumberOfActionsError as e:
         logger.error(e)
         return None, e
     except TypeError as e:
