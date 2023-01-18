@@ -2,8 +2,10 @@
 """
 import logging
 from typing import Callable, Iterable, Optional
-from synnet.config import MAX_PROCESSES
+
 from tqdm import tqdm
+
+from synnet.config import MAX_PROCESSES
 
 
 def compute_chunksize(iterable: Iterable, cpus: int) -> int:
@@ -32,6 +34,9 @@ def simple_parallel(
     def setup_pool():
         pool = mp.Pool(processes=max_cpu)
         async_results = [pool.apply_async(function, args=(i,)) for i in input_list]
+        # Note from the docs:
+        #   "func is only executed in one of the workers of the pool",
+        #   -> so we call apply_async for each input in the list
         pool.close()
         return pool, async_results
 
@@ -80,7 +85,7 @@ def chunked_parallel(
 
     Example:
 
-    ```pyhton
+    ```python
     input_list = [1,2,3,4,5]
     func = lambda x: x**10
     res = chunked_parallel(input_list,func,verbose=True,max_cpu=4)
@@ -89,8 +94,8 @@ def chunked_parallel(
     """
     # originally from: https://github.com/samgoldman97
 
-    # Run plain list comp if when no mp is necessary.
-    # Keeping this here to have a single interface.
+    # Run plain list comp when no mp is necessary.
+    # Note: Keeping this here to have a single interface.
     if max_cpu == 1:
         if verbose:
             input_list = tqdm(input_list)
