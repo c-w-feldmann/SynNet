@@ -99,6 +99,15 @@ class Reaction:
         else:
             raise TypeError(f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`")
 
+    def get_smiles(self, mol: Union[str, Chem.rdchem.Mol]) -> str:
+        """Convert `Chem.rdchem.Mol` to SMILES `str`."""
+        if isinstance(mol, str):
+            return mol
+        elif isinstance(mol, Chem.rdchem.Mol):
+            return dm.to_smiles(mol)
+        else:
+            raise TypeError(f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`")
+
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
 
@@ -230,11 +239,20 @@ class Reaction:
 
         return reactants
 
-    def set_available_reactants(self, building_blocks: list[str], verbose: bool = False):
+    def set_available_reactants(
+        self, building_blocks: list[Union[str, Chem.rdchem.Mol]], verbose: bool = False
+    ):
         """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
         """
-        self.available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
+        _available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
+        # Ensure molecules are stored as `str`
+        _avail_r1 = [self.get_smiles(mol) for mol in _available_reactants[0]]
+        if self.num_reactant == 2:
+            _avail_r2 = [self.get_smiles(mol) for mol in _available_reactants[1]]
+        self.available_reactants = (
+            (_avail_r1, _avail_r2) if self.num_reactant == 2 else (_avail_r1,)
+        )
         return self
 
     @property
