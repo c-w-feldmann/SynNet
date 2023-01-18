@@ -76,10 +76,7 @@ class SynTreeDecoder:
 
         # Networks
         self.nets: Dict[str, pl.LightningModule] = {
-            k: v
-            for k, v in zip(
-                "act rt1 rxn rt2".split(), (action_net, reactant1_net, rxn_net, reactant2_net)
-            )
+            k: v for k, v in zip("act rt1 rxn rt2".split(), (action_net, reactant1_net, rxn_net, reactant2_net))
         }
 
         # kNN search spaces
@@ -108,7 +105,7 @@ class SynTreeDecoder:
         else:
             raise ValueError(f"Unable to compute state embedding. Passed {state=}")
 
-        return [np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)] # TODO: Fix 1d/2d everywhere
+        return [np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)]  # TODO: Fix 1d/2d everywhere
 
     def get_state_embedding(self, state: list[str], z_target: np.ndarray) -> np.ndarray:
         """Computes embeddings for all molecules in the input space.
@@ -177,7 +174,7 @@ class SynTreeDecoder:
         eps = 1e-6  # small constant is added to probabilities so that masked values (=0.0) are unequal to probabilites (0+eps)
         self.max_depth = max_depth  # so we can access this param in methods
         act, rt1, rxn, rt2 = self.nets.values()
-        z_target = np.squeeze(z_target) # TODO: Fix shapes
+        z_target = np.squeeze(z_target)  # TODO: Fix shapes
         syntree = SyntheticTree()
         mol_recent: Union[str, None] = None  # most-recent root mol
         i = 0
@@ -187,7 +184,7 @@ class SynTreeDecoder:
             # Current state
             state = syntree.get_state()
             z_state = self.get_state_embedding(state, z_target)  # (3d)
-            z_state = torch.Tensor(z_state[None,:])  # (1,3d)
+            z_state = torch.Tensor(z_state[None, :])  # (1,3d)
 
             # Prediction action
             p_action = act.forward(z_state)  # (1,4)
@@ -235,12 +232,7 @@ class SynTreeDecoder:
             p_rxn = p_rxn.detach().numpy() + eps
             logger.debug(
                 "  Top 5 reactions: "
-                + ", ".join(
-                    [
-                        f"{__idx:>2d} (p={p_rxn[0][__idx]:.2f})"
-                        for __idx in np.argsort(p_rxn)[0, -5:][::-1]
-                    ]
-                )
+                + ", ".join([f"{__idx:>2d} (p={p_rxn[0][__idx]:.2f})" for __idx in np.argsort(p_rxn)[0, -5:][::-1]])
             )
 
             # Reaction mask
@@ -248,9 +240,7 @@ class SynTreeDecoder:
                 reactant_2 = (set(state) - set([reactant_1])).pop()
                 # TODO: fix these shenanigans and determine reliable which is the 2nd reactant
                 #       by "knowing" the order of the state
-                reaction_mask = self.get_reaction_mask(
-                    (reactant_1, reactant_2)
-                )  # if merge, only allow bi-mol rxn
+                reaction_mask = self.get_reaction_mask((reactant_1, reactant_2))  # if merge, only allow bi-mol rxn
             else:  # add or expand (both start from 1 reactant only)
                 reaction_mask = self.get_reaction_mask(reactant_1)
             logger.debug(f"  Reaction mask with n choices: {reaction_mask.sum()}")
@@ -261,17 +251,13 @@ class SynTreeDecoder:
                 # If there is only a sinlge tree, mark it as "ended"
                 if len(state) == 1:
                     action_id = 3
-                logger.debug(
-                    f"Terminated decoding as no reaction is possible, manually enforced {action_id=} "
-                )
+                logger.debug(f"Terminated decoding as no reaction is possible, manually enforced {action_id=} ")
                 break
 
             # Select reaction template
             rxn_id = np.argmax(p_rxn * reaction_mask)
             reaction: Reaction = self.rxn_collection.rxns[rxn_id]  # TODO: fix why we need type hint
-            logger.debug(
-                f"  Selected {'bi' if reaction.num_reactant==2 else 'uni'} reaction {rxn_id=}"
-            )
+            logger.debug(f"  Selected {'bi' if reaction.num_reactant==2 else 'uni'} reaction {rxn_id=}")
 
             # We have three options:
             #  1. "merge" -> need to sample 2nd reactant
@@ -298,9 +284,7 @@ class SynTreeDecoder:
 
                     # Get smiles -> index -> embedding
                     _idx = [self.bblocks_dict[_smiles] for _smiles in available_reactants_2]
-                    _emb = self.bblocks_emb[
-                        _idx
-                    ]  # TODO: Check if ordering is correct -> Seems legit
+                    _emb = self.bblocks_emb[_idx]  # TODO: Check if ordering is correct -> Seems legit
                     logger.debug(f"  Subspace of available 2nd reactants: {len(_idx)} ")
                     _dists = cosine_distances(_emb, z_reactant2)
                     idx = np.argmin(_dists)  # 1.5-5x faster WORTH ITTTT 🥳🪅
@@ -333,9 +317,7 @@ class SynTreeDecoder:
                 # If there is only a sinlge tree, mark it as "ended"
                 if len(state) == 1:
                     action_id = 3
-                logger.debug(
-                    f"Terminated decoding as no reaction is possible, manually enforced {action_id=} "
-                )
+                logger.debug(f"Terminated decoding as no reaction is possible, manually enforced {action_id=} ")
                 break
 
             # Update
@@ -410,9 +392,7 @@ class SynTreeDecoderGreedy:
                 best_syntree = syntree
             logger.debug(f"  Max similarity: {max_similarity:.3f} (best: {best_similarity:.3f})")
             if objective == "best" and best_similarity == 1.0:
-                logger.debug(
-                    f"Decoded syntree has similarity 1.0 and {objective=}; abort greedy search."
-                )
+                logger.debug(f"Decoded syntree has similarity 1.0 and {objective=}; abort greedy search.")
                 break
 
         # Return best results

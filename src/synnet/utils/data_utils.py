@@ -239,9 +239,7 @@ class Reaction:
 
         return reactants
 
-    def set_available_reactants(
-        self, building_blocks: list[Union[str, Chem.rdchem.Mol]], verbose: bool = False
-    ):
+    def set_available_reactants(self, building_blocks: list[Union[str, Chem.rdchem.Mol]], verbose: bool = False):
         """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
         """
@@ -250,9 +248,7 @@ class Reaction:
         _avail_r1 = [self.get_smiles(mol) for mol in _available_reactants[0]]
         if self.num_reactant == 2:
             _avail_r2 = [self.get_smiles(mol) for mol in _available_reactants[1]]
-        self.available_reactants = (
-            (_avail_r1, _avail_r2) if self.num_reactant == 2 else (_avail_r1,)
-        )
+        self.available_reactants = (_avail_r1, _avail_r2) if self.num_reactant == 2 else (_avail_r1,)
         return self
 
     @property
@@ -379,9 +375,7 @@ class SyntheticTree:
         self.depth: float = 0
         self.actions: list[int] = []
         self.rxn_id2type: dict = None
-        self.ACTIONS: dict[int, str] = {
-            i: action for i, action in enumerate("add expand merge end".split())
-        }
+        self.ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
 
     def __repr__(self) -> str:
         return f"SynTree(num_actions={self.num_actions})"  # This is including the end action
@@ -424,12 +418,13 @@ class SyntheticTree:
         print(self.actions)
         print("==============================================")
 
-    def get_node_index(self, smi: str) -> int:
+    def get_node_index(self, smi: str) -> Union[int, None]:
         """Return the index of the node matching the input SMILES.
 
         If the query moleucle is not in the tree, return None.
         """
-        for node in reversed(self.chemicals):  # Info: Prelim fix for a bug that caused three mols in the state!
+        # Info: reversed() is a prelim fix for a bug that caused three mols in the state!
+        for node in reversed(self.chemicals):
             if smi == node.smiles:
                 return node.index
         return None
@@ -444,7 +439,7 @@ class SyntheticTree:
         state = [node.smiles for node in self.chemicals if node.is_root]
         return state[::-1]  # TODO: Always return Tuple[str,Union[str,None]]
 
-    def update(self, action: int, rxn_id: int, mol1: str, mol2: str, mol_product: str):
+    def update(self, action: int, rxn_id: int, mol1: str, mol2: Optional[str], mol_product: str):
         """Update this synthetic tree by adding a reaction step.
 
         Info:
