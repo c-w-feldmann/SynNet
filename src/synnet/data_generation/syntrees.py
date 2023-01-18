@@ -13,12 +13,12 @@ from synnet.config import MAX_PROCESSES
 logger = logging.getLogger(__name__)
 
 from synnet.data_generation.exceptions import (
-    NoReactantAvailableError,
+    MaxNumberOfActionsError,
     NoBiReactionAvailableError,
+    NoMergeReactionPossibleError,
+    NoReactantAvailableError,
     NoReactionAvailableError,
     NoReactionPossibleError,
-    NoMergeReactionPossibleError,
-    MaxNumberOfActionsError,
 )
 from synnet.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
 

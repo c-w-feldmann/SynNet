@@ -76,7 +76,10 @@ class SynTreeDecoder:
 
         # Networks
         self.nets: Dict[str, pl.LightningModule] = {
-            k: v for k, v in zip("act rt1 rxn rt2".split(), (action_net, reactant1_net, rxn_net, reactant2_net))
+            k: v
+            for k, v in zip(
+                "act rt1 rxn rt2".split(), (action_net, reactant1_net, rxn_net, reactant2_net)
+            )
         }
 
         # kNN search spaces
@@ -232,7 +235,12 @@ class SynTreeDecoder:
             p_rxn = p_rxn.detach().numpy() + eps
             logger.debug(
                 "  Top 5 reactions: "
-                + ", ".join([f"{__idx:>2d} (p={p_rxn[0][__idx]:.2f})" for __idx in np.argsort(p_rxn)[0, -5:][::-1]])
+                + ", ".join(
+                    [
+                        f"{__idx:>2d} (p={p_rxn[0][__idx]:.2f})"
+                        for __idx in np.argsort(p_rxn)[0, -5:][::-1]
+                    ]
+                )
             )
 
             # Reaction mask
@@ -240,7 +248,9 @@ class SynTreeDecoder:
                 reactant_2 = (set(state) - set([reactant_1])).pop()
                 # TODO: fix these shenanigans and determine reliable which is the 2nd reactant
                 #       by "knowing" the order of the state
-                reaction_mask = self.get_reaction_mask((reactant_1, reactant_2))  # if merge, only allow bi-mol rxn
+                reaction_mask = self.get_reaction_mask(
+                    (reactant_1, reactant_2)
+                )  # if merge, only allow bi-mol rxn
             else:  # add or expand (both start from 1 reactant only)
                 reaction_mask = self.get_reaction_mask(reactant_1)
             logger.debug(f"  Reaction mask with n choices: {reaction_mask.sum()}")
@@ -251,13 +261,17 @@ class SynTreeDecoder:
                 # If there is only a sinlge tree, mark it as "ended"
                 if len(state) == 1:
                     action_id = 3
-                logger.debug(f"Terminated decoding as no reaction is possible, manually enforced {action_id=} ")
+                logger.debug(
+                    f"Terminated decoding as no reaction is possible, manually enforced {action_id=} "
+                )
                 break
 
             # Select reaction template
             rxn_id = np.argmax(p_rxn * reaction_mask)
             reaction: Reaction = self.rxn_collection.rxns[rxn_id]  # TODO: fix why we need type hint
-            logger.debug(f"  Selected {'bi' if reaction.num_reactant==2 else 'uni'} reaction {rxn_id=}")
+            logger.debug(
+                f"  Selected {'bi' if reaction.num_reactant==2 else 'uni'} reaction {rxn_id=}"
+            )
 
             # We have three options:
             #  1. "merge" -> need to sample 2nd reactant
@@ -284,7 +298,9 @@ class SynTreeDecoder:
 
                     # Get smiles -> index -> embedding
                     _idx = [self.bblocks_dict[_smiles] for _smiles in available_reactants_2]
-                    _emb = self.bblocks_emb[_idx]  # TODO: Check if ordering is correct -> Seems legit
+                    _emb = self.bblocks_emb[
+                        _idx
+                    ]  # TODO: Check if ordering is correct -> Seems legit
                     logger.debug(f"  Subspace of available 2nd reactants: {len(_idx)} ")
                     _dists = cosine_distances(_emb, z_reactant2)
                     idx = np.argmin(_dists)  # 1.5-5x faster WORTH ITTTT 🥳🪅
@@ -317,7 +333,9 @@ class SynTreeDecoder:
                 # If there is only a sinlge tree, mark it as "ended"
                 if len(state) == 1:
                     action_id = 3
-                logger.debug(f"Terminated decoding as no reaction is possible, manually enforced {action_id=} ")
+                logger.debug(
+                    f"Terminated decoding as no reaction is possible, manually enforced {action_id=} "
+                )
                 break
 
             # Update
@@ -392,7 +410,9 @@ class SynTreeDecoderGreedy:
                 best_syntree = syntree
             logger.debug(f"  Max similarity: {max_similarity:.3f} (best: {best_similarity:.3f})")
             if objective == "best" and best_similarity == 1.0:
-                logger.debug(f"Decoded syntree has similarity 1.0 and {objective=}; abort greedy search.")
+                logger.debug(
+                    f"Decoded syntree has similarity 1.0 and {objective=}; abort greedy search."
+                )
                 break
 
         # Return best results

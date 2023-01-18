@@ -1,7 +1,9 @@
 """Exceptions for data generation module."""
 
+
 class NoReactantAvailableError(Exception):
     """No second reactant available for the bimolecular reaction."""
+
     # TODO: for hb.txt, 2 bi-molecular rxn templates (id 78,79) have no matching bblock
     def __init__(self, message):
         super().__init__(message)
