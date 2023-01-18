@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 from pathlib import Path
 from typing import Iterable, List, Tuple, Union
@@ -6,12 +7,14 @@ import pandas as pd
 import rdkit
 from pathos import multiprocessing as mp
 from rdkit.Chem import AllChem as Chem
-from rdkit.Chem import PandasTools
+from rdkit.Chem import PandasTools, rdMolDescriptors
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import Reaction
 from synnet.utils.parallel import chunked_parallel
+
+logger = logging.getLogger()
 
 
 def parse_sdf_file(file: str) -> pd.DataFrame:
@@ -165,3 +168,103 @@ class ReactionTemplateFileHandler:
         has_single_product = len(products) == 1
 
         return is_uni_or_bimolecular and has_single_product
+
+
+class BuildingBlockFilterHeuristics:
+    @staticmethod
+    def filter(
+        bblocks: Iterable[str], return_as: str = "list", verbose: bool = False
+    ) -> Union[pd.DataFrame, List[str]]:
+        """Filter building blocks based on heuristics.
+
+        See: https://doi.org/10.1021/acs.jcim.2c00785, SI Figure 12)
+        """
+        # Convert bblocks to DataFrame for convenience
+        df = pd.DataFrame(bblocks, columns=["SMILES"])
+        PandasTools.AddMoleculeColumnToFrame(df, smilesCol="SMILES", molCol="mol")
+
+        # Compute properties
+        functions = [
+            rdMolDescriptors.CalcNumHeavyAtoms,
+            rdMolDescriptors.CalcNumAmideBonds,
+            rdMolDescriptors.CalcNumRings,
+            rdMolDescriptors.CalcFractionCSP3,
+            rdMolDescriptors.CalcExactMolWt,
+            rdMolDescriptors.CalcNumRotatableBonds,
+        ]
+
+        for func in functions:
+            name = func.__name__.removeprefix("Calc")
+            df[name] = df["mol"].apply(func)
+
+        # Filter based on heuristics
+        idx_remove = (
+            (df["SMILES"].isna())  # (df["NumHeavyAtoms"] < 5) \
+            | (df["NumHeavyAtoms"] > 40)
+            | (df["NumRotatableBonds"] > 16)
+            | (df["NumAmideBonds"] > 5)
+            | (df["NumHeavyAtoms"] > 40)
+        )
+
+        if verbose:
+            n_total = len(df)
+            n_keep = len(df) - idx_remove.sum()
+            logger.info("Filtering building blocks based on heuristics:")
+            logger.info(f"  Total number of building blocks {n_total:d}")
+            logger.info(f"  Retained number of building blocks {n_keep:d} ({n_keep/n_total:.2%})")
+
+        if return_as == "list":
+            return df.loc[~idx_remove, "SMILES"].tolist()
+        elif return_as == "df":
+            df["idx_remove"] = idx_remove
+            return df
+        else:
+            return df.loc[~idx_remove]
+
+
+class BuildingBlockFilterMatchRxn:
+    @staticmethod
+    def filter(
+        bblocks: Iterable[str],
+        rxn_templates: Iterable[str],
+        *,
+        ncpu: int = MAX_PROCESSES,
+        verbose: bool = False,
+    ) -> Tuple[List[str], List[Reaction]]:
+        """Filter building blocks based on a match to a reaction template.
+        If a building block matches a reaction template, it is retained.
+
+        Return:
+            matched_bblocks: List[str] - list of building blocks that matched a reaction template
+            reactions: List[Reaction] - initialized reactions
+        """
+        # Match building blocks to reactions
+        logger.info("Converting SMILES to `rdkit.Mol` objects...")
+        bblocks = chunked_parallel(bblocks, lambda x: Chem.MolFromSmiles(x), verbose=verbose)
+
+        logger.info("Converting reaction templates to `rdkit.Reaction` objects...")
+        reactions = [Reaction(tmpl) for tmpl in rxn_templates]
+
+        def match_bblocks(
+            reaction: Reaction, *, building_blocks: Iterable[Union[str, Chem.rdchem.Mol]]
+        ) -> Reaction:
+            return reaction.set_available_reactants(building_blocks)
+
+        logger.info("Matching building blocks to reactions...")
+        func = partial(match_bblocks, building_blocks=bblocks)
+        reactions: list[Reaction] = chunked_parallel(
+            reactions, func, verbose=verbose, max_cpu=ncpu, chunks=9
+        )
+
+        matched_bblocks: List[str] = list(
+            {x for rxn in reactions for x in rxn.get_available_reactants}
+        )
+
+        if verbose:
+            n_total = len(bblocks)
+            n_keep = len(matched_bblocks)
+            logger.info("Filtering building blocks based on match to reaction templates:")
+            logger.info(f"  Total number of building blocks {n_total:d}")
+            logger.info(f"  Retained number of building blocks {n_keep:d} ({n_keep/n_total:.2%})")
+
+        return matched_bblocks, reactions
