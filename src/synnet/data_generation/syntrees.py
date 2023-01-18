@@ -342,10 +342,11 @@ class SynTreeGenerator:
 
 def wraps_syntreegenerator_generate(
     stgen: SynTreeGenerator,
+    **kwargs,
 ) -> Tuple[Union[SyntheticTree, None], Union[Exception, None]]:
     """Wrapper for `SynTreeGenerator().generate` that catches all Exceptions."""
     try:
-        st = stgen.generate()
+        st = stgen.generate(**kwargs)
     except NoReactantAvailableError as e:
         logger.error(e)
         return None, e
