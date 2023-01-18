@@ -65,6 +65,26 @@ def count_actions(sts: SyntheticTreeSet) -> Counter:
     return cnt_action_ids
 
 
+def count_num_actions(sts: SyntheticTreeSet) -> Counter:
+    """Count number of actions (better metric for "depth")"""
+    num_actions = Counter([st.num_actions for st in sts])
+    return num_actions
+
+
+def plot_num_actions(sts: SyntheticTreeSet, ax: Optional[plt.Axes] = None, **plt_kwargs) -> plt.Axes:
+    actions = count_num_actions(sts)
+    # Plot actions (type `Counter`) as barplot:
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.bar(actions.keys(), actions.values(), **plt_kwargs)
+    ax.set(
+        xlabel="Number of actions",
+        ylabel="Number of syntrees",
+        xticks=range(0, max(actions.keys())),
+    )
+    return ax
+
+
 def _extract_reaction_ids(sts: SyntheticTreeSet) -> Dict[int, List[int]]:
     """Extract the list of reaction ids for each syntree."""
     reactions = dict()
@@ -91,6 +111,7 @@ def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter:
 def summarize_syntree_collection(sts: SyntheticTreeSet) -> dict:
     res = {
         "nTrees:": len(sts),
+        "avg_num_actions": np.mean([st.num_actions for st in sts]),
         "counters": {
             "depths": count_depths(sts),
             "reactions": count_reactions(sts),
