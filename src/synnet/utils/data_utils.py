@@ -44,7 +44,7 @@ class Reaction:
             name: The name of the reaction for downstream analysis.
             reference: (placeholder)
         """
-        self.smirks = template.strip()  # SMARTS pattern
+        self.smirks = template.strip()
         self.name = name
         self.reference = reference
 
@@ -421,19 +421,30 @@ class SyntheticTree:
             state (list): A list contains all root node molecules.
         """
         state = [node.smiles for node in self.chemicals if node.is_root]
-        return state[::-1]
+        return state[::-1]  # TODO: Always return Tuple[str,Union[str,None]]
 
     def update(self, action: int, rxn_id: int, mol1: str, mol2: str, mol_product: str):
         """Update this synthetic tree by adding a reaction step.
 
+        Info:
+            Recall that actions "add", "expand", "merge" have a reaction, "end" does not.
+            Hence the following 6 updates are possible:
+                - Action: End
+                - Action: Add
+                    - with unimolecular reaction
+                    - with bimolecular reaction
+                - Action: Expand
+                    - with unimolecular reaction
+                    - with bimolecular reaction
+                - Action: Merge
+                    - with bimolecular reaction
+
         Args:
-            action (int): Action index, where the indices (0, 1, 2, 3) represent
-                (Add, Expand, Merge, and End), respectively.
-            rxn_id (int): Index of the reaction occured, where the index can be
-               anything in the range [0, len(template_list)-1].
-            mol1 (str): SMILES string representing the first reactant.
-            mol2 (str): SMILES string representing the second reactant.
-            mol_product (str): SMILES string representing the product.
+            action (int): action_id corresponding to the action taken. (ref `self.ACTIONS`)
+            rxn_id (int): id of the reaction
+            mol1 (str): First reactant as SMILES-string
+            mol2 (str): Second reactant as SMILES-string
+            mol_product (str): Product of the reaction as SMILES-string
         """
         self.actions.append(int(action))
 
@@ -646,8 +657,8 @@ class SyntheticTree:
     def num_actions(self):
         """Number of actions
         Info:
-            Thee depth of a tree is not a perfect metric for complexity,
-            as a 2nd subtree that gets merged does not add depth.
+            The depth of a tree is not a perfect metric for complexity,
+            as a 2nd subtree that gets merged only increases depth by 1.
         """
         return len(self.actions)
 
