@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 
-@functools.lru_cache(maxsize=5)
+@functools.lru_cache(maxsize=10)
 def load_syntree_collection_from_file(file):
     return SyntheticTreeSet.load(file)
 
