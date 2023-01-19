@@ -365,43 +365,6 @@ class SynTreeGeneratorPostProc:
         return SyntheticTreeSet(syntrees), dict(Counter(exit_codes))
 
 
-def wraps_syntreegenerator_generate(
-    stgen: SynTreeGenerator,
-    **kwargs,
-) -> Tuple[Union[SyntheticTree, None], Union[Exception, None]]:
-    """Wrapper for `SynTreeGenerator().generate` that catches all Exceptions."""
-    try:
-        st = stgen.generate(**kwargs)
-    except NoReactantAvailableError as e:
-        logger.error(e)
-        return None, e
-    except NoReactionAvailableError as e:
-        logger.error(e)
-        return None, e
-    except NoBiReactionAvailableError as e:
-        logger.error(e)
-        return None, e
-    except NoReactionPossibleError as e:
-        logger.error(e)
-        return None, e
-    except MaxNumberOfActionsError as e:
-        logger.error(e)
-        return None, e
-    except TypeError as e:
-        # When converting an invalid molecule from SMILES to rdkit Molecule.
-        # This happens if the reaction template/rdkit produces an invalid product.
-        logger.error(e)
-        return None, e
-    except ValueError as e:
-        logger.error(e)
-        return None, e
-    except Exception as e:
-        logger.error(e, exc_info=e, stack_info=False)
-        return None, e
-    else:
-        return st, None
-
-
 def load_syntreegenerator(file: str) -> SynTreeGenerator:
     import pickle
 
