@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Iterable, List, Optional, Union
 
@@ -6,9 +7,6 @@ import torch
 from torch.utils.data.dataset import Dataset
 
 from synnet.config import MAX_PROCESSES
-
-import logging
-
 from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 
@@ -99,21 +97,22 @@ class ActSyntreeDataset(SyntreeDataset):
             #  - There can at most two "sub"syntrees.
             #  - There is always an "actively growing" and a "dangling" sub-syntree
             #  - We keep track of it:
-            #   - root_mol_1 -> active branch
-            #   - root_mol_2 -> dangling branch
-            if action == 0:  # add : adds a new root_mol
-                root_mol_2 = root_mol_1  # dangling branch
+            #    - root_mol_1 -> active branch
+            #    - root_mol_2 -> dangling branch
+            if action == 0:  # add: adds a new root_mol
+                root_mol_2 = root_mol_1  # dangling branch is the previous active branch
                 root_mol_1 = syntree.reactions[i].parent  # active branch
             elif action == 1:  # extend
-                root_mol_1 = syntree.reactions[i].parent
                 root_mol_2 = root_mol_2  # dangling, do not touch
-            elif action == 2:  # merge
                 root_mol_1 = syntree.reactions[i].parent
+            elif action == 2:  # merge
                 root_mol_2 = None  # dangling branch is merged and can be reset
+                root_mol_1 = syntree.reactions[i].parent
             elif action == 3:  # end
                 pass
             else:
                 raise ValueError(f"Action must be {0,1,2,3}, not {action}")
+
             data.append(x)
         return data
 
