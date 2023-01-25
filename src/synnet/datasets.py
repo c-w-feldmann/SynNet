@@ -88,9 +88,28 @@ class ActSyntreeDataset(SyntreeDataset):
         root_mol_1 = None
         root_mol_2 = None
         for i, action in enumerate(syntree.actions):
-            state: tuple[str, str, str] = (target_mol, root_mol_1, root_mol_2)
             target: int = action
-            x = {"target": target, "state": state, "num_action": i}
+            state: tuple[str, str, str] = (target_mol, root_mol_1, root_mol_2)
+
+            if action == 3:
+                reaction_id = None
+                reactant_1 = None
+                reactant_2 = None
+            else:
+                reaction_id = syntree.reactions[i].rxn_id
+                reactant_1 = syntree.reactions[i].child[0]
+                reactant_2 = (
+                    syntree.reactions[i].child[1] if syntree.reactions[i].rtype == 2 else None
+                )  # TODO: refactor datastructure: avoid need for ifs
+
+            x = {
+                "num_action": i,
+                "target": target,
+                "state": state,
+                "reaction_id": reaction_id,
+                "reactant_1": reactant_1,
+                "reactant_2": reactant_2,
+            }
 
             # The current action determines the state for the next iteration.
             # Note:
