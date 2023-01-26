@@ -8,6 +8,7 @@ from torch.utils.data.dataset import Dataset
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.parallel import chunked_parallel
 
 
 class SyntreeDataset(Dataset):
@@ -37,48 +38,7 @@ class SyntreeDataset(Dataset):
         return f"SyntreeDataset ({len(self)} syntrees)"
 
 
-from synnet.utils.parallel import chunked_parallel
-
-
-class ActSyntreeDataset(SyntreeDataset):
-    """SyntreeDataset."""
-
-    def __init__(
-        self,
-        dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
-        featurizer: None = None,
-        num_workers: int = MAX_PROCESSES,
-        verbose: bool = False,
-    ):
-        """ """
-        # Init superclass
-        super().__init__(dataset=dataset, num_workers=num_workers)
-        self.featurizer = featurizer
-        self.num_workers = num_workers
-
-        # Extract data
-        # For the ACT network the problem is classification.
-        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
-        self.data = [elem for sublist in chopped_syntrees for elem in sublist]
-
-        # Featurize data
-        if featurizer:
-            # Old: simple list comprehension
-            # self.features = np.asarray([featurizer.encode_batch(elem["state"]) for elem in self.data]).reshape((-1,3*self.featurizer.nbits)) # (num_states, 3*nbits)
-
-            # New: use `chunked_parallel()`
-            _features = chunked_parallel(
-                [elem["state"] for elem in self.data],
-                featurizer.encode_batch,
-                max_cpu=num_workers,
-                verbose=verbose,
-            )
-            self.features = (
-                np.asarray(_features).reshape((-1, 3 * self.featurizer.nbits)).astype("float32")
-            )  # (num_states, 3*nbits)
-        else:
-            raise ValueError("No featurizer provided")
-
+class SynTreeChopper:
     @staticmethod
     def chop_syntree(syntree: SyntheticTree) -> list[dict[str, Union[int, tuple[str, str, str]]]]:
 
@@ -135,8 +95,79 @@ class ActSyntreeDataset(SyntreeDataset):
             data.append(x)
         return data
 
+
+class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
+    """SyntreeDataset for the **Reactant 1** network."""
+
+    def __init__(
+        self,
+        dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
+        featurizer: None = None,
+        num_workers: int = MAX_PROCESSES,
+        verbose: bool = False,
+    ):
+        # Init superclass
+        super().__init__(dataset=dataset, num_workers=num_workers)
+        self.featurizer = featurizer
+        self.num_workers = num_workers
+        valid_actions = [0, 1, 2]  # "end" do not have reactions
+
+        # Extract data
+        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
+        self.data = [
+            elem
+            for sublist in chopped_syntrees
+            for elem in sublist
+            if elem["target"] in valid_actions
+        ]
+
+        # Featurize data
+        # TODO:
+
     def __len__(self):
-        """__len__."""
+        return len(self.data)
+
+    def __getitem__(self, idx: int):
+        return self.data[idx]  # TODO: change when featurizer is implemented
+
+
+class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
+    """SyntreeDataset for the **Action** network."""
+
+    def __init__(
+        self,
+        dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
+        featurizer: None = None,
+        num_workers: int = MAX_PROCESSES,
+        verbose: bool = False,
+    ):
+        """ """
+        # Init superclass
+        super().__init__(dataset=dataset, num_workers=num_workers)
+        self.featurizer = featurizer
+        self.num_workers = num_workers
+
+        # Extract data
+        # For the ACT network the problem is classification.
+        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
+        self.data = [elem for sublist in chopped_syntrees for elem in sublist]
+
+        # Featurize data
+        if featurizer:
+            _features = chunked_parallel(
+                [elem["state"] for elem in self.data],
+                featurizer.encode_batch,
+                max_cpu=num_workers,
+                verbose=verbose,
+            )
+            self.features = (
+                np.asarray(_features).reshape((-1, 3 * self.featurizer.nbits)).astype("float32")
+            )  # (num_states, 3*nbits) # TODO: do numpy shenanigans in featurizer, not here
+        else:
+            raise ValueError("No featurizer provided")
+
+    def __len__(self):
+        """__len__"""
         return len(self.data)
 
     def __getitem__(self, idx: int):
