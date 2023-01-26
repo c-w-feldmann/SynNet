@@ -131,6 +131,76 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
         return self.data[idx]  # TODO: change when featurizer is implemented
 
 
+class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
+    """SyntreeDataset for the **Reaction** network."""
+
+    def __init__(
+        self,
+        dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
+        featurizer: None = None,
+        num_workers: int = MAX_PROCESSES,
+        verbose: bool = False,
+    ):
+        # Init superclass
+        super().__init__(dataset=dataset, num_workers=num_workers)
+        self.featurizer = featurizer
+        self.num_workers = num_workers
+        valid_actions = [0, 1, 2]  # "end" do not have reactions
+
+        # Extract data
+        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
+        self.data = [
+            elem
+            for sublist in chopped_syntrees
+            for elem in sublist
+            if elem["target"] in valid_actions
+        ]
+
+        # Featurize data
+        # TODO:
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx: int):
+        return self.data[idx]  # TODO: change when featurizer is implemented
+
+
+class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
+    """SyntreeDataset for the **Reactant 2** network."""
+
+    def __init__(
+        self,
+        dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
+        featurizer: None = None,
+        num_workers: int = MAX_PROCESSES,
+        verbose: bool = False,
+    ):
+        # Init superclass
+        super().__init__(dataset=dataset, num_workers=num_workers)
+        self.featurizer = featurizer
+        self.num_workers = num_workers
+        valid_actions = [0, 1]  # "end" and "merge" do not have 2nd reactants
+
+        # Extract data
+        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
+        self.data = [
+            elem
+            for sublist in chopped_syntrees
+            for elem in sublist
+            if elem["target"] in valid_actions and elem["reactant_2"] is not None
+        ]  # fmt: skip                         ^ exclude unimolecular reactions
+
+        # Featurize data
+        # TODO:
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx: int):
+        return self.data[idx]  # TODO: change when featurizer is implemented
+
+
 class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
     """SyntreeDataset for the **Action** network."""
 
