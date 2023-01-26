@@ -110,7 +110,7 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
         super().__init__(dataset=dataset, num_workers=num_workers)
         self.featurizer = featurizer
         self.num_workers = num_workers
-        valid_actions = [0, 1, 2]  # "end" do not have reactions
+        valid_actions = [0]  # "expand", "merge", and "end" have no reactant 1
 
         # Extract data
         chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
