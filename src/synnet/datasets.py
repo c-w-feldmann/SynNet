@@ -19,6 +19,8 @@ class SyntreeDataset(Dataset):
         num_workers: int = MAX_PROCESSES,
         **kwargs,
     ):
+        """Dataset for syntrees."""
+        self.num_workers = num_workers
 
         if isfile := isinstance(dataset, Path) or isinstance(dataset, str):
             self.syntrees = SyntheticTreeSet.load(dataset).sts
@@ -109,7 +111,6 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
         self.featurizer = featurizer
-        self.num_workers = num_workers
         valid_actions = [0]  # "expand", "merge", and "end" have no reactant 1
 
         # Extract data
@@ -144,7 +145,6 @@ class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
         self.featurizer = featurizer
-        self.num_workers = num_workers
         valid_actions = [0, 1, 2]  # "end" do not have reactions
 
         # Extract data
@@ -179,7 +179,6 @@ class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
         self.featurizer = featurizer
-        self.num_workers = num_workers
         valid_actions = [0, 1]  # "end" and "merge" do not have 2nd reactants
 
         # Extract data
@@ -215,7 +214,6 @@ class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
         self.featurizer = featurizer
-        self.num_workers = num_workers
 
         # Extract data
         # For the ACT network the problem is classification.
