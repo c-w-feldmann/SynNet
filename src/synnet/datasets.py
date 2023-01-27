@@ -161,6 +161,7 @@ class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
         featurizer: None = None,
+        rxn_featurizer: None = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
@@ -178,14 +179,33 @@ class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
             if elem["target"] in valid_actions
         ]
 
-        # Featurize data
-        # TODO:
+        def _tupelize(elem: dict) -> tuple[Union[str, None]]:
+            """Helper method to create a tuple for featurization."""
+            return elem["state"] + (elem["reactant_1"],)
+
+        _features = chunked_parallel(
+            [_tupelize(elem) for elem in self.data],
+            featurizer.encode_batch,
+            max_cpu=num_workers,
+            verbose=verbose,
+        )
+        self.features = (
+            np.asarray(_features).reshape((-1, 4 * self.featurizer.nbits)).astype("float32")
+        )  # (n, 4*nbits) # TODO: do numpy shenanigans in featurizer, not here
+
+        if rxn_featurizer == "OneHotEncoder":
+            # We treat it as classification problem and there is no need to featurize the reaction-id.
+            self.targets = np.asarray([elem["reaction_id"] for elem in self.data]).astype(
+                "float32"
+            )  # (n, 1)
+        else:
+            raise NotImplementedError()
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx: int):
-        return self.data[idx]  # TODO: change when featurizer is implemented
+        return self.features[idx], self.targets[idx]
 
 
 class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
