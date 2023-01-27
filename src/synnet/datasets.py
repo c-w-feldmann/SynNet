@@ -107,6 +107,7 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
         featurizer: None = None,
+        reactant_1_featurizer: None = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
@@ -125,13 +126,32 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
         ]
 
         # Featurize data
-        # TODO:
+        if featurizer:
+            _features = chunked_parallel(
+                [elem["state"] for elem in self.data],
+                featurizer.encode_batch,
+                max_cpu=num_workers,
+                verbose=verbose,
+            )
+            self.features = (
+                np.asarray(_features).reshape((-1, 3 * self.featurizer.nbits)).astype("float32")
+            )  # (num_states, 3*nbits) # TODO: do numpy shenanigans in featurizer, not here
+
+            _targets = chunked_parallel(
+                [elem["reactant_1"] for elem in self.data],
+                reactant_1_featurizer.encode,
+                max_cpu=num_workers,
+                verbose=verbose,
+            )
+            self.targets = np.asarray(_targets).squeeze().astype("float32")  # (n, nbits')
+        else:
+            raise ValueError("No featurizer provided")
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx: int):
-        return self.data[idx]  # TODO: change when featurizer is implemented
+        return self.features[idx], self.targets[idx]
 
 
 class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
