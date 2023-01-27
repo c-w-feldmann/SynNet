@@ -215,6 +215,8 @@ class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
         featurizer: None = None,
+        rxn_featurizer: None = None,
+        reactant_2_featurizer: None = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
@@ -233,13 +235,44 @@ class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
         ]  # fmt: skip                         ^ exclude unimolecular reactions
 
         # Featurize data
-        # TODO:
+        # x = z_target ⊕ z_state ⊕ z_rt1 ⊕ z_rxn
+        # y = z_rt2
+        def _tupelize(elem: dict) -> tuple[Union[str, None]]:
+            """Helper method to create a tuple for featurization."""
+            return elem["state"] + (elem["reactant_1"],)
+
+        _features_mols = chunked_parallel(
+            [_tupelize(elem) for elem in self.data],
+            featurizer.encode_batch,
+            max_cpu=num_workers,
+            verbose=verbose,
+        )
+        _features_mols = np.asarray(_features_mols).reshape(
+            (-1, 4 * self.featurizer.nbits)
+        )  # (n, 4*nbits): z_target ⊕ z_state ⊕ z_rt1
+
+        _features_rxn = np.asarray(
+            [rxn_featurizer.encode(elem["reaction_id"]) for elem in self.data]
+        ).squeeze()  # (n, dimension_rxn_emb): z_rxn
+
+        self.features = np.concatenate((_features_mols, _features_rxn), axis=1,).astype(
+            "float32"
+        )  # (n, 4*nbits + dimension_rxn_emb)
+
+        # Targets
+        _targets = chunked_parallel(
+            [elem["reactant_1"] for elem in self.data],
+            reactant_2_featurizer.encode,
+            max_cpu=num_workers,
+            verbose=verbose,
+        )
+        self.targets = np.asarray(_targets).squeeze().astype("float32")  # (n, nbits')
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx: int):
-        return self.data[idx]  # TODO: change when featurizer is implemented
+        return self.features[idx], self.targets[idx]
 
 
 class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
