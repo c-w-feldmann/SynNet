@@ -15,7 +15,7 @@ class SyntreeDataset(Dataset):
     def __init__(
         self,
         *,
-        dataset: Union[str, Path, Iterable[SyntheticTree]],
+        dataset: Union[str, Path, Iterable[SyntheticTree], SyntheticTreeSet],
         num_workers: int = MAX_PROCESSES,
         **kwargs,
     ):
@@ -27,6 +27,8 @@ class SyntreeDataset(Dataset):
             logging.info(f"Loaded from file: {dataset}")
         elif isinstance(dataset, Iterable):
             self.syntrees = dataset
+        elif isinstance(dataset, SyntheticTreeSet):
+            self.syntrees = dataset.sts
         else:
             raise ValueError(f"dataset must be a Path, string or Iterable, not {type(dataset)}")
 
