@@ -1,44 +1,44 @@
 {
     "reactions": [
         {
-            "rxn_id": 12,
+            "rxn_id": "r1",
             "rtype": 2,
-            "parent": "n3",
+            "parent": "C",
             "child": [
-                "n1",
-                "n2"
+                "A",
+                "B"
             ],
             "depth": 0.5,
             "index": 0
         },
         {
-            "rxn_id": 47,
+            "rxn_id": "r2",
             "rtype": 2,
-            "parent": "n6",
+            "parent": "F",
             "child": [
-                "n4",
-                "n5"
+                "D",
+                "E"
             ],
             "depth": 0.5,
             "index": 1
         },
         {
-            "rxn_id": 15,
+            "rxn_id": "r3",
             "rtype": 2,
-            "parent": "n7",
+            "parent": "G",
             "child": [
-                "n6",
-                "n3"
+                "F",
+                "C"
             ],
             "depth": 1.5,
             "index": 2
         },
         {
-            "rxn_id": 49,
+            "rxn_id": "r4",
             "rtype": 1,
-            "parent": "n8",
+            "parent": "H",
             "child": [
-                "n7"
+                "G"
             ],
             "depth": 2.5,
             "index": 3
@@ -46,8 +46,8 @@
     ],
     "chemicals": [
         {
-            "smiles": "n1",
-            "parent": 12,
+            "smiles": "A",
+            "parent": "r1",
             "child": null,
             "is_leaf": true,
             "is_root": false,
@@ -55,8 +55,8 @@
             "index": 0
         },
         {
-            "smiles": "n2",
-            "parent": 12,
+            "smiles": "B",
+            "parent": "r1",
             "child": null,
             "is_leaf": true,
             "is_root": false,
@@ -64,17 +64,17 @@
             "index": 1
         },
         {
-            "smiles": "n3",
-            "parent": 15,
-            "child": 12,
+            "smiles": "C",
+            "parent": "r3",
+            "child": "r1",
             "is_leaf": false,
             "is_root": false,
             "depth": 1,
             "index": 2
         },
         {
-            "smiles": "n4",
-            "parent": 47,
+            "smiles": "D",
+            "parent": "r2",
             "child": null,
             "is_leaf": true,
             "is_root": false,
@@ -82,8 +82,8 @@
             "index": 3
         },
         {
-            "smiles": "n5",
-            "parent": 47,
+            "smiles": "E",
+            "parent": "r2",
             "child": null,
             "is_leaf": true,
             "is_root": false,
@@ -91,27 +91,27 @@
             "index": 4
         },
         {
-            "smiles": "n6",
-            "parent": 15,
-            "child": 47,
+            "smiles": "F",
+            "parent": "r3",
+            "child": "r2",
             "is_leaf": false,
             "is_root": false,
             "depth": 1,
             "index": 5
         },
         {
-            "smiles": "n7",
-            "parent": 49,
-            "child": 15,
+            "smiles": "G",
+            "parent": "r4",
+            "child": "r3",
             "is_leaf": false,
             "is_root": false,
             "depth": 2.0,
             "index": 6
         },
         {
-            "smiles": "n8",
+            "smiles": "H",
             "parent": null,
-            "child": 49,
+            "child": "r4",
             "is_leaf": false,
             "is_root": true,
             "depth": 3.0,
@@ -119,9 +119,9 @@
         }
     ],
     "root": {
-        "smiles": "n8",
+        "smiles": "H",
         "parent": null,
-        "child": 49,
+        "child": "r4",
         "is_leaf": false,
         "is_root": true,
         "depth": 3.0,
