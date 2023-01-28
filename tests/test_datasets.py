@@ -1,24 +1,40 @@
 import json
 from pathlib import Path
 
+import numpy
 import pytest
 
 from synnet.datasets import SynTreeChopper
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.data_utils import SyntheticTree
 
 
-@pytest.fixture
-def syntree_simplified():
-    """Load a simplified syntree where SMILES are replaced with chars A,B,C etc."""
-    return SyntheticTree.from_dict(
-        dict(json.loads(Path("tests/assets/syntree-small-simple.json").read_text()))
-    )
+def syntree_from_json(file):
+    return SyntheticTree.from_dict(dict(json.loads(Path(file).read_text())))
 
 
-def test_chop_syntree(syntree_simplified: SyntheticTree):
-    assert isinstance(syntree_simplified, SyntheticTree)
-    chopped = SynTreeChopper.chop_syntree(syntree_simplified)
-    ref_chopped = [
-    {'num_action': 0,  'target': 0,  'state': ('H', None, None),  'reaction_id': "r1",  'reactant_1': 'A',  'reactant_2': 'B'}, {'num_action': 1,  'target': 0,  'state': ('H', 'C', None),  'reaction_id': "r2",  'reactant_1': 'D',  'reactant_2': 'E'}, {'num_action': 2,  'target': 2,  'state': ('H', 'F', 'C'),  'reaction_id': "r3",  'reactant_1': 'F',  'reactant_2': 'C'}, {'num_action': 3,  'target': 1,  'state': ('H', 'G', None),  'reaction_id': "r4",  'reactant_1': 'G',  'reactant_2': None}, {'num_action': 4,  'target': 3,  'state': ('H', 'H', None),  'reaction_id': None,  'reactant_1': None,  'reactant_2': None},
-    ]  # fmt: skip
-    assert chopped == ref_chopped
+SYNTREE_FILES = [
+    "tests/assets/syntree-small-simple-1.json",
+    "tests/assets/syntree-small-simple-2.json",
+    "tests/assets/syntree-small-simple-3.json",
+]
+REFERENCE_FILES = [
+    "tests/assets/syntree-small-simple-1-chopped.json",
+    "tests/assets/syntree-small-simple-2-chopped.json",
+    "tests/assets/syntree-small-simple-3-chopped.json",
+]
+
+testdata = [*zip(SYNTREE_FILES, REFERENCE_FILES)]
+
+
+@pytest.mark.parametrize("syntree_file,syntree_chopped_file", testdata)
+def test_chop_syntrees(syntree_file, syntree_chopped_file):
+    syntree = syntree_from_json(syntree_file)
+    ref_chopped = json.loads(Path(syntree_chopped_file).read_text())
+
+    assert isinstance(syntree, SyntheticTree)
+
+    chopped = SynTreeChopper.chop_syntree(syntree)
+
+    assert syntree_file == ref_chopped["meta"]["original_file"]
+
+    numpy.testing.assert_equal(chopped, ref_chopped["data"])
