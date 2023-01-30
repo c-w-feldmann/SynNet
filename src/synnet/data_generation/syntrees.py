@@ -488,7 +488,9 @@ class SynTreeFeaturizer:
             # 1. Encode "state"
             z_root_mol_1 = self.mol_embedder.encode(root_mol_1)
             z_root_mol_2 = self.mol_embedder.encode(root_mol_2)
-            state = np.atleast_2d(np.concatenate((z_root_mol_1, z_root_mol_2, z_target_mol), axis=1))  # (1,3d)
+            state = np.atleast_2d(
+                np.concatenate((z_root_mol_1, z_root_mol_2, z_target_mol), axis=1)
+            )  # (1,3d)
 
             # 2. Encode "super"-step
             if action == 3:  # end
