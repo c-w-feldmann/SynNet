@@ -11,6 +11,7 @@ from tqdm import tqdm
 from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
+from src.synnet.encoding.drfp import DrfpEncoder
 
 from synnet.data_generation.exceptions import (
     MaxNumberOfActionsError,
@@ -435,6 +436,54 @@ class MorganFingerprintEncoder(Encoder):
         return np.asarray(
             [self.encode(smi, **kwargs) for smi in smis]
         ).squeeze()  # (num_items, nbits)
+
+
+class DrfpStateEncoder(Encoder):
+    def __init__(
+        self,
+        drfp_encoder: DrfpEncoder = DrfpEncoder,
+        nbits: int = 4096,
+        radius: int = 3,
+        rings: bool = True,
+        min_radius: int = 0,
+        operation: str = "symmetric_difference",
+    ):
+        self.drfp_encoder = drfp_encoder
+        self.operation = operation
+        self.nbits = nbits
+        self.drfp_kwrargs = {
+            "radius": radius,
+            "rings": rings,
+            "min_radius": min_radius,
+        }
+
+    def encode(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def encode_batch(
+        self, state: tuple[str, Optional[str], Optional[str]], allow_none: bool = True
+    ):
+        assert allow_none, "DrfpStateEncoder does not support allow_none=False"
+
+        shingles = list()  # ATTN: Assuming first element is the root mol, hence always not None
+        for smi in state:
+            if smi is None:
+                sh = b""
+            else:
+                mol = Chem.MolFromSmiles(smi)
+                sh, _ = self.drfp_encoder.shingling_from_mol(mol, **self.drfp_kwrargs)
+            shingles.append(sh)
+
+        if self.operation == "symmetric_difference":
+            s = set(shingles[0]).symmetric_difference(
+                set(_sh for sublist in shingles[1:] for _sh in sublist)
+            )
+        else:
+            raise NotImplementedError(f"operation {self.operation} not implemented")
+
+        bv = self.drfp_encoder.hash(list(s))
+        fp, _ = self.drfp_encoder.fold(bv, length=self.nbits)
+        return fp[None, :]  # (1, nbits)
 
 
 class IdentityIntEncoder(Encoder):
