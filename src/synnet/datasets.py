@@ -129,13 +129,13 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
         if featurizer:
             _features = chunked_parallel(
                 [elem["state"] for elem in self.data],
-                featurizer.encode_batch,
+                featurizer.encode_tuple,
                 max_cpu=num_workers,
                 verbose=verbose,
             )
-            self.features = (
-                np.asarray(_features).reshape((-1, 3 * self.featurizer.nbits)).astype("float32")
-            )  # (num_states, 3*nbits) # TODO: do numpy shenanigans in featurizer, not here
+            _features = np.asarray(_features)
+            shape = _features.shape
+            self.features = np.asarray(_features).reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
 
             _targets = chunked_parallel(
                 [elem["reactant_1"] for elem in self.data],
@@ -185,13 +185,13 @@ class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
 
         _features = chunked_parallel(
             [_tupelize(elem) for elem in self.data],
-            featurizer.encode_batch,
+            featurizer.encode_tuple,
             max_cpu=num_workers,
             verbose=verbose,
         )
-        self.features = (
-            np.asarray(_features).reshape((-1, 4 * self.featurizer.nbits)).astype("float32")
-        )  # (n, 4*nbits) # TODO: do numpy shenanigans in featurizer, not here
+        _features = np.asarray(_features)
+        shape = _features.shape
+        self.features = self.features = np.asarray(_features).reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (num_states, 4*nbits for MorganFP OR 'nbits' for drfp)
 
         if rxn_featurizer == "OneHotEncoder":
             # We treat it as classification problem and there is no need to featurize the reaction-id.
@@ -243,13 +243,13 @@ class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
 
         _features_mols = chunked_parallel(
             [_tupelize(elem) for elem in self.data],
-            featurizer.encode_batch,
+            featurizer.encode_tuple,
             max_cpu=num_workers,
             verbose=verbose,
         )
-        _features_mols = np.asarray(_features_mols).reshape(
-            (-1, 4 * self.featurizer.nbits)
-        )  # (n, 4*nbits): z_target ⊕ z_state ⊕ z_rt1
+        _features_mols = np.asarray(_features_mols)
+        shape = _features_mols.shape
+        _features_mols = np.asarray(_features_mols).reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (n, d): z_(target ⊕ state) ⊕ z_rt1
 
         _features_rxn = np.asarray(
             [rxn_featurizer.encode(elem["reaction_id"]) for elem in self.data]
@@ -299,13 +299,13 @@ class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
         if featurizer:
             _features = chunked_parallel(
                 [elem["state"] for elem in self.data],
-                featurizer.encode_batch,
+                featurizer.encode_tuple,
                 max_cpu=num_workers,
                 verbose=verbose,
             )
-            self.features = (
-                np.asarray(_features).reshape((-1, 3 * self.featurizer.nbits)).astype("float32")
-            )  # (num_states, 3*nbits) # TODO: do numpy shenanigans in featurizer, not here
+            _features = np.asarray(_features)
+            shape = _features.shape
+            self.features = _features.reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
         else:
             raise ValueError("No featurizer provided")
 

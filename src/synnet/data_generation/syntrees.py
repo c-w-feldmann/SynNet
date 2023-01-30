@@ -429,8 +429,8 @@ class MorganFingerprintEncoder(Encoder):
             fp = fp[None, :]
         return fp  # (1,d)
 
-    def encode_batch(self, smis: Iterable[Union[str, None]], **kwargs) -> np.ndarray:
-        """Encode a batch.
+    def encode_tuple(self, smis: tuple[Union[str, None]], **kwargs) -> np.ndarray:
+        """Encode a tuple.
 
         Info: Added for convenience for datasets to encode a state (target,root1,root2) in one go"""
         return np.asarray(
@@ -460,7 +460,7 @@ class DrfpStateEncoder(Encoder):
     def encode(self, *args, **kwargs):
         raise NotImplementedError
 
-    def encode_batch(
+    def encode_tuple(
         self, state: tuple[str, Optional[str], Optional[str]], allow_none: bool = True
     ):
         assert allow_none, "DrfpStateEncoder does not support allow_none=False"
