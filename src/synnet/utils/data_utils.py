@@ -12,6 +12,7 @@ import gzip
 import itertools
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional, Set, Tuple, Union
 
 import datamol as dm
@@ -694,10 +695,9 @@ class SyntheticTree:
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""
 
-    sts: list[SyntheticTree]
-
-    def __init__(self, sts: Optional[list[SyntheticTree]] = None):
+    def __init__(self, sts: Optional[list[SyntheticTree]] = None, from_file: Optional[str] = None):
         self.sts = sts if sts is not None else []
+        self.from_file = str(Path(from_file).resolve()) if from_file is not None else None
 
     def __repr__(self) -> str:
         return f"SyntheticTreeSet ({len(self.sts)} syntrees.)"
@@ -710,6 +710,13 @@ class SyntheticTreeSet:
             raise IndexError("No Synthetic Trees.")
         return self.sts[index]
 
+    @property
+    def metadata(self) -> dict:
+        return {
+            "loaded_from_file": self.from_file,
+            "num_syntrees": len(self.sts),
+        }
+
     @classmethod
     def load(cls, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
@@ -720,15 +727,22 @@ class SyntheticTreeSet:
 
         syntrees = [SyntheticTree.from_dict(_syntree) for _syntree in data["trees"]]
 
-        return cls(syntrees)
+        return cls(syntrees, from_file=file)
 
     def save(self, file: str) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        syntrees_as_json = {"trees": [st.to_dict() for st in self.sts if st is not None]}
+        out = {
+            "metadata": {
+                **self.metadata,
+                "save_to_file": str(Path(file).resolve()),
+            },
+            "trees": [st.to_dict() for st in self.sts if st is not None],
+        }
+
         with gzip.open(file, "wt") as f:
-            f.write(json.dumps(syntrees_as_json))
+            f.write(json.dumps(out))
 
     def split_by_depth(self) -> dict[int, list[SyntheticTree]]:
         """Splits syntrees by depths and returns a copy."""

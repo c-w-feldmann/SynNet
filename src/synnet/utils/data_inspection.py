@@ -111,13 +111,17 @@ def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter:
 
 
 def summarize_syntree_collection(sts: SyntheticTreeSet) -> dict:
+    """Compute summary statistics for syntree collection."""
+    #  dict(sorted(count_num_actions(syntree_coll).items()))
     res = {
+        "metadata": sts.metadata,
         "nTrees:": len(sts),
         "avg_num_actions": np.mean([st.num_actions for st in sts]),
         "counters": {
-            "depths": count_depths(sts),
-            "reactions": count_reactions(sts),
-            "actions": count_actions(sts),
+            "depths": dict(sorted(count_depths(sts).items())),
+            "reactions": dict(sorted(count_reactions(sts).items())),
+            "actions": dict(sorted(count_actions(sts).items())),
+            "num_actions": dict(sorted(count_num_actions(sts).items())),
         },
     }
     return res
