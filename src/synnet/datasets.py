@@ -135,7 +135,9 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
             )
             _features = np.asarray(_features)
             shape = _features.shape
-            self.features = np.asarray(_features).reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
+            self.features = (
+                np.asarray(_features).reshape((-1, shape[-2] * shape[-1])).astype("float32")
+            )  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
 
             _targets = chunked_parallel(
                 [elem["reactant_1"] for elem in self.data],
@@ -191,7 +193,9 @@ class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
         )
         _features = np.asarray(_features)
         shape = _features.shape
-        self.features = self.features = np.asarray(_features).reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (num_states, 4*nbits for MorganFP OR 'nbits' for drfp)
+        self.features = self.features = (
+            np.asarray(_features).reshape((-1, shape[-2] * shape[-1])).astype("float32")
+        )  # (num_states, 4*nbits for MorganFP OR 'nbits' for drfp)
 
         if rxn_featurizer == "OneHotEncoder":
             # We treat it as classification problem and there is no need to featurize the reaction-id.
@@ -249,7 +253,9 @@ class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
         )
         _features_mols = np.asarray(_features_mols)
         shape = _features_mols.shape
-        _features_mols = np.asarray(_features_mols).reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (n, d): z_(target ⊕ state) ⊕ z_rt1
+        _features_mols = (
+            np.asarray(_features_mols).reshape((-1, shape[-2] * shape[-1])).astype("float32")
+        )  # (n, d): z_(target ⊕ state) ⊕ z_rt1
 
         _features_rxn = np.asarray(
             [rxn_featurizer.encode(elem["reaction_id"]) for elem in self.data]
@@ -305,7 +311,9 @@ class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
             )
             _features = np.asarray(_features)
             shape = _features.shape
-            self.features = _features.reshape((-1,shape[-2]*shape[-1])).astype("float32")  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
+            self.features = _features.reshape((-1, shape[-2] * shape[-1])).astype(
+                "float32"
+            )  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
         else:
             raise ValueError("No featurizer provided")
 
