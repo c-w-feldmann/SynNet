@@ -16,26 +16,30 @@ Let's start.
 
 0. Prepare reaction templates and building blocks.
 
-    Extract SMILES from the `.sdf` file from enamine.net.
+    Parse and canonicalize SMILES from the `.sdf` file from enamine.net.
 
     ```shell
     python scripts/00-extract-smiles-from-sdf.py \
         --input-file="data/assets/building-blocks/enamine-us.sdf" \
-        --output-file="data/assets/building-blocks/enamine-us-smiles.csv.gz"
+        --output-file="data/assets/building-blocks/enamine-us.csv.gz"
     ```
 
-1. Filter building blocks.
+1. Filter building blocks + match to reaction templates
 
-    We proprocess the building blocks to identify applicable reactants for each reaction template.
-    In other words, filter out all building blocks that do not match any reaction template.
-    There is no need to keep them, as they cannot act as reactant.
-    In a first step, we match all building blocks with each reaction template.
-    In a second step, we save all matched building blocks
-    and a collection of `Reaction`s with their available building blocks.
+    We filter the building blocks based on two criteria:
+      1. Building block matches at least one reaction template
+      2. Building block passes some heuristics.
+
+    > :speaker: For the enamine-us & Hartenfeller-Button combination, 138 (0.07%) molecules do not pass the heuristics, and 17358 (8.89%) do not match any reaction template.
+
+    In a first step, we filter all building blocks.
+    In a second step, we save
+      - all matched building blocks
+      - and a collection of `Reaction`s with their available building blocks as class attributes.
 
     ```bash
     python scripts/01-filter-building-blocks.py \
-        --building-blocks-file "data/assets/building-blocks/enamine-us-smiles.csv.gz" \
+        --building-blocks-file "data/assets/building-blocks/enamine-us.csv.gz" \
         --rxn-templates-file "data/assets/reaction-templates/hb.txt" \
         --output-bblock-file "data/pre-process/building-blocks-rxns/bblocks-enamine-us.csv.gz" \
         --output-rxns-collection-file "data/pre-process/building-blocks-rxns/rxns-hb-enamine-us.json.gz" --verbose
@@ -43,7 +47,8 @@ Let's start.
 
     > :bulb: All following steps use this matched building blocks <-> reaction template data. You have to specify the correct files for every script to that it can load the right data. It can save some time to store these as environment variables.
 
-2. Pre-compute embeddings
+2. ~~Pre-compute embeddings~~
+    > 🚨 WIP: TODO: This computation is fast and the embeddings are now much easier to change with the chagne to datasets. Hence, it is probably best to do it during runtime (+ maybe cache it?)
 
     We use the embedding space for the building blocks a lot.
     Hence, we pre-compute and store the building blocks.
@@ -77,58 +82,19 @@ Let's start.
     python scripts/04-filter-syntrees.py \
         --input-file "data/pre-process/syntrees/synthetic-trees.json.gz" \
         --output-file "data/pre-process/syntrees/synthetic-trees-filtered.json.gz" \
+        --filter "qed + random" \
         --verbose
     ```
 
     Each *synthetic tree* is serializable and so we save all trees in a compressed `.json` file.
 
-5. Split *synthetic trees* into train,valid,test-data
+4. Train the networks
 
-    We load the `.json`-file with all *synthetic trees* and
-    straightforward split it into three files: `{train,test,valid}.json`.
+    We can construct our `{train,val,test}`-[Dataset](https://pytorch.org/docs/stable/data.html#torch.utils.data.Dataset) from the filtered syntree file.
     The default split ratio is 6:2:2.
 
-    ```bash
-    python scripts/05-split-syntrees.py \
-            --input-file "data/pre-process/syntrees/synthetic-trees-filtered.json.gz" \
-            --output-dir "data/pre-process/syntrees/" --verbose
-    ```
-
-6. Featurization
-
-   We featurize each *synthetic tree*.
-   That is, we break down each tree to each iteration step ("Add", "Expand", "Extend", "End") and featurize it.
-   This results in a "state" vector and a a corresponding "super step" vector.
-   We call it "super step" here, as it contains all featurized data for all networks.
-
-    ```bash
-    python scripts/06-featurize-syntrees.py \
-        --input-dir "data/pre-process/syntrees/" \
-        --output-dir "data/featurized/" --verbose
-    ```
-
-    This script will load the `{train,valid,test}` data, featurize it, and save it in
-      - `<output-dir>/{train,valid,test}_states.npz` and
-      - `<output-dir>/{train,valid,test}_steps.npz`.
-
-    The encoders for the molecules must be provided in the script.
-    A short text summary of the encoders will be saved as well.
-
-7. Split features
-
-    Up to this point, we worked with a (featurized) *synthetic tree* as a whole,
-    now we split it up to into "consumable" input/output data for each of the four networks.
-    This includes picking the right featurized data from the "super step" vector from the previous step.
-
-    ```bash
-    python scripts/07-split-data-for-networks.py \
-        --input-dir "data/featurized/"
-    ```
-
-    This will create 24 new files (3 splits, 4 networks, X + y).
-    All new files will be saved in `<input-dir>/Xy`.
-
-8. Train the networks
+    Each Dataset takes one or more featurizers in their constructor.
+    Change them or their parameters if you want to featurize the data for a network differently.
 
     Finally, we can train each of the four networks in `src/synnet/models/` separately. For example:
 
@@ -146,7 +112,7 @@ Please refer to the [README.md](./README.md) for inference instructions.
 
 ### Visualizing trees
 
-To visualize trees, there is a hacky script that represents *Synthetic Trees* as [mermaid](https://github.com/mermaid-js/mermaid) diagrams.
+To visualize trees, there is a hacky script that represents *Synthetic Trees* as [Graphviz](https://graphviz.org/) diagrams and exports them to `*.png`.
 
 To demo it:
 
@@ -154,8 +120,4 @@ To demo it:
 python src/synnet/visualize/visualizer.py
 ```
 
-Still to be implemented: i) target molecule, ii) "end" action
-
-To render the markdown file incl. the diagram directly in VS Code, install the extension [vscode-markdown-mermaid](https://github.com/mjbvz/vscode-markdown-mermaid) and use the built-in markdown preview.
-
-*Info*: If the images of the molecules do not load, edit + save the markdown file anywhere. For example add and delete a character with the preview open. Not sure why this happens.
+Still to be implemented: i) target molecule, ii) reaction nodes.
