@@ -5,10 +5,12 @@ import logging
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
-from synnet.data_generation.preprocessing import (BuildingBlockFileHandler,
-                                                  BuildingBlockFilterHeuristics,
-                                                  BuildingBlockFilterMatchRxn,
-                                                  ReactionTemplateFileHandler)
+from synnet.data_generation.preprocessing import (
+    BuildingBlockFileHandler,
+    BuildingBlockFilterHeuristics,
+    BuildingBlockFilterMatchRxn,
+    ReactionTemplateFileHandler,
+)
 from synnet.utils.data_utils import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")

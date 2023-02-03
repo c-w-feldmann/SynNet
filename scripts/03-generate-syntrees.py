@@ -2,7 +2,9 @@
 """
 import json
 import logging
+from functools import partial
 from pathlib import Path
+
 import numpy as np
 from rdkit import RDLogger
 
@@ -13,11 +15,11 @@ from synnet.data_generation.preprocessing import (
 )
 from synnet.data_generation.syntrees import SynTreeGenerator, SynTreeGeneratorPostProc
 from synnet.utils.data_utils import ReactionSet
-from functools import partial
 
 logger = logging.getLogger(__name__)
-import os
 import multiprocessing as mp
+import os
+
 RDLogger.DisableLog("rdApp.*")
 
 
@@ -100,13 +102,13 @@ if __name__ == "__main__":
     logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
     stgen_kwargs = {"max_depth": args.max_actions, "min_actions": args.min_actions}
 
-    def stgen_with_fresh_seed(dummy,**stgen_kwargs):
+    def stgen_with_fresh_seed(dummy, **stgen_kwargs):
         stgen.rng = np.random.default_rng()
         return stgen.generate_safe(max_depth=args.max_actions, min_actions=args.min_actions)
 
-    func = partial(stgen_with_fresh_seed,stgen_kwargs=stgen_kwargs)
+    func = partial(stgen_with_fresh_seed, stgen_kwargs=stgen_kwargs)
     with mp.Pool(args.ncpu) as pool:
-        results = pool.map(func,range(args.number_syntrees))
+        results = pool.map(func, range(args.number_syntrees))
     # results = chunked_parallel(range(args.number_syntrees),func,max_cpu=args.ncpu,verbose=True)
 
     syntrees, exit_codes = SynTreeGeneratorPostProc.parse_generate_safe(results)
@@ -117,7 +119,7 @@ if __name__ == "__main__":
     summary_file = Path(args.output_file).parent / "results-summary.json"
     summary_file.parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Writing summary to {summary_file} .")
-    summary = {"exit_codes":exit_codes,"args": vars(args), "stgen_kwargs": stgen_kwargs}
+    summary = {"exit_codes": exit_codes, "args": vars(args), "stgen_kwargs": stgen_kwargs}
     summary_file.write_text(json.dumps(exit_codes, indent=2))
 
     # Save synthetic trees on disk
