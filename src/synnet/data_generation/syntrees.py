@@ -11,7 +11,7 @@ from tqdm import tqdm
 from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
-from src.synnet.encoding.drfp import DrfpEncoder
+from synnet.encoding.drfp import DrfpEncoder
 
 from synnet.data_generation.exceptions import (
     MaxNumberOfActionsError,
@@ -385,6 +385,7 @@ def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None
 # TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
 
 from abc import ABC, abstractmethod
+import json
 
 
 class Encoder(ABC):
@@ -393,7 +394,7 @@ class Encoder(ABC):
         ...
 
     def __repr__(self) -> str:
-        return f"'{self.__class__.__name__}': {self.__dict__}"
+        return json.dumps({self.__class__.__name__: self.__dict__})
 
     @property
     def args(self) -> dict:
