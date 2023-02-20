@@ -1,6 +1,5 @@
 import logging
 import math
-from dataclasses import asdict, dataclass
 from typing import Callable, Optional, Union
 
 import numpy as np
@@ -11,13 +10,9 @@ from torch import nn
 from tqdm import tqdm
 
 import wandb
-
-logger = logging.getLogger(__name__)
 from synnet.diffusion.utils import BetaSchedules, extract
 
-# TODO: change MLP to nn.Module
-# TODO: do proper positional encoding, i.e. append to (x,y) instead of superpositioning
-# See: https://github.com/jbergq/simple-diffusion-model
+logger = logging.getLogger(__name__)
 
 
 class Linear(nn.Module):
@@ -73,6 +68,7 @@ class MLP(nn.Module):
     ) -> None:
         super().__init__()
         # self.save_hyperparameters(ignore=["positional_encoder"]) # INFO: only for pl        self.automatic_optimization = False
+
         if positional_encoder_kwargs is not None:
             self.positional_encoder = PositionalEncoder(**positional_encoder_kwargs)
         else:
@@ -82,7 +78,6 @@ class MLP(nn.Module):
             if num_hidden_layers is None:
                 raise ValueError(f"Must specify number of hidden layers when `hidden_size` is int")
             _hidden_sizes: tuple[int] = (hidden_size,) * num_hidden_layers
-            print(_hidden_sizes)
         else:
             _hidden_sizes = hidden_size
 
@@ -120,9 +115,32 @@ class MLP(nn.Module):
             raise ValueError(
                 f"Positional encoder {self.positional_encoder} provided, but no timesteps provided."
             )
-
+        logger.debug(f"Forward pass on x: {x.shape=}")
         if self.positional_encoder is not None:
-            x = self.positional_encoder.forward_with_x(x, t)
+            t_emb = self.positional_encoder.forward(t)
+            logger.debug(f"Forward pass on t_emb: {t_emb.shape=}")
+            mode = self.positional_encoder.kwargs["mode"]
+            denoise = self.positional_encoder.kwargs["denoise"]
+            logger.debug(f"PE {mode=}, {denoise=}")
+            if denoise == "xy":
+                if mode == "add":
+                    x = x + t_emb
+                elif mode == "mul":
+                    x = x * t_emb
+                elif mode == "cat":
+                    # INFO: embarrassing design, we always pass in (x,y) but we had set the input dim to be (x,y) + emb_t
+                    x = torch.cat((x, t_emb), axis=1)
+            elif denoise == "y":
+                bs = t_emb.shape[0]
+                dim_x = self.positional_encoder.kwargs["dim_x"]
+                if mode == "add":
+                    t_emb = torch.concat((torch.zeros((bs, dim_x)), t_emb), axis=1)
+                    x = x + t_emb
+                if mode == "mul":
+                    t_emb = torch.concat((torch.ones((bs, dim_x)), t_emb), axis=1)
+                    x = x * t_emb
+                if mode == "cat":
+                    x = torch.cat((x, t_emb), axis=1)
         return self.layers(x)
 
     # region LightningModule
@@ -195,8 +213,16 @@ class PositionalEncoder(nn.Module):
         dropout: float = 0.0,
         max_timesteps: int = 1000,  # "max_len"
         n=10000.0,  # arbitrary factor, same as in AIAYN
+        **kwargs,
     ):
         super().__init__()
+        self.kwargs = kwargs | {
+            "d_model": d_model,
+            "dropout": dropout,
+            "max_timesteps": max_timesteps,
+            "n": n,
+        }
+
         self._with_dropout = dropout > 0.0
         self.dropout = nn.Dropout(p=dropout)
 
@@ -216,7 +242,7 @@ class PositionalEncoder(nn.Module):
             x: Optional: Tensor, shape [batch_size, embedding_dim]
         """
         logger.debug(f".forward(): {t.shape=}")
-        t_emb = self.pe[t, :]
+        t_emb = self.pe[t, :] * 0.2
         return self.dropout(t_emb) if self._with_dropout else t_emb
 
     def forward_with_x(self, x: torch.Tensor, t: torch.Tensor):
@@ -227,19 +253,20 @@ class PositionalEncoder(nn.Module):
 class GaussionDiffusion(pl.LightningModule):
     def __init__(
         self,
-        model: nn.Module,  # diffusion model eps_theta(x,t)
         *,
+        model: Optional[nn.Module] = None,  # diffusion model eps_theta(x,t)
         beta_schedule: str = "linear",
+        denoise: str,
         loss: str = "mse",
         timesteps: int = 1000,
         learning_rate: float = 1e-3,
         **kwargs: dict,
     ):
         super().__init__()
-        self.save_hyperparameters(ignore=["model", "beta_schedules"])
+        self.save_hyperparameters(ignore=["model"])
 
         # Model to predict noise
-        self.model = model
+        self.model = MLP(12288 + 256, 256, 3, num_hidden_layers=1)
 
         # Get beta schedule
         betas = BetaSchedules(schedule=beta_schedule)(timesteps=timesteps)
@@ -308,27 +335,43 @@ class GaussionDiffusion(pl.LightningModule):
         noise: Optional[torch.Tensor] = None,
         **kwargs,
     ):
+        denoise = self.hparams["denoise"]
         if noise is None:
+            if denoise == "xy":
+                x_start = torch.cat([kwargs["x"], kwargs["y"]], dim=1)
+            elif denoise == "y":
+                x_start = kwargs["y"]
+            logger.debug(f"Generating noise for {denoise} with shape `{x_start.shape}`")
             noise = torch.randn_like(x_start)
 
         if t is None:
             # t ~ Uniform({1,...,T})
             # Algorithm 1 line 3: sample t uniformally for every example in the batch
-            t = torch.randint(0, self.num_timesteps, (x_start.shape[0],)).long()  # (batch_size,)
+            batch_size = x_start.shape[0]
+            t = torch.randint(0, self.num_timesteps, (batch_size,)).long()
             logger.debug(f"Sampled timesteps, {t.shape=}, {t[:5]=}")
 
         # Sample x_t ~ q(x_t | x_0) = x_t(x_0, eps)
+        #   -> applies noise to data (t steps forward)
         x_noisy = self.q_sample(x0=x_start, t=t, noise=noise)
 
         # Compute epsilon_theta(x_t, t)
-        predicted_noise = self.model(x_noisy, t)
+        #   -> predict noise from data
+        # INFO: Let us always learn the noise from a (noisy) joint distribution (x,y)
+        #       model: (x,y) |-> noise
+        if denoise == "xy":
+            xy_noisy = x_noisy
+        elif denoise == "y":
+            xy_noisy = torch.cat([kwargs["x"], x_noisy], dim=1)
+
+        predicted_noise = self.model(xy_noisy, t)
 
         # Compute loss
         loss = self.loss_fct(predicted_noise, noise)
         return loss
 
     @torch.no_grad()
-    def p_sample(self, x, t):
+    def p_sample(self, x, t, **kwargs):
         """Reverse diffusion step.
         Sample x_{t-1} ~ p(x_{t-1} | x_t) (Alg. 2)"""
         # Extract consts
@@ -337,12 +380,13 @@ class GaussionDiffusion(pl.LightningModule):
         sqrt_one_minus_alphas_cumprod_t = extract(self.sqrt_one_minus_alphas_cumprod, t, x.shape)
 
         # Compute mean of model (Eq. 11)
-        predicted_noise = self.model(x, t)
+        x_t = torch.concat([kwargs["x_data"], x], dim=1)  # TODO: if denoising over y, x=y here
+        predicted_noise = self.model(x_t, t)
 
         mean_theta = sqrt_recip_alphas_t * (
             x - (betas_t * predicted_noise / sqrt_one_minus_alphas_cumprod_t)
         )
-        if t > 0:
+        if t[0] > 0:  # t is a tensor, but all elements are the same for inference
             # Sample noise
             noise = torch.randn_like(x)
             # Compute std
@@ -360,59 +404,60 @@ class GaussionDiffusion(pl.LightningModule):
         dim_y: int,
         x: Optional[torch.Tensor] = None,
         verbose: Optional[bool] = True,
+        **kwargs,
     ):
         """Reverse diffusion process."""
 
-        assert (batch_size, dim_x) == x.shape
+        # assert (batch_size, dim_x) == x.shape
 
-        if x is None:
-            # Begin from pure noise for each example in the batch
+        denoise = self.hparams["denoise"]
+        if denoise == "xy":
+            raise NotImplementedError("TODO:")
             logger.debug(f"Begin from pure noise for x,y for {batch_size} samples.")
-            xgen = torch.randn((batch_size, dim_x + dim_y))
-        else:
+        elif denoise == "y":
             # Fix x, begin from pure noise for y
             logger.debug(
                 f"Fixing x (d={dim_x}), begin from pure noise for y (d={dim_y}) for {batch_size} samples."
             )
-            xgen = torch.concat((x, torch.randn((batch_size, self.dim_y))), dim=1)
+            xgen = torch.randn((batch_size, dim_y))
         xgens = []
 
         loop = reversed(range(0, self.num_timesteps))
         if verbose:
             loop = tqdm(loop, desc="Sampling loop time step", total=self.num_timesteps)
         for t in loop:
-            xgen = self.p_sample(xgen, t)
-            xgens.append(x.cpu().numpy())
-        return xgens
+            ts = torch.ones((batch_size,)).long() * t
+            xgen = self.p_sample(xgen, ts, **kwargs)
+            xgens.append(xgen.cpu().numpy())
+        return np.asarray(xgens)
 
-    def sample(self, x, dim_y: int):
+    def sample(self, x, dim_y: int, **kwargs):
         """Reverse diffusion process."""
         batch_size, dim_x = x.shape
+        logger.debug(f"sample() {x.shape=}")
 
-        return self.p_sample_loop(shape=(batch_size, dim_x + dim_y), x=x)
+        return self.p_sample_loop(x=x, dim_x=dim_x, dim_y=dim_y, batch_size=batch_size, **kwargs)
 
     def forward(self, x, t):
         raise NotImplementedError()  # TODO: rethink design choices
 
     def training_step(self, batch, batch_idx):
-        xx, yy = batch
-        x = torch.concat((xx, yy), dim=1).to(self.device)
-        loss = self.p_lossses(
-            x,
-        )
+        logger.debug("Training step")
+        x, y = batch
+        loss = self.p_lossses(None, **{"x": x, "y": y})
         self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        xx, yy = batch
-        x = torch.concat((xx, yy), dim=1)
-        loss = self.p_lossses(x)
+        logger.debug("Validation step")
+        x, y = batch
+        loss = self.p_lossses(None, **{"x": x, "y": y})
         self.log("val_loss", loss)  # Note: do not change this name, lr scheduler monitors it
         return loss
 
     def test_step(self, batch, batch_idx):
         x, y = batch
-        loss = self.p_lossses(x)
+        loss = self.p_lossses(None, **{"x": x, "y": y})
         self.log("test_loss", loss)
         return loss
 
@@ -422,7 +467,7 @@ class GaussionDiffusion(pl.LightningModule):
         decay_rate = 0.9
         start_lr = self.hparams_initial["learning_rate"]
         min_lr = 1.0e-05
-        steps_to_decay = 1
+        steps_to_decay = 30
         min_decay_rate = min_lr / start_lr
         lr_lambda = lambda epoch: (
             np.maximum(decay_rate ** (epoch // steps_to_decay), min_decay_rate)
