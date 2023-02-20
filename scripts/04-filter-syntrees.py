@@ -83,12 +83,15 @@ if __name__ == "__main__":
         "input_file": {"metadata": syntree_collection.metadata},
         "output_file": args.output_file,
         "filter": {
-            "label": "qed + random",
+            "label": args.filter,
             "query": query,
-            "threshold": THRESHOLD,
-            "num_syntrees": len(filtered_df),
+            "qed-threshold": THRESHOLD,
+            "num_syntrees_after_filter": len(filtered_df),
         },
-        "pandas_describe": filtered_df.describe().to_dict(),
+        "statistics": {
+            "filtered_df.describe()": filtered_df.describe().to_dict(),
+            "df.describe()": df.describe().to_dict(),
+        },
     }
     summary_file = Path(args.output_file).parent / "filter-summary.json"
     summary_file.parent.mkdir(parents=True, exist_ok=True)
