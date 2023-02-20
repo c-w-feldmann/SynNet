@@ -51,16 +51,29 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-    # Load previously generated synthetic trees
-    syntree_collection = SyntheticTreeSet().load(args.input_file)
-    logger.info(f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees.")
-
-    # Filter synthetic trees
     rng = np.random.default_rng(42)
-    THRESHOLD = 0.5  # for QED filter
+    # Set threshold for QED filter
+    THRESHOLD = 0.5
 
-    df = calc_metrics_on_syntree_collection(syntree_collection)
-    df["random"] = rng.random(len(df))
+    # Load previously generated synthetic trees
+    if args.input_file.endswith("with-metrics.pkl"):
+        # Computing the metrics on >>1 million syntrees can be slow.
+        # If this is done before, we can load the df directly.
+        import pandas as pd
+
+        df = pd.read_pickle(args.input_file)
+        logger.info(f"Successfully loaded '{args.input_file}' with {len(df)} syntrees.")
+        syntree_collection = SyntheticTreeSet(df["syntrees"].values.tolist())
+        syntree_collection.from_file = args.input_file
+    else:
+        syntree_collection = SyntheticTreeSet().load(args.input_file)
+        logger.info(
+            f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees."
+        )
+
+        # Calculate metrics
+        df = calc_metrics_on_syntree_collection(syntree_collection)
+        df["random"] = rng.random(len(df))
 
     query = FILTERS[args.filter]
     logger.info(f"Filtering syntrees with query: {query}")
