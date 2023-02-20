@@ -14,8 +14,15 @@ import synnet
 from synnet import RUNNING_ON_HPC
 from synnet.models.common import _compute_class_weights_from_dataloader, init_save_dir
 from synnet.models.mlp import MLP
-from synnet.utils.data import (get_dataloaders, get_dataset, get_datasets_act, get_datasets_rt1,
-                               get_datasets_rt2, get_datasets_rxn, get_splits)
+from synnet.utils.data import (
+    get_dataloaders,
+    get_dataset,
+    get_datasets_act,
+    get_datasets_rt1,
+    get_datasets_rt2,
+    get_datasets_rxn,
+    get_splits,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +93,7 @@ def get_args():
     parser.add_argument("--learning_rate", default=3e-05, type=float)
     parser.add_argument("--loss", default="cosine_distance", type=str)
     parser.add_argument("--valid_loss", default="cosine_distance", type=str)
-    parser.add_argument("--val_freq", default=10, type=int)
+    parser.add_argument("--val_freq", default=1, type=int)
     parser.add_argument("--with_class_weights", default=False, action="store_true")
 
     return parser.parse_args()
@@ -98,7 +105,7 @@ def train():
     # Set up logging dir
     save_dir = init_save_dir(
         kwargs["result_dir"],
-        suffix=kwargs.get("group", "") + ("debug" if kwargs["debug"] else ""),
+        suffix=kwargs.get("group", "") + ("_debug" if kwargs["debug"] else ""),
     )
     kwargs["save_dir"] = str(save_dir)
 
