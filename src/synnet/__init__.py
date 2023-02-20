@@ -1,12 +1,13 @@
+import copy
 import logging
 import os
-from typing import Optional
-from argparse import Namespace
 import sys
-import yaml
 import warnings
+from argparse import Namespace
 from pathlib import Path
-import copy
+from typing import Optional
+
+import yaml
 
 RUNNING_ON_HPC: bool = "SLURM_JOB_ID" in os.environ
 
