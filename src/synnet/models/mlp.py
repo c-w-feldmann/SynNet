@@ -35,7 +35,6 @@ class MLP(pl.LightningModule):
         optimizer: str,
         learning_rate: float,
         val_freq: int,
-        ncpu: Optional[int] = None,
         molembedder: Optional[MolEmbedder] = None,  # for knn-accuracy
         class_weights: Optional[np.ndarray] = None,
         **kwargs,
@@ -58,13 +57,12 @@ class MLP(pl.LightningModule):
         self.valid_loss = valid_loss
         self.optimizer = optimizer
         self.learning_rate = learning_rate
-        self.ncpu = ncpu  # unused
         self.val_freq = val_freq
         self.molembedder = molembedder
         self.class_weights = class_weights
 
         # Create modules
-        modules = []
+        modules = nn.ModuleList()
 
         # Input layer
         modules.append(nn.Linear(input_dim, hidden_dim))

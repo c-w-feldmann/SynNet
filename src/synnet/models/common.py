@@ -3,7 +3,7 @@
 
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import torch
@@ -17,62 +17,17 @@ from synnet.MolEmbedder import MolEmbedder
 logger = logging.getLogger(__file__)
 
 
-def init_save_dir(path: str, suffix: str = "") -> Path:
+def init_save_dir(root_log_dir: str, suffix: Optional[str] = None) -> Path:
     """Creates folder with timestamp: `$path/<timestamp>$suffix`."""
     from datetime import datetime
 
-    now = datetime.now().strftime("%Y_%m_%d-%H%M%S")
-    save_dir = Path(path) / (now + suffix)
+    now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    suffix = f"_{suffix}" if suffix else ""
+    log_dir = Path(root_log_dir) / (now + suffix)
 
-    save_dir.mkdir(exist_ok=True, parents=True)
-    return save_dir
-
-
-def load_config_file(file: str) -> dict[str, Union[str, int]]:
-    """Load a `*.yaml`-config file."""
-    file = Path(file)
-    if not file.suffix == ".yaml":
-        raise NotImplementedError(f"Can only read config from yaml file, not {file}.")
-    with open(file, "r") as f:
-        config = yaml.safe_load(f)
-    return config
-
-
-def xy_to_dataloader(
-    X_file: str,
-    y_file: str,
-    task: str,
-    n: Union[int, float] = 1.0,
-    **kwargs,
-):
-    """Loads featurized X,y `*.npz`-data into a `DataLoader`"""
-    X = sparse.load_npz(X_file)
-    y = sparse.load_npz(y_file)
-    # Filer?
-    if isinstance(n, int):
-        n = min(n, X.shape[0])  # ensure n does not exceed size of dataset
-        X = X[:n]
-        y = y[:n]
-    elif isinstance(n, float) and n < 1.0:
-        xn = X.shape[0] * n
-        yn = X.shape[0] * n
-        X = X[:xn]
-        y = y[:yn]
-    else:
-        pass  #
-    X = np.atleast_2d(np.asarray(X.todense()))
-    y = (
-        np.atleast_2d(np.asarray(y.todense()))
-        if task == "regression"
-        else np.asarray(y.todense()).squeeze()
-    )
-    dataset = torch.utils.data.TensorDataset(
-        torch.Tensor(X),
-        torch.Tensor(y),
-    )
-    logger.info(f"Loaded {X_file}, {X.shape=}")
-    logger.info(f"Loaded {y_file}, {y.shape=}")
-    return torch.utils.data.DataLoader(dataset, **kwargs)
+    log_dir.mkdir(exist_ok=True, parents=True)
+    logger.debug(f"Created folder `{log_dir}`")
+    return log_dir
 
 
 def _compute_class_weights_from_dataloader(dataloader, as_tensor: bool = False):
