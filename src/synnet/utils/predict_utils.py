@@ -14,7 +14,7 @@ from sklearn.neighbors import BallTree
 from synnet.encoding.distances import cosine_distance, tanimoto_similarity
 from synnet.encoding.fingerprints import fp_embedding
 from synnet.encoding.utils import one_hot_encoder
-from synnet.utils.data_utils import Reaction, SyntheticTree
+from synnet.utils.datastructures import Reaction, SyntheticTree
 
 # create a random seed for NumPy
 np.random.seed(6)

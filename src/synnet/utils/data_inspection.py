@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.datastructures import SyntheticTree, SyntheticTreeSet
 
 
 @functools.lru_cache(maxsize=10)

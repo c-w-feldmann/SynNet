@@ -11,7 +11,7 @@ from synnet.data_generation.preprocessing import (
     BuildingBlockFilterMatchRxn,
     ReactionTemplateFileHandler,
 )
-from synnet.utils.data_utils import ReactionSet
+from synnet.utils.datastructures import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__file__)

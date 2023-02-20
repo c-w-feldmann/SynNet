@@ -3,7 +3,7 @@ import logging
 
 import pytest
 
-from synnet.utils.data_utils import SyntheticTree
+from synnet.utils.datastructures import SyntheticTree
 
 logger = logging.getLogger(__name__)
 

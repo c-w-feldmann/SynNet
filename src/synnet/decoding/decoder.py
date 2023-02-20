@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.neighbors import BallTree
 
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.datastructures import SyntheticTree, SyntheticTreeSet
 
 
 class HelperDataloader:

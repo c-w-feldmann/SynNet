@@ -9,7 +9,7 @@ import numpy as np
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
-from synnet.utils.data_utils import SyntheticTreeSet
+from synnet.utils.datastructures import SyntheticTreeSet
 from synnet.utils.filters import FILTERS, calc_metrics_on_syntree_collection
 
 logger = logging.getLogger(__name__)

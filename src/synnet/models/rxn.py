@@ -14,7 +14,7 @@ import synnet
 from synnet import RUNNING_ON_HPC
 from synnet.models.common import _compute_class_weights_from_dataloader, init_save_dir
 from synnet.models.mlp import MLP
-from synnet.utils.data import (
+from synnet.data.utils import (
     get_dataloaders,
     get_dataset,
     get_datasets_act,

@@ -14,7 +14,7 @@ from synnet.data_generation.preprocessing import (
     ReactionTemplateFileHandler,
 )
 from synnet.data_generation.syntrees import SynTreeGenerator, SynTreeGeneratorPostProc
-from synnet.utils.data_utils import ReactionSet
+from synnet.utils.datastructures import ReactionSet
 
 logger = logging.getLogger(__name__)
 import multiprocessing as mp

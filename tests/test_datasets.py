@@ -5,7 +5,7 @@ import numpy
 import pytest
 
 from synnet.datasets import SynTreeChopper
-from synnet.utils.data_utils import SyntheticTree
+from synnet.utils.datastructures import SyntheticTree
 
 
 def syntree_from_json(file):

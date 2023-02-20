@@ -8,7 +8,7 @@ from rdkit.Chem import rdMolDescriptors
 from tdc import Oracle
 
 from synnet.config import MAX_PROCESSES
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.datastructures import SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
 
 logger = logging.getLogger()

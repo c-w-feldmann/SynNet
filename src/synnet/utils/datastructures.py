@@ -1,5 +1,5 @@
 """
-Here we define the following classes for working with synthetic tree data:
+Define the following classes for working with synthetic tree data:
 * `Reaction`
 * `ReactionSet`
 * `NodeChemical`
@@ -697,7 +697,9 @@ class SyntheticTreeSet:
 
     def __init__(self, sts: Optional[list[SyntheticTree]] = None, from_file: Optional[str] = None):
         self.sts = sts if sts is not None else []
-        self.from_file = str(Path(from_file).resolve()) if from_file is not None else None
+        self.from_file = (
+            str(Path(from_file).resolve()) if from_file is not None else None
+        )  # Note: use .load() to load from file.
 
     def __repr__(self) -> str:
         return f"SyntheticTreeSet ({len(self.sts)} syntrees.)"
@@ -720,7 +722,7 @@ class SyntheticTreeSet:
     @classmethod
     def load(cls, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
-        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file `{file}`"
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
@@ -744,8 +746,8 @@ class SyntheticTreeSet:
         with gzip.open(file, "wt") as f:
             f.write(json.dumps(out))
 
-    def split_by_depth(self) -> dict[int, list[SyntheticTree]]:
-        """Splits syntrees by depths and returns a copy."""
+    def split_by_num_actions(self) -> dict[int, list[SyntheticTree]]:
+        """Splits syntrees by number of actions and returns a dict."""
         depths = sorted(list({st.depth for st in self}))
         out = {int(depth): [] for depth in depths}  # TODO: Think of a better variable name
         for st in self:

@@ -15,7 +15,7 @@ from synnet.decoding.decoder import HelperDataloader, SynTreeDecoder, SynTreeDec
 from synnet.encoding.distances import cosine_distance, tanimoto_similarity
 from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
-from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
+from synnet.utils.datastructures import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
 
 logger = logging.getLogger(__file__)

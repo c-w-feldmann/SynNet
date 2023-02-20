@@ -21,7 +21,7 @@ from synnet.data_generation.exceptions import (
     NoReactionAvailableError,
     NoReactionPossibleError,
 )
-from synnet.utils.data_utils import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
+from synnet.utils.datastructures import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
 
 
 class SynTreeGenerator:

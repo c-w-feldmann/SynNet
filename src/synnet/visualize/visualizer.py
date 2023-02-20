@@ -6,7 +6,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
-from synnet.utils.data_utils import NodeChemical, SyntheticTree
+from synnet.utils.datastructures import NodeChemical, SyntheticTree
 from synnet.visualize.drawers import MolDrawer
 
 logger = logging.getLogger(__file__)

@@ -12,7 +12,7 @@ import pandas as pd
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
-from synnet.utils.data_utils import SyntheticTreeSet
+from synnet.utils.datastructures import SyntheticTreeSet
 
 logger = logging.getLogger(__file__)
 

@@ -11,7 +11,7 @@ from rdkit.Chem import PandasTools, rdMolDescriptors
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
-from synnet.utils.data_utils import Reaction
+from synnet.utils.datastructures import Reaction
 from synnet.utils.parallel import chunked_parallel
 
 logger = logging.getLogger()
