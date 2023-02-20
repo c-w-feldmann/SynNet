@@ -22,6 +22,7 @@ FILTERS = {
     "qed + random": "`random` < (`qed` / @THRESHOLD)",
     "qed + small molecules": "(`qed` > @THRESHOLD) & (`NumHeavyAtoms` <= 40) & (`NumRotatableBonds` <= 16) & (`NumAmideBonds` <= 5)",
     "qed + random + small molecules": "(`random` < (`qed` / @THRESHOLD)) & (`NumHeavyAtoms` <= 40) & (`NumRotatableBonds` <= 16) & (`NumAmideBonds` <= 5)",
+    "molw_le_300": "`ExactMolWt` <= 300",
 }
 
 FILTER_LABELS = list(FILTERS.keys())
