@@ -1,6 +1,7 @@
 """Reaction fingerprints with RDKit."""
 
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from typing import Callable, Union
 
 import numpy as np
@@ -53,7 +54,12 @@ class RdkitRxnFPConfig:
 
 
 class RXNFingerprintEncoder(Encoder):
-    def __init__(self, mode: str, params: dict = RdkitRxnFPConfig().params) -> None:
+    def __init__(
+        self,
+        mode: str = "structural",
+        params: dict = RdkitRxnFPConfig().params,
+        rxn_map: dict[int, str] = None,  # to map int to reaction smiles
+    ) -> None:
         super().__init__()
         # Input validation
         valid_modes = ["difference", "structural"]
@@ -65,11 +71,16 @@ class RXNFingerprintEncoder(Encoder):
         if mode == "structural":
             self._fct = CreateStructuralFingerprintForReaction
         elif mode == "difference":
+            # NOTE: Difference fps may not be in [0, 1], so we default to structural fps
             self._fct = CreateDifferenceFingerprintForReaction
         # Store params and get ReactionFingerprintParams
         self.params = params
         self._rdkitparams = RdkitRxnFPConfig(**params).get_config()
 
+        # Reaction map (helper for creating dataset)
+        self.rxn_map = rxn_map
+
+    @lru_cache(maxsize=128)
     def _from_string(self, input: str) -> ChemicalReaction:
         """Convert a reaction smiles/smirks/smarts to a rdkit ChemicalReaction object"""
         return Chem.ReactionFromSmarts(input)
@@ -81,8 +92,13 @@ class RXNFingerprintEncoder(Encoder):
 
     def encode(self, rxn: Union[ChemicalReaction, str]) -> np.ndarray:
         """Encode a reaction"""
-        if isinstance(input, str):
+        if isinstance(rxn, str):
             rxn = self._from_string(rxn)
+        if isinstance(rxn, int):
+            # We are creating a dataset.
+            # For legacy reasons, we only have access to the reaction id in the syntree,
+            # not the reaction smiles.
+            rxn = self._from_string(self.rxn_map[rxn])
 
         # Compute fingerprint
         bv = self._encode_to_bv(rxn)
