@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy
 import pytest
 
-from synnet.datasets import SynTreeChopper
+from synnet.data.datasets import SynTreeChopper
 from synnet.utils.datastructures import SyntheticTree
 
 
