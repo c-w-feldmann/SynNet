@@ -11,8 +11,6 @@ from tqdm import tqdm
 from synnet.config import MAX_PROCESSES
 
 logger = logging.getLogger(__name__)
-from synnet.encoding.drfp import DrfpEncoder
-
 from synnet.data_generation.exceptions import (
     MaxNumberOfActionsError,
     NoBiReactionAvailableError,
@@ -21,6 +19,7 @@ from synnet.data_generation.exceptions import (
     NoReactionAvailableError,
     NoReactionPossibleError,
 )
+from synnet.encoding.drfp import DrfpEncoder
 from synnet.utils.datastructures import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
 
 
@@ -384,8 +383,8 @@ def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None
 # TODO: Move all these encoders to "from syn_net.encoding/"
 # TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
 
-from abc import ABC, abstractmethod
 import json
+from abc import ABC, abstractmethod
 
 
 class Encoder(ABC):
@@ -394,7 +393,8 @@ class Encoder(ABC):
         ...
 
     def __repr__(self) -> str:
-        return json.dumps({self.__class__.__name__: self.__dict__})
+        kwargs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        return json.dumps({self.__class__.__name__: kwargs})
 
     @property
     def args(self) -> dict:
