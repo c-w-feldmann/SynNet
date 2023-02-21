@@ -12,8 +12,6 @@ from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
 import synnet
 from synnet import RUNNING_ON_HPC
-from synnet.models.common import _compute_class_weights_from_dataloader, init_save_dir
-from synnet.models.mlp import MLP
 from synnet.data.utils import (
     get_dataloaders,
     get_dataset,
@@ -23,6 +21,8 @@ from synnet.data.utils import (
     get_datasets_rxn,
     get_splits,
 )
+from synnet.models.common import _compute_class_weights_from_dataloader, init_save_dir
+from synnet.models.mlp import MLP
 
 logger = logging.getLogger(__name__)
 
@@ -73,16 +73,14 @@ def get_args():
     parser.add_argument(
         "--data", default="data-st/final/datasets/syntrees_iclr_like_dev.json.gz", type=str
     )
-    ## state
+    ## state & rt1
     parser.add_argument("--embedding_state_nbits", default=4096, type=int)
     parser.add_argument("--embedding_state_radius", default=2, type=int)
-    ## rt1
-    parser.add_argument("--embedding_rct_nbits", default=256, type=int)
-    parser.add_argument("--embedding_rct_radius", default=2, type=int)
     ## rxn
-    parser.add_argument("--embedding_rxn", default="onehot", type=str)
+    parser.add_argument(
+        "--embedding_rxn", default="onehot", type=str, choices=["onehot", "rdkitfp"]
+    )
     parser.add_argument("--embedding_rxn_nbits", default=256, type=int)
-    parser.add_argument("--embedding_rxn_radius", default=2, type=int)
 
     # parameters
     parser.add_argument("--task", default="classification", type=str)
