@@ -171,6 +171,7 @@ def train():
             monitor="val_loss",
             patience=kwargs["early_stopping_patience"],
         ),
+        "lrmonitor": pl.callbacks.LearningRateMonitor(logging_interval="step"),
     }
     if RUNNING_ON_HPC:
         callbacks.pop("tqdm")  # dont spam the logs
