@@ -133,6 +133,7 @@ class MLP(pl.LightningModule):
             accuracy = (y_hat == y).sum() / len(y)
             loss = 1 - accuracy
         elif self.valid_loss == "nn_accuracy":
+            # NOTE: Deprecated, use `faiss-knn` instead.
             # NOTE: Very slow!
             # Performing the knn-search can easily take a couple of minutes,
             # even for small datasets.
@@ -142,6 +143,18 @@ class MLP(pl.LightningModule):
             y_hat = nn_search_list(y_hat.detach().cpu().numpy(), kdtree)
 
             accuracy = (y_hat == y).sum() / len(y)
+            loss = 1 - accuracy
+        elif self.valid_loss == "faiss-knn":
+            index = self.molembedder.index
+            device = index.GetDevice() if hasattr(index, "GetDevice") else "cpu"
+            k = 1
+            # Normalize query vectors
+            y_normalized = y / torch.linalg.norm(y.to(float), dim=1, keepdim=True)
+            ypred_normalized = y_hat / torch.linalg.norm(y_hat.to(float), dim=1, keepdim=True)
+            # kNN search
+            _, ind_y = index.search(y_normalized.to(device), k)
+            _, ind_ypred = index.search(ypred_normalized.to(device), k)
+            accuracy = (ind_y == ind_ypred).sum() / len(y)
             loss = 1 - accuracy
         elif self.valid_loss == "mse":
             loss = F.mse_loss(y_hat, y)
