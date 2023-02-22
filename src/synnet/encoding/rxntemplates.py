@@ -59,6 +59,7 @@ class RXNFingerprintEncoder(Encoder):
         mode: str = "structural",
         params: dict = RdkitRxnFPConfig().params,
         rxn_map: dict[int, str] = None,  # to map int to reaction smiles
+        map_to_zero_one: bool = True,
     ) -> None:
         super().__init__()
         # Input validation
@@ -79,6 +80,9 @@ class RXNFingerprintEncoder(Encoder):
 
         # Reaction map (helper for creating dataset)
         self.rxn_map = rxn_map
+
+        # Whether to map to [0, 1] (only applies to difference fps)
+        self.map_to_zero_one = map_to_zero_one
 
     @lru_cache(maxsize=128)
     def _from_string(self, input: str) -> ChemicalReaction:
@@ -107,7 +111,11 @@ class RXNFingerprintEncoder(Encoder):
         fp = np.zeros(0, dtype=int)
         Chem.DataStructs.ConvertToNumpyArray(bv, fp)
 
-        return fp
+        if self.mode == "difference" and self.map_to_zero_one:
+            # Map to [0, 1] and avoid division by zero
+            fp = (fp - fp.min()) / np.maximum(1, (fp.max() - fp.min()))
+
+        return fp.astype(np.float32)
 
     def encode_batch(self, inputs: list[ChemicalReaction, str]) -> np.ndarray:
         """Encode a batch of reactions"""
