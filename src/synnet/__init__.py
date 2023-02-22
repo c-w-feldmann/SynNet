@@ -68,6 +68,7 @@ def from_config(args: Namespace, sys_args: Optional[Namespace] = None):
     user_keys = [
         k for k in sys_args if k.startswith("-") and not (k == "--config" or k == "--show-config")
     ]  # not very robust
+    user_keys = [k.split("=")[0] for k in user_keys]  # wandb sweeps calls with --key=value
 
     # Update kwargs
     for _k in user_keys:
