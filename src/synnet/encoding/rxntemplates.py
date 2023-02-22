@@ -33,7 +33,7 @@ class RdkitRxnFPConfig:
     nonAgentWeight: int = 10
     agentWeight: int = 1
     fpSize: int = 2048
-    fpType: str = "AtomPairFP"
+    fpType: str = "MorganFP"
 
     # Post init, check that fptype is valid
     def __post_init__(self):
