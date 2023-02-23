@@ -190,7 +190,7 @@ def get_datasets_rt2(
     # Model specific featurizers
     featurizer_state = MorganFingerprintEncoder(r_state, dim_state)
     featurizer_rct = MorganFingerprintEncoder(r_rct, dim_rct)
-    if kwargs["embedding_rxn"] == "onehot":  # => INOF: must 1-hot encode here
+    if kwargs["embedding_rxn"] == "onehot":  # => INFO: must 1-hot encode here
         featurizer_rxn = OneHotEncoder(NUM_RXN_TEMPLATES)
     elif kwargs["embedding_rxn"] == "rdkit-fp-TODO:":
         raise NotImplementedError()
