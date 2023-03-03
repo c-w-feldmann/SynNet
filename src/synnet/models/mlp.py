@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class MLP(pl.LightningModule):
     TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
-    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
+    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy faiss-knn".split()
     OPTIMIZERS = "sgd adam".lower().split()
 
     def __init__(
@@ -146,12 +146,14 @@ class MLP(pl.LightningModule):
             loss = 1 - accuracy
         elif self.valid_loss == "faiss-knn":
             index = self.molembedder.index
-            device = index.GetDevice() if hasattr(index, "GetDevice") else "cpu"
-            k = 1
+            device = index.getDevice() if hasattr(index, "getDevice") else "cpu"
+            import faiss.contrib.torch_utils  # https://github.com/facebookresearch/faiss/issues/561
+
             # Normalize query vectors
-            y_normalized = y / torch.linalg.norm(y.to(float), dim=1, keepdim=True)
-            ypred_normalized = y_hat / torch.linalg.norm(y_hat.to(float), dim=1, keepdim=True)
+            y_normalized = y / torch.linalg.norm(y, dim=1, keepdim=True)
+            ypred_normalized = y_hat / torch.linalg.norm(y_hat, dim=1, keepdim=True)
             # kNN search
+            k = 1
             _, ind_y = index.search(y_normalized.to(device), k)
             _, ind_ypred = index.search(ypred_normalized.to(device), k)
             accuracy = (ind_y == ind_ypred).sum() / len(y)
