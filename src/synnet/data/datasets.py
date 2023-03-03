@@ -1,11 +1,16 @@
+import enum
 import logging
+import os
+import warnings
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 
 import numpy as np
 from torch.utils.data.dataset import Dataset
 
 from synnet.config import MAX_PROCESSES
+from synnet.data_generation.syntrees import Encoder
 from synnet.utils.datastructures import SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
 
@@ -13,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 class SyntreeDataset(Dataset):
+    """torch `Dataset` for syntrees."""
+
     def __init__(
         self,
         *,
@@ -20,10 +27,9 @@ class SyntreeDataset(Dataset):
         num_workers: int = MAX_PROCESSES,
         **kwargs,
     ):
-        """Dataset for syntrees."""
         self.num_workers = num_workers
 
-        if isfile := isinstance(dataset, Path) or isinstance(dataset, str):
+        if isinstance(dataset, Path) or isinstance(dataset, str):
             self.syntrees = SyntheticTreeSet.load(dataset).sts
             logger.info(f"Loaded dataset from file: {dataset}")
         elif isinstance(dataset, Iterable):
@@ -33,7 +39,7 @@ class SyntreeDataset(Dataset):
         else:
             raise ValueError(f"dataset must be a Path, string or Iterable, not {type(dataset)}")
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.syntrees)
 
     def __getitem__(self, index) -> SyntheticTree:
@@ -43,20 +49,49 @@ class SyntreeDataset(Dataset):
         return f"SyntreeDataset ({len(self)} syntrees)"
 
 
-class SynTreeChopper:
-    @staticmethod
-    def chop_syntree(syntree: SyntheticTree) -> list[dict[str, Union[int, tuple[str, str, str]]]]:
+class Action(enum.IntEnum):  # TODO: refactor everywhere
+    """Actions that can be taken on a syntree"""
 
-        data = []
+    add = 0
+    expand = 1
+    merge = 2
+    end = 3
+
+
+@dataclass
+class SynTreeChunk:
+    """A chunk of a syntree."""
+
+    num_action: int  # = t, i.e. the number of actions taken so far
+    action: int
+    state: tuple[str, str, str]
+    reaction_id: int
+    reactant_1: str
+    reactant_2: Optional[str]
+
+
+class SynTreeChopper:
+    """Chops a syntree into chunks."""
+
+    @staticmethod
+    def chop_batch(syntrees: Iterable[SyntheticTree]) -> list[SynTreeChunk]:
+        """Chops a batch of syntrees into chunks (flattens the list of chunks)"""
+        return [chunk for syntree in syntrees for chunk in SynTreeChopper.chop(syntree)]
+
+    @staticmethod
+    def chop(syntree: SyntheticTree) -> list[SynTreeChunk]:
+        """Chops a syntree into chunks."""
+
+        chunks = []
         target_mol = syntree.root.smiles
         # Recall: We can have at most 2 sub-trees, each with a root node.
-        root_mol_1 = None
-        root_mol_2 = None
+        root_mol_active = None
+        root_mol_inactive = None
         for i, action in enumerate(syntree.actions):
-            target: int = action
-            state: tuple[str, str, str] = (target_mol, root_mol_1, root_mol_2)
+            state: tuple[str, str, str] = (target_mol, root_mol_active, root_mol_inactive)
+            _action_name = Action(action).name
 
-            if action == 3:
+            if _action_name == "end":
                 reaction_id = None
                 reactant_1 = None
                 reactant_2 = None
@@ -67,38 +102,36 @@ class SynTreeChopper:
                     syntree.reactions[i].child[1] if syntree.reactions[i].rtype == 2 else None
                 )  # TODO: refactor datastructure: avoid need for ifs
 
-            x = {
-                "num_action": i,
-                "target": target,
-                "state": state,
-                "reaction_id": reaction_id,
-                "reactant_1": reactant_1,
-                "reactant_2": reactant_2,
-            }
+            chunk = SynTreeChunk(
+                num_action=i,
+                action=action,
+                state=state,
+                reaction_id=reaction_id,
+                reactant_1=reactant_1,
+                reactant_2=reactant_2,
+            )
 
             # The current action determines the state for the next iteration.
             # Note:
             #  - There can at most two "sub"syntrees.
-            #  - There is always an "actively growing" and a "dangling" sub-syntree
-            #  - We keep track of it:
-            #    - root_mol_1 -> active branch
-            #    - root_mol_2 -> dangling branch
-            if action == 0:  # add: adds a new root_mol
-                root_mol_2 = root_mol_1  # dangling branch is the previous active branch
-                root_mol_1 = syntree.reactions[i].parent  # active branch
-            elif action == 1:  # extend
-                root_mol_2 = root_mol_2  # dangling, do not touch
-                root_mol_1 = syntree.reactions[i].parent
-            elif action == 2:  # merge
-                root_mol_2 = None  # dangling branch is merged and can be reset
-                root_mol_1 = syntree.reactions[i].parent
-            elif action == 3:  # end
+            #  - There is always an "active" and a "inactive" sub-syntree
+            #  - The "active" sub-syntree is the one actively being expanded
+            if _action_name == "add":
+                root_mol_inactive = root_mol_active  # active branch becomes inactive
+                root_mol_active = syntree.reactions[i].parent  # product = root mol of active branch
+            elif _action_name == "expand":
+                root_mol_inactive = root_mol_inactive  # inactive branch remains inactive
+                root_mol_active = syntree.reactions[i].parent  # product = root mol of active branch
+            elif _action_name == "merge":
+                root_mol_inactive = None  # inactive branch is reset
+                root_mol_active = syntree.reactions[i].parent  # merge-rxn product -> active branch
+            elif _action_name == "end":
                 pass
             else:
                 raise ValueError(f"Action must be {0,1,2,3}, not {action}")
 
-            data.append(x)
-        return data
+            chunks.append(chunk)
+        return chunks
 
 
 class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
@@ -107,29 +140,30 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
     def __init__(
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
-        featurizer: None = None,
-        reactant_1_featurizer: None = None,
+        featurizer: Encoder = None,
+        featurizer_reactant_1: Encoder = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
-        self.featurizer = featurizer
-        valid_actions = [0]  # "expand", "merge", and "end" have no reactant 1
 
-        # Extract data
-        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
-        self.data = [
-            elem
-            for sublist in chopped_syntrees
-            for elem in sublist
-            if elem["target"] in valid_actions
-        ]
+        # Featurizers
+        self.featurizer = featurizer
+
+        # Syntree chunks (filtered)
+        def _filter(chunk: SynTreeChunk) -> bool:
+            return chunk.action in [0]  # "expand", "merge", and "end" have no reactant 1
+
+        chunks = self.chop_batch(self.syntrees)
+        self.chunks = [chunk for chunk in chunks if _filter(chunk)]
 
         # Featurize data
+        # x = z_state
+        # y = z_reactant_1
         if featurizer:
             _features = chunked_parallel(
-                [elem["state"] for elem in self.data],
+                [chunk.state for chunk in self.chunks],
                 featurizer.encode_tuple,
                 max_cpu=num_workers,
                 verbose=verbose,
@@ -141,17 +175,17 @@ class RT1SyntreeDataset(SyntreeDataset, SynTreeChopper):
             )  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
 
             _targets = chunked_parallel(
-                [elem["reactant_1"] for elem in self.data],
-                reactant_1_featurizer.encode,
+                [chunk.reactant_1 for chunk in self.chunks],
+                featurizer_reactant_1.encode,
                 max_cpu=num_workers,
                 verbose=verbose,
             )
             self.targets = np.asarray(_targets).squeeze().astype("float32")  # (n, nbits')
         else:
-            raise ValueError("No featurizer provided")
+            warnings.warn(f"No featurizer provided for {self.__class__.__name__}.")
 
     def __len__(self):
-        return len(self.data)
+        return len(self.chunks)
 
     def __getitem__(self, idx: int):
         return self.features[idx], self.targets[idx]
@@ -166,47 +200,53 @@ class RXNSyntreeDataset(SyntreeDataset, SynTreeChopper):
     def __init__(
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
-        featurizer: None = None,
-        rxn_featurizer: None = None,
+        featurizer: Encoder = None,
+        featurizer_rxn: Encoder = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
+
+        # Featurizers
         self.featurizer = featurizer
-        valid_actions = [0, 1, 2]  # "end" do not have reactions
 
-        # Extract data
-        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
-        self.data = [
-            elem
-            for sublist in chopped_syntrees
-            for elem in sublist
-            if elem["target"] in valid_actions
-        ]
+        # Syntree chunks (filtered)
+        def _filter(chunk: SynTreeChunk) -> bool:
+            return chunk.action in [0, 1, 2]  # "end" do not have reactions
 
-        def _tupelize(elem: dict) -> tuple[Union[str, None]]:
-            """Helper method to create a tuple for featurization."""
-            return elem["state"] + (elem["reactant_1"],)
+        chunks = self.chop_batch(self.syntrees)
+        self.chunks = [chunk for chunk in chunks if _filter(chunk)]
 
-        _features = chunked_parallel(
-            [_tupelize(elem) for elem in self.data],
-            featurizer.encode_tuple,
-            max_cpu=num_workers,
-            verbose=verbose,
-        )
-        _features = np.asarray(_features)
-        shape = _features.shape
-        self.features = self.features = (
-            np.asarray(_features).reshape((-1, shape[-2] * shape[-1])).astype("float32")
-        )  # (num_states, 4*nbits for MorganFP OR 'nbits' for drfp)
+        # Featurize data
+        # x = z_state ⊕ z_rt1
+        # y = z_rxn
+        if featurizer:
 
-        self.targets = np.asarray(
-            [rxn_featurizer.encode(elem["reaction_id"]) for elem in self.data]
-        ).squeeze()  # (n, dimension_rxn_emb): z_rxn
+            def _tupelize(chunk: SynTreeChunk) -> tuple[Union[str, None]]:
+                """Helper method to create a tuple for featurization."""
+                return chunk.state + (chunk.reactant_1,)
+
+            _features = chunked_parallel(
+                [_tupelize(chunk) for chunk in self.chunks],
+                featurizer.encode_tuple,
+                max_cpu=num_workers,
+                verbose=verbose,
+            )
+            _features = np.asarray(_features)
+            shape = _features.shape
+            self.features = self.features = (
+                np.asarray(_features).reshape((-1, shape[-2] * shape[-1])).astype("float32")
+            )  # (num_states, 4*nbits for MorganFP OR 'nbits' for drfp)
+
+            self.targets = np.asarray(
+                [featurizer_rxn.encode(chunk.reaction_id) for chunk in self.chunks]
+            ).squeeze()  # (n, dimension_rxn_emb): z_rxn
+        else:
+            warnings.warn(f"No featurizer provided for {self.__class__.__name__}.")
 
     def __len__(self):
-        return len(self.data)
+        return len(self.chunks)
 
     def __getitem__(self, idx: int):
         return self.features[idx], self.targets[idx]
@@ -221,64 +261,69 @@ class RT2SyntreeDataset(SyntreeDataset, SynTreeChopper):
     def __init__(
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
-        featurizer: None = None,
-        rxn_featurizer: None = None,
-        reactant_2_featurizer: None = None,
+        featurizer: Encoder = None,
+        featurizer_rxn: Encoder = None,
+        featurizer_reactant_2: Encoder = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
         # Init superclass
         super().__init__(dataset=dataset, num_workers=num_workers)
-        self.featurizer = featurizer
-        valid_actions = [0, 1]  # "end" and "merge" do not have 2nd reactants
 
-        # Extract data
-        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
-        self.data = [
-            elem
-            for sublist in chopped_syntrees
-            for elem in sublist
-            if elem["target"] in valid_actions and elem["reactant_2"] is not None
-        ]  # fmt: skip                         ^ exclude unimolecular reactions
+        # Featurizers
+        self.featurizer = featurizer
+
+        # Syntree chunks (filtered)
+        def _filter(chunk: SynTreeChunk) -> bool:
+            is_valid_action = chunk.action in [0, 1]  # "end" & "merge" do not have 2nd reactants
+            has_2nd_reactant = chunk.reactant_2 is not None
+            return is_valid_action and has_2nd_reactant
+
+        chunks = self.chop_batch(self.syntrees)
+        self.chunks = [chunk for chunk in chunks if _filter(chunk)]
 
         # Featurize data
-        # x = z_target ⊕ z_state ⊕ z_rt1 ⊕ z_rxn
+        # x = z_state ⊕ z_rt1 ⊕ z_rxn
         # y = z_rt2
-        def _tupelize(elem: dict) -> tuple[Union[str, None]]:
-            """Helper method to create a tuple for featurization."""
-            return elem["state"] + (elem["reactant_1"],)
+        if featurizer:
 
-        _features_mols = chunked_parallel(
-            [_tupelize(elem) for elem in self.data],
-            featurizer.encode_tuple,
-            max_cpu=num_workers,
-            verbose=verbose,
-        )
-        _features_mols = np.asarray(_features_mols)
-        shape = _features_mols.shape
-        _features_mols = (
-            np.asarray(_features_mols).reshape((-1, shape[-2] * shape[-1])).astype("float32")
-        )  # (n, d): z_(target ⊕ state) ⊕ z_rt1
+            def _tupelize(chunk: dict) -> tuple[Union[str, None]]:
+                """Helper method to create a tuple for featurization."""
+                return chunk.state + (chunk.reactant_1,)
 
-        _features_rxn = np.asarray(
-            [rxn_featurizer.encode(elem["reaction_id"]) for elem in self.data]
-        ).squeeze()  # (n, dimension_rxn_emb): z_rxn
+            _features_mols = chunked_parallel(
+                [_tupelize(chunk) for chunk in self.chunks],
+                featurizer.encode_tuple,
+                max_cpu=num_workers,
+                verbose=verbose,
+            )
+            _features_mols = np.asarray(_features_mols)
+            shape = _features_mols.shape
+            _features_mols = (
+                np.asarray(_features_mols).reshape((-1, shape[-2] * shape[-1])).astype("float32")
+            )  # (n, d): z_(target ⊕ state) ⊕ z_rt1
 
-        self.features = np.concatenate((_features_mols, _features_rxn), axis=1,).astype(
-            "float32"
-        )  # (n, 4*nbits + dimension_rxn_emb)
+            _features_rxn = np.asarray(
+                [featurizer_rxn.encode(chunk.reaction_id) for chunk in self.chunks]
+            ).squeeze()  # (n, dimension_rxn_emb): z_rxn
 
-        # Targets
-        _targets = chunked_parallel(
-            [elem["reactant_1"] for elem in self.data],
-            reactant_2_featurizer.encode,
-            max_cpu=num_workers,
-            verbose=verbose,
-        )
-        self.targets = np.asarray(_targets).squeeze().astype("float32")  # (n, nbits')
+            self.features = np.concatenate((_features_mols, _features_rxn), axis=1,).astype(
+                "float32"
+            )  # (n, 4*nbits + dimension_rxn_emb)
+
+            # Targets
+            _targets = chunked_parallel(
+                [chunk.reactant_1 for chunk in self.chunks],
+                featurizer_reactant_2.encode,
+                max_cpu=num_workers,
+                verbose=verbose,
+            )
+            self.targets = np.asarray(_targets).squeeze().astype("float32")  # (n, nbits')
+        else:
+            warnings.warn(f"No featurizer provided for {self.__class__.__name__}.")
 
     def __len__(self):
-        return len(self.data)
+        return len(self.chunks)
 
     def __getitem__(self, idx: int):
         return self.features[idx], self.targets[idx]
@@ -293,7 +338,7 @@ class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
     def __init__(
         self,
         dataset: Union[str, Path, Iterable[SyntheticTree], SyntreeDataset],
-        featurizer: None = None,
+        featurizer: Encoder = None,
         num_workers: int = MAX_PROCESSES,
         verbose: bool = False,
     ):
@@ -303,14 +348,13 @@ class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
         self.featurizer = featurizer
 
         # Extract data
-        # For the ACT network the problem is classification.
-        chopped_syntrees = [self.chop_syntree(st) for st in self.syntrees]
-        self.data = [elem for sublist in chopped_syntrees for elem in sublist]
+        chunks = self.chop_batch(self.syntrees)
+        self.chunks = chunks
 
         # Featurize data
         if featurizer:
             _features = chunked_parallel(
-                [elem["state"] for elem in self.data],
+                [chunk.state for chunk in self.chunks],
                 featurizer.encode_tuple,
                 max_cpu=num_workers,
                 verbose=verbose,
@@ -320,15 +364,29 @@ class ActSyntreeDataset(SyntreeDataset, SynTreeChopper):
             self.features = _features.reshape((-1, shape[-2] * shape[-1])).astype(
                 "float32"
             )  # (num_states, 3*nbits for MorganFP OR 'nbits' for drfp)
+
+            # region inject one-hot-encoding of num_action
+            if os.environ.get("SYNNET_ACT_POS"):  # feature flag for amateurs
+                print("😊Injecting one-hot-encoding of num_action into features.")
+                MAX_DEPTH = max([chunk.num_action for chunk in self.chunks])
+                print(f"😊Syntrees have a maximum depth of {MAX_DEPTH}.")
+                from synnet.data_generation.syntrees import OneHotEncoder
+
+                onehot = OneHotEncoder(MAX_DEPTH)
+                _depths = np.asarray([onehot.encode(chunk.num_action - 1) for chunk in self.chunks])
+                _depths = _depths.astype("float32").squeeze()
+                self.features = np.concatenate((self.features, _depths), axis=1)
+            # endregion
+            self.targets = np.asarray([chunk.action for chunk in self.chunks]).astype("int32")
         else:
             raise ValueError("No featurizer provided")
 
     def __len__(self):
         """__len__"""
-        return len(self.data)
+        return len(self.chunks)
 
     def __getitem__(self, idx: int):
-        return self.features[idx], np.asarray(self.data[idx]["target"], dtype="int32")
+        return self.features[idx], self.targets[idx]
 
     def __repr__(self) -> str:
         return f"ActSyntreeDataset ({len(self)} datapoints)"

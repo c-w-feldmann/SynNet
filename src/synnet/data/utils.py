@@ -112,7 +112,7 @@ def get_datasets_rt1(
         _dataset = RT1SyntreeDataset(
             (st for st in data),
             featurizer=featurizer_state,
-            reactant_1_featurizer=featurizer_rct,
+            featurizer_reactant_1=featurizer_rct,
             verbose=verbose,
             num_workers=num_workers,
         )
@@ -162,7 +162,7 @@ def get_datasets_rxn(
         _dataset = RXNSyntreeDataset(
             (st for st in data),
             featurizer=featurizer_state,
-            rxn_featurizer=featurizer_rxn,
+            featurizer_rxn=featurizer_rxn,
             verbose=verbose,
             num_workers=num_workers,
         )
@@ -208,8 +208,8 @@ def get_datasets_rt2(
         _dataset = RT2SyntreeDataset(
             (st for st in data),
             featurizer=featurizer_state,
-            rxn_featurizer=featurizer_rxn,
-            reactant_2_featurizer=featurizer_rct,
+            featurizer_rxn=featurizer_rxn,
+            featurizer_reactant_2=featurizer_rct,
             verbose=verbose,
             num_workers=num_workers,
         )

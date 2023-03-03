@@ -1,4 +1,5 @@
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy
@@ -33,8 +34,8 @@ def test_chop_syntrees(syntree_file, syntree_chopped_file):
 
     assert isinstance(syntree, SyntheticTree)
 
-    chopped = SynTreeChopper.chop_syntree(syntree)
-
+    chunks = SynTreeChopper.chop(syntree)
+    chunks_json = [asdict(chunk) for chunk in chunks]
     assert syntree_file == ref_chopped["meta"]["original_file"]
 
-    numpy.testing.assert_equal(chopped, ref_chopped["data"])
+    numpy.testing.assert_equal(chunks_json, ref_chopped["data"])

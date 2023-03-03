@@ -6,7 +6,7 @@
   "data": [
     {
       "num_action": 0,
-      "target": 0,
+      "action": 0,
       "state": [
         "H",
         null,
@@ -18,7 +18,7 @@
     },
     {
       "num_action": 1,
-      "target": 0,
+      "action": 0,
       "state": [
         "H",
         "C",
@@ -30,7 +30,7 @@
     },
     {
       "num_action": 2,
-      "target": 2,
+      "action": 2,
       "state": [
         "H",
         "F",
@@ -42,7 +42,7 @@
     },
     {
       "num_action": 3,
-      "target": 1,
+      "action": 1,
       "state": [
         "H",
         "G",
@@ -54,7 +54,7 @@
     },
     {
       "num_action": 4,
-      "target": 3,
+      "action": 3,
       "state": [
         "H",
         "H",
