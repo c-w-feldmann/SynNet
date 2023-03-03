@@ -140,15 +140,24 @@ def get_datasets_rxn(
     if kwargs["embedding_rxn"] == "onehot":  # => classification problem
         featurizer_rxn = IdentityIntEncoder()
     elif kwargs["embedding_rxn"] == "rdkitfp":
+        # TODO: clean up
+        import os
+
         from synnet.data_generation.preprocessing import ReactionTemplateFileHandler
         from synnet.encoding.rxntemplates import RdkitRxnFPConfig, RXNFingerprintEncoder
 
-        tmplts = ReactionTemplateFileHandler().load("data/assets/reaction-templates/hb.txt")
+        RXN_TMPLTS_DEFAULT = "data/assets/reaction-templates/hb.txt"
+
+        tmplts = ReactionTemplateFileHandler().load(
+            os.environ.get("SYNNET_RXN_TMPLTS", RXN_TMPLTS_DEFAULT)
+        )
         rxn_map = {i: rxn for i, rxn in enumerate(tmplts)}
-        rdkit_params = RdkitRxnFPConfig(fpSize=kwargs["embedding_rxn_nbits"])
         featurizer_rxn = RXNFingerprintEncoder(
             rxn_map=rxn_map,
-            params=RdkitRxnFPConfig(fpSize=kwargs["embedding_rxn_nbits"]).params,
+            params=RdkitRxnFPConfig(
+                fpSize=kwargs["embedding_rxn_nbits"],
+                fpType=kwargs["embedding_rxn_type"],
+            ).params,
         )
 
     logger.debug(f"RXNSyntreeDataset: {featurizer_state=}, {featurizer_rxn=}")
