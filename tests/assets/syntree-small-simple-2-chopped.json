@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "original_file": "tests/assets/syntree-small-simple-2.json",
+    "created_at": "2023-01-28T17:25:24.183642"
+  },
+  "data": [
+    {
+      "num_action": 0,
+      "action": 0,
+      "state": [
+        "I",
+        null,
+        null
+      ],
+      "reaction_id": "r1",
+      "reactant_1": "A",
+      "reactant_2": "B"
+    },
+    {
+      "num_action": 1,
+      "action": 0,
+      "state": [
+        "I",
+        "C",
+        null
+      ],
+      "reaction_id": "r2",
+      "reactant_1": "D",
+      "reactant_2": null
+    },
+    {
+      "num_action": 2,
+      "action": 1,
+      "state": [
+        "I",
+        "E",
+        "C"
+      ],
+      "reaction_id": "r3",
+      "reactant_1": "E",
+      "reactant_2": "F"
+    },
+    {
+      "num_action": 3,
+      "action": 2,
+      "state": [
+        "I",
+        "G",
+        "C"
+      ],
+      "reaction_id": "r4",
+      "reactant_1": "G",
+      "reactant_2": "C"
+    },
+    {
+      "num_action": 4,
+      "action": 1,
+      "state": [
+        "I",
+        "H",
+        null
+      ],
+      "reaction_id": "r5",
+      "reactant_1": "H",
+      "reactant_2": null
+    },
+    {
+      "num_action": 5,
+      "action": 3,
+      "state": [
+        "I",
+        "I",
+        null
+      ],
+      "reaction_id": null,
+      "reactant_1": null,
+      "reactant_2": null
+    }
+  ]
+}

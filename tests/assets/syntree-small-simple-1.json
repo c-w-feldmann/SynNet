@@ -1,0 +1,139 @@
+{
+    "reactions": [
+        {
+            "rxn_id": "r1",
+            "rtype": 2,
+            "parent": "C",
+            "child": [
+                "A",
+                "B"
+            ],
+            "depth": 0.5,
+            "index": 0
+        },
+        {
+            "rxn_id": "r2",
+            "rtype": 2,
+            "parent": "F",
+            "child": [
+                "D",
+                "E"
+            ],
+            "depth": 0.5,
+            "index": 1
+        },
+        {
+            "rxn_id": "r3",
+            "rtype": 2,
+            "parent": "G",
+            "child": [
+                "F",
+                "C"
+            ],
+            "depth": 1.5,
+            "index": 2
+        },
+        {
+            "rxn_id": "r4",
+            "rtype": 1,
+            "parent": "H",
+            "child": [
+                "G"
+            ],
+            "depth": 2.5,
+            "index": 3
+        }
+    ],
+    "chemicals": [
+        {
+            "smiles": "A",
+            "parent": "r1",
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 0
+        },
+        {
+            "smiles": "B",
+            "parent": "r1",
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 1
+        },
+        {
+            "smiles": "C",
+            "parent": "r3",
+            "child": "r1",
+            "is_leaf": false,
+            "is_root": false,
+            "depth": 1,
+            "index": 2
+        },
+        {
+            "smiles": "D",
+            "parent": "r2",
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 3
+        },
+        {
+            "smiles": "E",
+            "parent": "r2",
+            "child": null,
+            "is_leaf": true,
+            "is_root": false,
+            "depth": 0,
+            "index": 4
+        },
+        {
+            "smiles": "F",
+            "parent": "r3",
+            "child": "r2",
+            "is_leaf": false,
+            "is_root": false,
+            "depth": 1,
+            "index": 5
+        },
+        {
+            "smiles": "G",
+            "parent": "r4",
+            "child": "r3",
+            "is_leaf": false,
+            "is_root": false,
+            "depth": 2.0,
+            "index": 6
+        },
+        {
+            "smiles": "H",
+            "parent": null,
+            "child": "r4",
+            "is_leaf": false,
+            "is_root": true,
+            "depth": 3.0,
+            "index": 7
+        }
+    ],
+    "root": {
+        "smiles": "H",
+        "parent": null,
+        "child": "r4",
+        "is_leaf": false,
+        "is_root": true,
+        "depth": 3.0,
+        "index": 7
+    },
+    "depth": 3.0,
+    "actions": [
+        0,
+        0,
+        2,
+        1,
+        3
+    ],
+    "rxn_id2type": null
+}

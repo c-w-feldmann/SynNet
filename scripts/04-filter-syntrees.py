@@ -4,54 +4,17 @@
 import json
 import logging
 from pathlib import Path
-from typing import Union
 
 import numpy as np
-from rdkit import Chem, RDLogger
+from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
-from synnet.utils.parallel import chunked_parallel
+from synnet.utils.datastructures import SyntheticTreeSet
+from synnet.utils.filters import FILTERS, calc_metrics_on_syntree_collection
 
 logger = logging.getLogger(__name__)
 
 RDLogger.DisableLog("rdApp.*")
-
-
-class Filter:
-    def filter(self, st: SyntheticTree, **kwargs) -> bool:
-        ...
-
-
-class ValidRootMolFilter(Filter):
-    def filter(self, st: SyntheticTree, **kwargs) -> bool:
-        return Chem.MolFromSmiles(st.root.smiles) is not None
-
-
-class OracleFilter(Filter):
-    def __init__(
-        self,
-        name: str = "qed",
-        threshold: float = 0.5,
-        rng=np.random.default_rng(42),
-    ) -> None:
-        super().__init__()
-        from tdc import Oracle
-
-        self.oracle_fct = Oracle(name=name)
-        self.threshold = threshold
-        self.rng = rng
-
-    def _qed(self, st: SyntheticTree):
-        """Filter for molecules with a high qed."""
-        return self.oracle_fct(st.root.smiles) > self.threshold
-
-    def _random(self, st: SyntheticTree):
-        """Filter molecules that fail the `_qed` filter; i.e. randomly select low qed molecules."""
-        return self.rng.random() < (self.oracle_fct(st.root.smiles) / self.threshold)
-
-    def filter(self, st: SyntheticTree) -> bool:
-        return self._qed(st) or self._random(st)
 
 
 def get_args():
@@ -69,27 +32,16 @@ def get_args():
         type=str,
         help="Output file for the filtered generated synthetic trees (*.json.gz)",
     )
-
+    parser.add_argument(
+        "--filter",
+        type=str,
+        default="qed + random",
+        choices=FILTERS.keys(),
+    )
     # Processing
     parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
-
-
-def filter_syntree(syntree: SyntheticTree) -> Union[SyntheticTree, int]:
-    """Apply filters to `syntree` and return it, if all filters are passed. Else, return error code."""
-    # Filter 1: Is root molecule valid?
-    keep_tree = valid_root_mol_filter.filter(syntree)
-    if not keep_tree:
-        return -1
-
-    # Filter 2: Is root molecule "pharmaceutically interesting?"
-    keep_tree = interesting_mol_filter.filter(syntree)
-    if not keep_tree:
-        return -2
-
-    # We passed all filters. This tree ascended to our dataset
-    return syntree
 
 
 if __name__ == "__main__":
@@ -99,49 +51,64 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
+    rng = np.random.default_rng(42)
+    # Set threshold for QED filter
+    THRESHOLD = 0.5
+
     # Load previously generated synthetic trees
-    syntree_collection = SyntheticTreeSet().load(args.input_file)
-    logger.info(f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees.")
+    if args.input_file.endswith("with-metrics.pkl"):
+        # Computing the metrics on >>1 million syntrees can be slow.
+        # If this is done before, we can load the df directly.
+        import pandas as pd
 
-    # Filter trees
-    # TODO: Move to src/synnet/data_generation/filters.py ?
-    valid_root_mol_filter = ValidRootMolFilter()
-    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng(42))
+        df = pd.read_pickle(args.input_file)
+        logger.info(f"Successfully loaded '{args.input_file}' with {len(df)} syntrees.")
+        syntree_collection = SyntheticTreeSet(df["syntrees"].values.tolist())
+        syntree_collection.from_file = args.input_file
+    else:
+        syntree_collection = SyntheticTreeSet().load(args.input_file)
+        logger.info(
+            f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees."
+        )
 
-    syntrees = [s for s in syntree_collection if s is not None]
+        # Calculate metrics
+        df = calc_metrics_on_syntree_collection(syntree_collection)
+        df["random"] = rng.random(len(df))
 
-    logger.info(f"Start filtering {len(syntrees)} syntrees.")
-
-    results = chunked_parallel(syntrees, filter_syntree, verbose=args.verbose)
-
-    logger.info("Finished decoding.")
-
-    # Handle results, most notably keep track of why we deleted the tree
-    outcomes: dict[str, int] = {
-        "invalid_root_mol": 0,
-        "not_interesting": 0,
-    }
-    syntrees_filtered = []
-    for res in results:
-        if res == -1:
-            outcomes["invalid_root_mol"] += 1
-        if res == -2:
-            outcomes["not_interesting"] += 1
-        else:
-            syntrees_filtered.append(res)
+    query = FILTERS[args.filter]
+    logger.info(f"Filtering syntrees with query: {query}")
+    filtered_df = df.query(query)
 
     logger.info(f"Successfully filtered syntrees.")
+    logger.info(
+        f"Retained {len(filtered_df)} syntrees out of {len(df)} ({len(filtered_df)/len(df)*100:.2f}%)"
+    )
 
     out_folder = Path(args.output_file).parent
     out_folder.mkdir(parents=True, exist_ok=True)
 
     # Save filtered synthetic trees on disk
-    SyntheticTreeSet(syntrees_filtered).save(args.output_file)
-    logger.info(f"Successfully saved '{args.output_file}' with {len(syntrees_filtered)} syntrees.")
+    SyntheticTreeSet(filtered_df["syntrees"].values.tolist()).save(args.output_file)
+    logger.info(f"Successfully saved '{args.output_file}' with {len(filtered_df)} syntrees.")
 
     # Save short summary file
-    summary_file = Path(args.output_file).parent / "filter-summary.txt"
+    _summary = {
+        "input_file": {"metadata": syntree_collection.metadata},
+        "output_file": args.output_file,
+        "filter": {
+            "label": args.filter,
+            "query": query,
+            "qed-threshold": THRESHOLD,
+            "num_syntrees_after_filter": len(filtered_df),
+        },
+        "statistics": {
+            "filtered_df.describe()": filtered_df.describe().to_dict(),
+            "df.describe()": df.describe().to_dict(),
+        },
+    }
+    summary_file = Path(args.output_file).parent / "filter-summary.json"
     summary_file.parent.mkdir(parents=True, exist_ok=True)
-    summary_file.write_text(json.dumps(outcomes, indent=2))
+    summary_file.write_text(json.dumps(_summary, indent=2))
+    logger.info(f"Successfully saved '{summary_file}'.")
 
     logger.info(f"Completed.")

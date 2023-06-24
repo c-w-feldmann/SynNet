@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.neighbors import BallTree
 
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.datastructures import SyntheticTree, SyntheticTreeSet
 
 
 class HelperDataloader:
@@ -108,7 +108,7 @@ class SynTreeDecoder:
         else:
             raise ValueError(f"Unable to compute state embedding. Passed {state=}")
 
-        return [np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)] # TODO: Fix 1d/2d everywhere
+        return [np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)]  # TODO: Fix 1d/2d everywhere
 
     def get_state_embedding(self, state: list[str], z_target: np.ndarray) -> np.ndarray:
         """Computes embeddings for all molecules in the input space.
@@ -177,7 +177,7 @@ class SynTreeDecoder:
         eps = 1e-6  # small constant is added to probabilities so that masked values (=0.0) are unequal to probabilites (0+eps)
         self.max_depth = max_depth  # so we can access this param in methods
         act, rt1, rxn, rt2 = self.nets.values()
-        z_target = np.squeeze(z_target) # TODO: Fix shapes
+        z_target = np.squeeze(z_target)  # TODO: Fix shapes
         syntree = SyntheticTree()
         mol_recent: Union[str, None] = None  # most-recent root mol
         i = 0
@@ -187,7 +187,7 @@ class SynTreeDecoder:
             # Current state
             state = syntree.get_state()
             z_state = self.get_state_embedding(state, z_target)  # (3d)
-            z_state = torch.Tensor(z_state[None,:])  # (1,3d)
+            z_state = torch.Tensor(z_state[None, :])  # (1,3d)
 
             # Prediction action
             p_action = act.forward(z_state)  # (1,4)

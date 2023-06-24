@@ -1,19 +1,33 @@
 {
-    // Show .git folder (See https://stackoverflow.com/a/40828248)
-    "files.exclude": {
-        "**/.git": false
-    },
-    "files.trimTrailingWhitespace": true,
-    "files.eol": "\n",
-    "files.trimFinalNewlines": true,
-    "jupyter.debugJustMyCode": false,
-    "jupyter.notebookFileRoot": "${workspaceFolder}",
-    "markdown-preview-github-styles.colorTheme": "light",
-    "python.analysis.typeCheckingMode": "off",
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "terminal.integrated.defaultProfile.linux": "zsh",
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+  // Show .git folder (See https://stackoverflow.com/a/40828248)
+  "files.exclude": {
+    "**/.git": false,
+    "**/__pycache__": true,
+    "**/.ipynb_checkpoints": true,
+    "**/.pytest_cache": true,
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.eol": "\n",
+  "files.trimFinalNewlines": true,
+  "jupyter.debugJustMyCode": false,
+  "jupyter.notebookFileRoot": "${workspaceFolder}",
+  "markdown-preview-github-styles.colorTheme": "light",
+  "python.analysis.typeCheckingMode": "off",
+  "python.testing.pytestArgs": [
+    "tests"
+  ],
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true,
+  "editor.formatOnSave": true,
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.python",
+    "editor.rulers": [
+      80,
+      100
+    ]
+  },
+  "python.formatting.provider": "black",
+  // "python.formatting.blackPath": "~/miniconda3/envs/{ENV_NAME}/bin/black",
 }

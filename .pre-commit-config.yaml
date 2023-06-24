@@ -15,6 +15,7 @@ repos:
     hooks:
       - id: black-jupyter
         language_version: python3.9
+        args: [--config, pyproject.toml]
   - repo: https://github.com/pycqa/isort
     rev: 5.11.2
     hooks:

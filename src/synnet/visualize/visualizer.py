@@ -6,7 +6,7 @@ from pathlib import Path
 
 from jinja2 import Template
 
-from synnet.utils.data_utils import NodeChemical, SyntheticTree
+from synnet.utils.datastructures import NodeChemical, SyntheticTree
 from synnet.visualize.drawers import MolDrawer
 
 logger = logging.getLogger(__file__)
@@ -22,11 +22,18 @@ digraph {
 
     // Nodes
     {% for node in nodes %}
+    {% if has_images_in_nodes %}
     {{node.id}} [
         label=""
         color="{{node.color}}"
         image="{{node.filename}}"
     ]
+    {% else %}
+    {{node.id}} [
+        label="{{node.label}}"
+        color="{{node.color}}"
+    ]
+    {% endif %}
     {% endfor %}
     // End node added manually
     nend [
@@ -135,13 +142,28 @@ class SynTreeVisualizer:
         file = Path(file).with_suffix(".png")
 
         # Plot all nodes
-        self.drawer.plot([node.smiles for node in syntree.chemicals])
+        has_images_in_nodes = self.drawer is not None
+        if has_images_in_nodes:
+            self.drawer.plot([node.smiles for node in syntree.chemicals])
+            nodes = self._get_nodes(syntree)
+        else:
+            nodes = [
+                {
+                    "color": self.get_node_color(node),
+                    "id": f"n{node.index}",
+                    "label": f"{node.smiles}",
+                }
+                for node in syntree.chemicals
+            ]
 
-        nodes = self._get_nodes(syntree)
+            class dummy:
+                tmpdir = tempfile.mkdtemp()
+
+            self.drawer = dummy
         edges = self._get_edges(syntree)
 
         template = Template(GRAPHVIZ_TMPLT)
-        text = template.render(edges=edges, nodes=nodes)
+        text = template.render(edges=edges, nodes=nodes, has_images_in_nodes=has_images_in_nodes)
 
         _, graphvizfile = tempfile.mkstemp(dir=self.drawer.tmpdir, suffix=".dot")
         Path(graphvizfile).write_text(text)

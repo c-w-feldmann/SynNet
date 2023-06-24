@@ -17,7 +17,7 @@ from synnet.data_generation.preprocessing import BuildingBlockFileHandler
 from synnet.encoding.distances import cosine_distance
 from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.MolEmbedder import MolEmbedder
-from synnet.utils.data_utils import ReactionSet
+from synnet.utils.datastructures import ReactionSet
 from synnet.utils.ga_utils import crossover, mutation
 from synnet.utils.predict_utils import fp_embedding, synthetic_tree_decoder, tanimoto_similarity
 

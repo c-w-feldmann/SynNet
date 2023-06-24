@@ -1,5 +1,5 @@
 """
-Here we define the following classes for working with synthetic tree data:
+Define the following classes for working with synthetic tree data:
 * `Reaction`
 * `ReactionSet`
 * `NodeChemical`
@@ -12,6 +12,7 @@ import gzip
 import itertools
 import json
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional, Set, Tuple, Union
 
 import datamol as dm
@@ -44,7 +45,7 @@ class Reaction:
             name: The name of the reaction for downstream analysis.
             reference: (placeholder)
         """
-        self.smirks = template.strip()  # SMARTS pattern
+        self.smirks = template.strip()
         self.name = name
         self.reference = reference
 
@@ -90,14 +91,23 @@ class Reaction:
         return out
 
     @functools.lru_cache(maxsize=20_000)
-    def get_mol(self, smi: Union[str, Chem.Mol]) -> Chem.Mol:
-        """Convert smiles to  `RDKit.Chem.Mol`."""
+    def get_mol(self, smi: Union[str, Chem.rdchem.Mol]) -> Chem.rdchem.Mol:
+        """Convert smiles to  `RDKit.Chem.rdchem.Mol`."""
         if isinstance(smi, str):
             return dm.to_mol(smi)
-        elif isinstance(smi, Chem.Mol):
+        elif isinstance(smi, Chem.rdchem.Mol):
             return smi
         else:
-            raise TypeError(f"{type(smi)} not supported, only `str` or `rdkit.Chem.Mol`")
+            raise TypeError(f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`")
+
+    def get_smiles(self, mol: Union[str, Chem.rdchem.Mol]) -> str:
+        """Convert `Chem.rdchem.Mol` to SMILES `str`."""
+        if isinstance(mol, str):
+            return mol
+        elif isinstance(mol, Chem.rdchem.Mol):
+            return dm.to_smiles(mol)
+        else:
+            raise TypeError(f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`")
 
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
@@ -121,12 +131,12 @@ class Reaction:
         image = d2d.GetDrawingText()
         return image
 
-    def is_reactant(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_reactant(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Checks if `smi` is a reactant of this reaction."""
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeReactant(mol)
 
-    def is_agent(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_agent(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Checks if `smi` is an agent of this reaction."""
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeAgent(mol)
@@ -136,13 +146,13 @@ class Reaction:
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeProduct(mol)
 
-    def is_reactant_first(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_reactant_first(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Check if `smi` is the first reactant in this reaction"""
         mol = self.get_mol(smi)
         pattern = Chem.MolFromSmarts(self.reactant_template[0])
         return mol.HasSubstructMatch(pattern)
 
-    def is_reactant_second(self, smi: Union[str, Chem.Mol]) -> bool:
+    def is_reactant_second(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
         """Check if `smi` the second reactant in this reaction"""
         mol = self.get_mol(smi)
         pattern = Chem.MolFromSmarts(self.reactant_template[1])
@@ -150,7 +160,7 @@ class Reaction:
 
     def run_reaction(
         self,
-        reactants: Tuple[Union[str, Chem.Mol, None]],
+        reactants: Tuple[Union[str, Chem.rdchem.Mol, None]],
         keep_main: bool = True,
         allow_to_fail: bool = False,
     ) -> Union[str, None]:
@@ -169,7 +179,7 @@ class Reaction:
         if not len(reactants) in (1, 2):
             raise ValueError(f"Can only run reactions with 1 or 2 reactants, not {len(reactants)}.")
 
-        # Convert all reactants to `Chem.Mol`
+        # Convert all reactants to `Chem.rdchem.Mol`
         r = tuple(self.get_mol(smiles) for smiles in reactants if smiles is not None)
 
         # Validate reaction for these reactants
@@ -211,7 +221,7 @@ class Reaction:
         uniqps = uniqps[0]
         # <<< ^ delete this line if resolved.
 
-        # Sanity check: Convert SMILES to `Chem.Mol`, then to SMILES again.
+        # Sanity check: Convert SMILES to `Chem.rdchem.Mol`, then to SMILES again.
         mol = dm.to_mol(uniqps)
         smiles = dm.to_smiles(mol, isomeric=False, allow_to_fail=False)
         if allow_to_fail and smiles is None:
@@ -236,11 +246,20 @@ class Reaction:
 
         return reactants
 
-    def set_available_reactants(self, building_blocks: list[str], verbose: bool = False):
+    def set_available_reactants(
+        self, building_blocks: list[Union[str, Chem.rdchem.Mol]], verbose: bool = False
+    ):
         """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
         """
-        self.available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
+        _available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
+        # Ensure molecules are stored as `str`
+        _avail_r1 = [self.get_smiles(mol) for mol in _available_reactants[0]]
+        if self.num_reactant == 2:
+            _avail_r2 = [self.get_smiles(mol) for mol in _available_reactants[1]]
+        self.available_reactants = (
+            (_avail_r1, _avail_r2) if self.num_reactant == 2 else (_avail_r1,)
+        )
         return self
 
     @property
@@ -367,9 +386,12 @@ class SyntheticTree:
         self.depth: float = 0
         self.actions: list[int] = []
         self.rxn_id2type: dict = None
+        self.ACTIONS: dict[int, str] = {
+            i: action for i, action in enumerate("add expand merge end".split())
+        }
 
     def __repr__(self) -> str:
-        return f"SynTree(depth={self.depth})"
+        return f"SynTree(num_actions={self.num_actions})"  # This is including the end action
 
     @classmethod
     def from_dict(cls, attrs: dict):
@@ -409,12 +431,13 @@ class SyntheticTree:
         print(self.actions)
         print("==============================================")
 
-    def get_node_index(self, smi: str) -> int:
+    def get_node_index(self, smi: str) -> Union[int, None]:
         """Return the index of the node matching the input SMILES.
 
         If the query moleucle is not in the tree, return None.
         """
-        for node in self.chemicals:
+        # Info: reversed() is a prelim fix for a bug that caused three mols in the state!
+        for node in reversed(self.chemicals):
             if smi == node.smiles:
                 return node.index
         return None
@@ -427,19 +450,30 @@ class SyntheticTree:
             state (list): A list contains all root node molecules.
         """
         state = [node.smiles for node in self.chemicals if node.is_root]
-        return state[::-1]
+        return state[::-1]  # TODO: Always return Tuple[str,Union[str,None]]
 
-    def update(self, action: int, rxn_id: int, mol1: str, mol2: str, mol_product: str):
+    def update(self, action: int, rxn_id: int, mol1: str, mol2: Optional[str], mol_product: str):
         """Update this synthetic tree by adding a reaction step.
 
+        Info:
+            Recall that actions "add", "expand", "merge" have a reaction, "end" does not.
+            Hence the following 6 updates are possible:
+                - Action: End
+                - Action: Add
+                    - with unimolecular reaction
+                    - with bimolecular reaction
+                - Action: Expand
+                    - with unimolecular reaction
+                    - with bimolecular reaction
+                - Action: Merge
+                    - with bimolecular reaction
+
         Args:
-            action (int): Action index, where the indices (0, 1, 2, 3) represent
-                (Add, Expand, Merge, and End), respectively.
-            rxn_id (int): Index of the reaction occured, where the index can be
-               anything in the range [0, len(template_list)-1].
-            mol1 (str): SMILES string representing the first reactant.
-            mol2 (str): SMILES string representing the second reactant.
-            mol_product (str): SMILES string representing the product.
+            action (int): action_id corresponding to the action taken. (ref `self.ACTIONS`)
+            rxn_id (int): id of the reaction
+            mol1 (str): First reactant as SMILES-string
+            mol2 (str): Second reactant as SMILES-string
+            mol_product (str): Product of the reaction as SMILES-string
         """
         self.actions.append(int(action))
 
@@ -652,8 +686,8 @@ class SyntheticTree:
     def num_actions(self):
         """Number of actions
         Info:
-            Thee depth of a tree is not a perfect metric for complexity,
-            as a 2nd subtree that gets merged does not add depth.
+            The depth of a tree is not a perfect metric for complexity,
+            as a 2nd subtree that gets merged only increases depth by 1.
         """
         return len(self.actions)
 
@@ -661,10 +695,11 @@ class SyntheticTree:
 class SyntheticTreeSet:
     """Represents a collection of synthetic trees, for saving and loading purposes."""
 
-    sts: list[SyntheticTree]
-
-    def __init__(self, sts: Optional[list[SyntheticTree]] = None):
+    def __init__(self, sts: Optional[list[SyntheticTree]] = None, from_file: Optional[str] = None):
         self.sts = sts if sts is not None else []
+        self.from_file = (
+            str(Path(from_file).resolve()) if from_file is not None else None
+        )  # Note: use .load() to load from file.
 
     def __repr__(self) -> str:
         return f"SyntheticTreeSet ({len(self.sts)} syntrees.)"
@@ -677,28 +712,42 @@ class SyntheticTreeSet:
             raise IndexError("No Synthetic Trees.")
         return self.sts[index]
 
+    @property
+    def metadata(self) -> dict:
+        return {
+            "loaded_from_file": self.from_file,
+            "num_syntrees": len(self.sts),
+        }
+
     @classmethod
     def load(cls, file: str):
         """Load a collection of synthetic trees from a `*.json.gz` file."""
-        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
+        assert str(file).endswith(".json.gz"), f"Incompatible file extension for file `{file}`"
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
 
         syntrees = [SyntheticTree.from_dict(_syntree) for _syntree in data["trees"]]
 
-        return cls(syntrees)
+        return cls(syntrees, from_file=file)
 
     def save(self, file: str) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
         assert str(file).endswith(".json.gz"), f"Incompatible file extension for file {file}"
 
-        syntrees_as_json = {"trees": [st.to_dict() for st in self.sts if st is not None]}
-        with gzip.open(file, "wt") as f:
-            f.write(json.dumps(syntrees_as_json))
+        out = {
+            "metadata": {
+                **self.metadata,
+                "save_to_file": str(Path(file).resolve()),
+            },
+            "trees": [st.to_dict() for st in self.sts if st is not None],
+        }
 
-    def split_by_depth(self) -> dict[int, list[SyntheticTree]]:
-        """Splits syntrees by depths and returns a copy."""
+        with gzip.open(file, "wt") as f:
+            f.write(json.dumps(out))
+
+    def split_by_num_actions(self) -> dict[int, list[SyntheticTree]]:
+        """Splits syntrees by number of actions and returns a dict."""
         depths = sorted(list({st.depth for st in self}))
         out = {int(depth): [] for depth in depths}  # TODO: Think of a better variable name
         for st in self:

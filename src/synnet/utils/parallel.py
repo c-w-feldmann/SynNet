@@ -2,24 +2,26 @@
 """
 import logging
 from typing import Callable, Iterable, Optional
-from synnet.config import MAX_PROCESSES
+
 from tqdm import tqdm
 
+from synnet.config import MAX_PROCESSES
 
-def compute_chunksize(iterable: Iterable, cpus: int) -> int:
+
+def compute_chunksize(input_list: list, cpus: int) -> int:
     """Source: https://github.com/python/cpython/blob/816066f497ab89abcdb3c4f2d34462c750d23713/Lib/multiprocessing/pool.py#L477"""
-    chunksize, extra = divmod(len(iterable), cpus * 4)
+    chunksize, extra = divmod(len(input_list), cpus * 4)
     if extra:
         chunksize += 1
-    if len(iterable) == 0:
+    if len(input_list) == 0:
         chunksize = 0
     return chunksize
 
 
 def simple_parallel(
-    input_list: Iterable,
+    input_list: list,
     function: Callable,
-    max_cpu: int = 4,
+    max_cpu: int = MAX_PROCESSES,
     timeout: int = 4000,
     max_retries: int = 3,
     verbose: bool = False,
@@ -32,6 +34,9 @@ def simple_parallel(
     def setup_pool():
         pool = mp.Pool(processes=max_cpu)
         async_results = [pool.apply_async(function, args=(i,)) for i in input_list]
+        # Note from the docs:
+        #   "func is only executed in one of the workers of the pool",
+        #   -> so we call apply_async for each input in the list
         pool.close()
         return pool, async_results
 
@@ -40,13 +45,9 @@ def simple_parallel(
     retries = 0
     while True:
         try:
-            list_outputs = []
             if verbose:
                 async_results = tqdm(async_results, total=len(input_list))
-            for async_result in async_results:
-                result = async_result.get(timeout)
-                list_outputs.append(result)
-
+            list_outputs = [async_result.get(timeout) for async_result in async_results]
             break
         except TimeoutError:
             retries += 1
@@ -61,7 +62,7 @@ def simple_parallel(
 
 
 def chunked_parallel(
-    input_list: Iterable,
+    input_list: list,
     function: Callable,
     chunks: Optional[int] = None,
     max_cpu: int = MAX_PROCESSES,
@@ -73,14 +74,14 @@ def chunked_parallel(
     Args:
         input_list : list of objects to apply function
         function : Callable with 1 input and returning a single value
-        chunks: number of hcunks
+        chunks: number of chunks
         max_cpu: Max num cpus
         timeout: Length of timeout
         max_retries: Num times to retry this
 
     Example:
 
-    ```pyhton
+    ```python
     input_list = [1,2,3,4,5]
     func = lambda x: x**10
     res = chunked_parallel(input_list,func,verbose=True,max_cpu=4)
@@ -89,8 +90,8 @@ def chunked_parallel(
     """
     # originally from: https://github.com/samgoldman97
 
-    # Run plain list comp if when no mp is necessary.
-    # Keeping this here to have a single interface.
+    # Run plain list comp when no mp is necessary.
+    # Note: Keeping this here to have a single interface.
     if max_cpu == 1:
         if verbose:
             input_list = tqdm(input_list)
@@ -100,10 +101,13 @@ def chunked_parallel(
     def batch_func(list_inputs):
         return [function(i) for i in list_inputs]
 
-    num_chunks = compute_chunksize(input_list, max_cpu) if chunks is None else 1
+    num_chunks = compute_chunksize(input_list, max_cpu) if chunks is None else chunks
     step_size = len(input_list) // num_chunks
 
     chunked_list = [input_list[i : i + step_size] for i in range(0, len(input_list), step_size)]
+    logging.debug(
+        f"{max_cpu=}, {len(input_list)=}, {num_chunks=}, {step_size=}, {len(chunked_list)=}"
+    )
 
     list_outputs = simple_parallel(
         chunked_list,

@@ -21,9 +21,9 @@ def fp_embedding(smi: str, _radius: Optional[int] = 2, _nBits: Optional[int] = 4
         return np.zeros(_nBits).reshape((-1,))
     else:
         mol = Chem.MolFromSmiles(smi)
-        features_vec = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
+        bv = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
         features = np.zeros((1,))
-        DataStructs.ConvertToNumpyArray(features_vec, features)
+        DataStructs.ConvertToNumpyArray(bv, features)
         return features.reshape((-1,))
 
 

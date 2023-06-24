@@ -7,10 +7,11 @@ from rdkit import RDLogger
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import (
     BuildingBlockFileHandler,
-    BuildingBlockFilter,
+    BuildingBlockFilterHeuristics,
+    BuildingBlockFilterMatchRxn,
     ReactionTemplateFileHandler,
 )
-from synnet.utils.data_utils import ReactionSet
+from synnet.utils.datastructures import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__file__)
@@ -25,12 +26,12 @@ def get_args():
     parser.add_argument(
         "--building-blocks-file",
         type=str,
-        help="File with SMILES strings (First row `SMILES`, then one per line).",
+        help="File with SMILES strings (DataFrame with `SMILES` column).",
     )
     parser.add_argument(
         "--rxn-templates-file",
         type=str,
-        help="Input file with reaction templates as SMARTS(No header, one per line).",
+        help="Input file with reaction templates as SMARTS (No header, one per line).",
     )
     parser.add_argument(
         "--output-bblock-file",
@@ -55,31 +56,24 @@ if __name__ == "__main__":
     args = get_args()
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
-    # Load assets
+    # 1. Load assets
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
     rxn_templates = ReactionTemplateFileHandler().load(args.rxn_templates_file)
 
-    bbf = BuildingBlockFilter(
-        building_blocks=bblocks,
-        rxn_templates=rxn_templates,
-        verbose=args.verbose,
-        processes=args.ncpu,
+    # 2. Filter
+    #   building blocks on heuristics
+    filtered_bblocks = BuildingBlockFilterHeuristics.filter(bblocks, verbose=args.verbose)
+
+    #   building blocks that cannot react with any template
+    filtered_bblocks, reactions = BuildingBlockFilterMatchRxn.filter(
+        filtered_bblocks, rxn_templates, ncpu=args.ncpu, verbose=args.verbose
     )
-    # Time intensive task...
-    bbf.filter()
 
-    # ... and save to disk
-    bblocks_filtered = bbf.building_blocks_filtered
-    BuildingBlockFileHandler().save(args.output_bblock_file, bblocks_filtered)
+    # 3. Save
+    #   filtered building blocks
+    BuildingBlockFileHandler().save(args.output_bblock_file, filtered_bblocks)
 
-    # Save collection of reactions which have "available reactants" set (for convenience)
-    rxn_collection = ReactionSet(bbf.rxns)
-    rxn_collection.save(args.output_rxns_collection_file)
-
-    logger.info(f"Total number of building blocks {len(bblocks):d}")
-    logger.info(f"Matched number of building blocks {len(bblocks_filtered):d}")
-    logger.info(
-        f"{len(bblocks_filtered)/len(bblocks):.2%} of building blocks applicable for the reaction templates."
-    )
+    #   initialized reactions (these are initialized with available reactants)
+    ReactionSet(reactions).save(args.output_rxns_collection_file)
 
     logger.info("Completed.")

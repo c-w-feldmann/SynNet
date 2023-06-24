@@ -7,6 +7,7 @@ from synnet.models.mlp import MLP
 
 CHECKPOINT_ICLR_DIR = "checkpoints/iclr"
 
+
 @pytest.mark.skipif(
     not Path(CHECKPOINT_ICLR_DIR).exists(),  # assume if path exits, then all 4 files exist
     reason="ICLR checkpoints are not available",

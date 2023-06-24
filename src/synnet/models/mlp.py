@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class MLP(pl.LightningModule):
     TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
-    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
+    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy faiss-knn".split()
     OPTIMIZERS = "sgd adam".lower().split()
 
     def __init__(
@@ -35,7 +35,6 @@ class MLP(pl.LightningModule):
         optimizer: str,
         learning_rate: float,
         val_freq: int,
-        ncpu: Optional[int] = None,
         molembedder: Optional[MolEmbedder] = None,  # for knn-accuracy
         class_weights: Optional[np.ndarray] = None,
         **kwargs,
@@ -58,13 +57,12 @@ class MLP(pl.LightningModule):
         self.valid_loss = valid_loss
         self.optimizer = optimizer
         self.learning_rate = learning_rate
-        self.ncpu = ncpu  # unused
         self.val_freq = val_freq
         self.molembedder = molembedder
         self.class_weights = class_weights
 
         # Create modules
-        modules = []
+        modules = nn.ModuleList()
 
         # Input layer
         modules.append(nn.Linear(input_dim, hidden_dim))
@@ -135,6 +133,7 @@ class MLP(pl.LightningModule):
             accuracy = (y_hat == y).sum() / len(y)
             loss = 1 - accuracy
         elif self.valid_loss == "nn_accuracy":
+            # NOTE: Deprecated, use `faiss-knn` instead.
             # NOTE: Very slow!
             # Performing the knn-search can easily take a couple of minutes,
             # even for small datasets.
@@ -144,6 +143,20 @@ class MLP(pl.LightningModule):
             y_hat = nn_search_list(y_hat.detach().cpu().numpy(), kdtree)
 
             accuracy = (y_hat == y).sum() / len(y)
+            loss = 1 - accuracy
+        elif self.valid_loss == "faiss-knn":
+            index = self.molembedder.index
+            device = index.getDevice() if hasattr(index, "getDevice") else "cpu"
+            import faiss.contrib.torch_utils  # https://github.com/facebookresearch/faiss/issues/561
+
+            # Normalize query vectors
+            y_normalized = y / torch.linalg.norm(y, dim=1, keepdim=True)
+            ypred_normalized = y_hat / torch.linalg.norm(y_hat, dim=1, keepdim=True)
+            # kNN search
+            k = 1
+            _, ind_y = index.search(y_normalized.to(device), k)
+            _, ind_ypred = index.search(ypred_normalized.to(device), k)
+            accuracy = (ind_y == ind_ypred).sum() / len(y)
             loss = 1 - accuracy
         elif self.valid_loss == "mse":
             loss = F.mse_loss(y_hat, y)
@@ -158,11 +171,17 @@ class MLP(pl.LightningModule):
 
     def configure_optimizers(self):
         """Define Optimerzers and LR schedulers."""
+        out = dict()
         if self.optimizer == "adam":
             optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         elif self.optimizer == "sgd":
             optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
-        return optimizer
+        out["optimizer"] = optimizer
+
+        # if (lr_scheduler := self.hparams.get("lr_scheduler_config",None)) is not None:
+        # out["lr_scheduler"] = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1,verbose=True)
+
+        return out
 
 
 def nn_search_list(y, kdtree):
