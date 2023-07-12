@@ -158,7 +158,7 @@ if __name__ == "__main__":
                 raise ValueError(f"Unknown error code: {res}")
             syntrees_filtered.append(res)
 
-    logger.info(f"Successfully filtered syntrees.")
+    logger.info("Successfully filtered syntrees.")
 
     out_folder = Path(args.output_file).parent
     out_folder.mkdir(parents=True, exist_ok=True)
@@ -172,4 +172,4 @@ if __name__ == "__main__":
     summary_file.parent.mkdir(parents=True, exist_ok=True)
     summary_file.write_text(json.dumps(outcomes, indent=2))
 
-    logger.info(f"Completed.")
+    logger.info("Completed.")
