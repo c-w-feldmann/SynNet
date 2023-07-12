@@ -357,9 +357,8 @@ class SynTreeDecoder:
                 break
             elif self.action_mapping[action_id] == "add":
                 # Start a new sub-syntree.
-                z_reactant1 = rt1.forward(
-                    z_state_tensor
-                )  # TODO: z=z' as mol embedding dim is differnt
+                # TODO: z=z' as mol embedding dim is differnt
+                z_reactant1 = rt1.forward(z_state_tensor)
                 z_reactant1 = z_reactant1.detach().numpy()  # (1,d')
 
                 # Select building block via kNN search
