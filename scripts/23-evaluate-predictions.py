@@ -1,6 +1,7 @@
 """Evaluate a batch of predictions on different metrics.
 The predictions are generated in `20-predict-targets.py`.
 """
+import argparse
 import json
 import logging
 
@@ -13,9 +14,8 @@ from synnet.config import MAX_PROCESSES
 logger = logging.getLogger(__name__)
 
 
-def get_args():
-    import argparse
-
+def get_args() -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser()
 
     parser.add_argument(

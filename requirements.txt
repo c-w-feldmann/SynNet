@@ -1,0 +1,8 @@
+numba
+pathos
+pytest
+pymoo
+lightning
+rdkit
+scikit-learn>=1.1.0
+torch

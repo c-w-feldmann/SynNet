@@ -1,11 +1,16 @@
 from typing import Optional
 
 import numpy as np
+import numpy.typing as npt
 from rdkit import Chem
-from rdkit.Chem import AllChem, DataStructs
+from rdkit.Chem import AllChem
 
 
-def fp_embedding(smi: str, _radius: Optional[int] = 2, _nBits: Optional[int] = 4096) -> np.ndarray:
+def fp_embedding(
+    smi: Optional[str],
+    _radius: int = 2,
+    _nBits: int = 4096
+) -> npt.NDArray[np.float_]:
     """
     General function for building variable-size & -radius Morgan fingerprints.
 
@@ -18,30 +23,8 @@ def fp_embedding(smi: str, _radius: Optional[int] = 2, _nBits: Optional[int] = 4
         np.ndarray: A Morgan fingerprint generated using the specified parameters.
     """
     if smi is None:
-        return np.zeros(_nBits).reshape((-1,))
+        return np.zeros(_nBits, dtype=np.float_).reshape((-1,))
     else:
         mol = Chem.MolFromSmiles(smi)
-        bv = AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits)
-        features = np.zeros((1,))
-        DataStructs.ConvertToNumpyArray(bv, features)
-        return features.reshape((-1,))
-
-
-def fp_4096(smi):
-    return fp_embedding(smi, _radius=2, _nBits=4096)
-
-
-def fp_2048(smi):
-    return fp_embedding(smi, _radius=2, _nBits=2048)
-
-
-def fp_1024(smi):
-    return fp_embedding(smi, _radius=2, _nBits=1024)
-
-
-def fp_512(smi):
-    return fp_embedding(smi, _radius=2, _nBits=512)
-
-
-def fp_256(smi):
-    return fp_embedding(smi, _radius=2, _nBits=256)
+        features_vec = np.array(AllChem.GetMorganFingerprintAsBitVect(mol, _radius, _nBits), dtype=np.float_)
+        return features_vec.reshape((-1,))

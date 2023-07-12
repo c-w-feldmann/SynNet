@@ -1,6 +1,7 @@
 """Compute the mean reciprocal ranking for reactant 1
 selection using the different distance metrics in the k-NN search.
 """
+import argparse
 import json
 import logging
 
@@ -10,14 +11,13 @@ from tqdm import tqdm
 from synnet.config import MAX_PROCESSES
 from synnet.encoding.distances import ce_distance, cosine_distance
 from synnet.models.common import xy_to_dataloader
-from synnet.models.mlp import load_mlp_from_ckpt
-from synnet.MolEmbedder import MolEmbedder
+from synnet.models.common import load_mlp_from_ckpt
+from synnet.encoding.embedding import MolecularEmbeddingManager
 
 logger = logging.getLogger(__name__)
 
 
-def get_args():
-    import argparse
+def get_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -61,7 +61,9 @@ if __name__ == "__main__":
         metric = args.distance
 
     # Recall default: Morgan fingerprint with radius=2, nbits=256
-    mol_embedder = MolEmbedder().load_precomputed(args.embeddings_file)
+    mol_embedder = MolecularEmbeddingManager.from_folder(
+        args.embeddings_file
+    )
     mol_embedder.init_balltree(metric=metric)
     n, d = mol_embedder.embeddings.shape
 
@@ -79,7 +81,7 @@ if __name__ == "__main__":
     rt1_net = load_mlp_from_ckpt(args.ckpt_file)
     rt1_net.to(args.device)
 
-    ranks = []
+    rank_list = []
     for X, y in tqdm(dataloader):
         X, y = X.to(args.device), y.to(args.device)
         y_hat = rt1_net(X)  # (batch_size,nbits)
@@ -88,10 +90,10 @@ if __name__ == "__main__":
         ind = mol_embedder.kdtree.query(y_hat.detach().cpu().numpy(), k=n, return_distance=False)
 
         irows, icols = np.nonzero(ind == ind_true)  # irows = range(batch_size), icols = ranks
-        ranks.append(icols)
+        rank_list.append(icols)
 
-    ranks = np.asarray(ranks, dtype=int).flatten()  # (nSamples,)
-    rrs = 1 / (ranks + 1)  # +1 for offset 0-based indexing
+    ranks_array = np.asarray(rank_list, dtype=int).flatten()  # (nSamples,)
+    rrs = 1 / (ranks_array + 1)  # +1 for offset 0-based indexing
 
     # np.save("ranks_" + metric + ".npy", ranks)  # TODO: do not hard code
 
@@ -99,6 +101,6 @@ if __name__ == "__main__":
     print(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
     TOP_N_RANKS = (1, 3, 5, 10, 15, 30)
     for i in TOP_N_RANKS:
-        n_recovered = sum(ranks < i)
-        n = len(ranks)
+        n_recovered = sum(ranks_array < i)
+        n = len(ranks_array)
         print(f"The Top-{i:<2d} recovery rate is: {n_recovered/n:.3f} ({n_recovered}/{n})")

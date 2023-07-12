@@ -1,16 +1,22 @@
 """syntrees
 """
+from __future__ import annotations
 import logging
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Any, Iterable, List, Optional, Tuple, TypeVar, Union
+try:
+    from typing import Self  # type: ignore[attr-defined]
+except ImportError:
+    from typing_extensions import Self
 
 import numpy as np
+import numpy.typing as npt
 from rdkit import Chem
+from rdkit.Chem import AllChem
 from scipy import sparse
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 
-logger = logging.getLogger(__name__)
 from synnet.data_generation.exceptions import (
     MaxNumberOfActionsError,
     NoBiReactionAvailableError,
@@ -19,14 +25,22 @@ from synnet.data_generation.exceptions import (
     NoReactionAvailableError,
     NoReactionPossibleError,
 )
-from synnet.encoding.drfp import DrfpEncoder
-from synnet.utils.datastructures import Reaction, ReactionSet, SyntheticTree, SyntheticTreeSet
+from synnet.utils.data_utils import (
+    NodeRxn,
+    Reaction,
+    ReactionSet,
+    SyntheticTree,
+    SyntheticTreeSet,
+)
+
+logger = logging.getLogger(__name__)
 
 
 class SynTreeGenerator:
     """Generates synthetic trees by randomly applying reactions to building blocks."""
 
     ACTIONS: dict[int, str] = {i: action for i, action in enumerate("add expand merge end".split())}
+    reaction_set: ReactionSet
 
     def __init__(
         self,
@@ -34,16 +48,36 @@ class SynTreeGenerator:
         building_blocks: list[str],
         rxn_templates: list[str],
         rxn_collection: Optional[ReactionSet] = None,
-        rng=np.random.default_rng(),  # Note: When generating syntrees with mp provide a fresh seed!
+        rng: np.random.Generator = np.random.default_rng(),
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
         debug: bool = False,
     ) -> None:
+        """Initializes a `SynTreeGenerator`.
+
+        Parameters
+        ----------
+        building_blocks : list[str]
+            List of building blocks.
+        rxn_templates : list[str]
+            List of reaction templates.
+        rxn_collection : Optional[ReactionSet], optional
+            Pre-initialised reaction collection, by default None
+        rng : np.random.Generator, optional
+            Random number generator, by default np.random.default_rng()
+            Note: When generating syntrees with mp provide a fresh seed!
+        processes : int, optional
+            Number of processes to use, by default MAX_PROCESSES
+        verbose : bool, optional
+            Whether to show progress bars, by default False
+        debug : bool, optional
+            Whether to show debug messages, by default False
+        """
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
-        self.rxns = [Reaction(template=tmplt) for tmplt in rxn_templates]
+        self.reaction_set = ReactionSet([Reaction(template=tmplt) for tmplt in rxn_templates])
         self.rng = rng
-        self.IDX_RXNS = np.arange(len(self.rxns))
+        self.IDX_RXNS = np.arange(len(self.reaction_set))
         self.processes = processes
         self.verbose = verbose
         if not verbose:
@@ -57,33 +91,33 @@ class SynTreeGenerator:
             self._init_rxns_with_reactants()
         else:
             logger.info("Using pre-initialised reaction collection.")
-            self.rxns = rxn_collection
+            self.reaction_set = rxn_collection
             self.rxns_initialised = True
 
-    def __match_mp(self):
+    def __match_mp(self) -> Self:
         # TODO: refactor / merge with `BuildingBlockFilter`
         # TODO: Rename `ReactionSet` -> `ReactionCollection` (same for `SyntheticTreeSet`)
         from functools import partial
 
         from pathos import multiprocessing as mp
 
-        def __match(_rxn: Reaction, *, bblocks: list[str]):
+        def __match(_rxn: Reaction, bblocks: list[str]) -> Reaction:
             return _rxn.set_available_reactants(bblocks)
 
         func = partial(__match, bblocks=self.building_blocks)
         with mp.Pool(processes=self.processes) as pool:
-            rxns = pool.map(func, self.rxns)
+            rxns = pool.map(func, self.reaction_set)
 
-        self.rxns = rxns
+        self.reaction_set = rxns
         return self
 
-    def _init_rxns_with_reactants(self):
+    def _init_rxns_with_reactants(self) -> Self:
         """Initializes a `Reaction` with a list of possible reactants.
 
         Info: This can take a while for lots of possible reactants."""
         if self.processes == 1:
-            rxns = tqdm(self.rxns) if self.verbose else self.rxns
-            self.rxns = [rxn.set_available_reactants(self.building_blocks) for rxn in rxns]
+            rxns = tqdm(self.reaction_set) if self.verbose else self.reaction_set
+            self.reaction_set = ReactionSet([rxn.set_available_reactants(self.building_blocks) for rxn in rxns])
         else:
             self.__match_mp()
 
@@ -98,24 +132,26 @@ class SynTreeGenerator:
         logger.debug(f"    Sampled molecule: {smiles}")
         return smiles
 
-    def _find_rxn_candidates(self, smiles: str, raise_exc: bool = True) -> list[bool]:
+    def _find_rxn_candidates(self, smiles: str, raise_exc: bool = True) -> npt.NDArray[np.bool_]:
         """Find reactions which reactions have `smiles` as reactant."""
-        rxn_mask = [rxn.is_reactant(smiles) for rxn in self.rxns]
+        rxn_mask = [rxn.is_reactant(smiles) for rxn in self.reaction_set.rxns]
 
         if raise_exc and not any(rxn_mask):  # Do not raise exc when checking if two mols can react
             raise NoReactionAvailableError(f"Cannot find a reaction for reactant: {smiles}.")
-        return rxn_mask
+        return np.asarray(rxn_mask)
 
-    def _sample_rxn(self, mask: Optional[np.ndarray] = None) -> Tuple[Reaction, int]:
+    def _sample_rxn(
+        self,
+        mask: Optional[npt.NDArray[np.bool_]] = None
+    ) -> Tuple[Reaction, int]:
         """Sample a reaction by index."""
         if mask is None:
-            irxn_mask = self.IDX_RXNS  #  = all reactions are possible
+            irxn_mask = self.IDX_RXNS  # all reactions are possible
         else:
-            mask = np.asarray(mask)  # If a mask is passed, it should have at least 1 True entry
             irxn_mask = self.IDX_RXNS[mask]
 
         idx = self.rng.choice(irxn_mask)
-        rxn = self.rxns[idx]
+        rxn = self.reaction_set[idx]
 
         logger.debug(
             f"    Sampled {'uni' if rxn.num_reactant == 1 else 'bi'}-molecular reaction with id {idx:d}"
@@ -124,7 +160,7 @@ class SynTreeGenerator:
 
     def _expand(
         self, reactant_1: str, raise_exc: bool = True
-    ) -> Tuple[str, Optional[str], Optional[str], np.int64]:
+    ) -> tuple[str, Optional[str], Optional[str], int]:
         """Expand a sub-tree from one molecule.
         This can result in uni- or bimolecular reaction."""
 
@@ -133,25 +169,31 @@ class SynTreeGenerator:
 
         # Sample reaction (by index)
         rxn, idx_rxn = self._sample_rxn(mask=rxn_mask)
+        available_reactants = rxn.available_reactants
+        if not available_reactants:
+            raise NoReactantAvailableError(
+                f"No reactant available for reaction (ID: {idx_rxn}). Present reactant: {reactant_1}."
+            )
 
         # Sample 2nd reactant
         if rxn.num_reactant == 1:
-            reactant_2 = None
+            reactant_2: Optional[str] = None
         else:
             # Sample a molecule from the available reactants of this reaction
             # That is, for a reaction A + B -> C,
             #   - determine if we have "A" or "B"
             #   - then sample "B" (or "A")
-            reactant_2_order = 1 if rxn.is_reactant_first(reactant_1) else 0
-            available_reactants = rxn.available_reactants[reactant_2_order]
+            if rxn.is_reactant_first(reactant_1):
+                reactant_2_candidate_list = available_reactants[1]
+            else:
+                reactant_2_candidate_list = available_reactants[0]
 
-            if (nAvailableReactants := len(available_reactants)) == 0:
+            if not reactant_2_candidate_list:
                 raise NoReactantAvailableError(
-                    f"No reactant available for bimolecular reaction (ID: {idx_rxn}). Present reactant: {reactant_1}. Missing {'second' if reactant_2_order==1 else 'first'} reactant."
+                    f"No reactant available for bimolecular reaction (ID: {idx_rxn}). Present reactant: {reactant_1}."
                 )
 
-            idx = self.rng.choice(nAvailableReactants)
-            reactant_2 = available_reactants[idx]
+            reactant_2 = self.rng.choice(reactant_2_candidate_list)
             logger.debug(f"    Sampled second reactant: {reactant_2}")
 
         # Run reaction
@@ -161,13 +203,17 @@ class SynTreeGenerator:
             raise NoReactionPossibleError(
                 f"Reaction (ID: {idx_rxn}) not possible with: `{reactant_1} + {reactant_2}`."
             )
-        return *reactants, product, idx_rxn
+        return reactant_1, reactant_2, product, idx_rxn
 
-    def _merge(self, syntree: SyntheticTree):
+    def _merge(self, syntree: SyntheticTree) -> Tuple[str, Optional[str], str, int]:
         """Merge the two root mols in the `SyntheticTree`"""
         # Identify suitable rxn
+        r1: Optional[str]
+        r2: Optional[str]
         r1, r2 = syntree.get_state()
-        rxn_mask = self._get_rxn_mask(tuple((r1, r2)))
+        if r1 is None:
+            raise NoMergeReactionPossibleError("Cannot merge empty tree.")
+        rxn_mask = self._get_rxn_mask((r1, r2))
         # Sample reaction
         rxn, idx_rxn = self._sample_rxn(mask=rxn_mask)
         # Run reaction
@@ -178,71 +224,73 @@ class SynTreeGenerator:
             )
         return r1, r2, p, idx_rxn
 
-    def _get_action_mask(self, syntree: SyntheticTree):
+    def _get_action_mask(self, syntree: SyntheticTree) -> npt.NDArray[np.bool_]:
         """Get a mask of possible action for a SyntheticTree"""
         # Recall: (Add, Expand, Merge, and End)
-        canAdd = False
-        canMerge = False
-        canExpand = False
-        canEnd = False
+        can_add = False
+        can_merge = False
+        can_expand = False
+        can_end = False
 
         state = syntree.get_state()
-        nTrees = len(state)
-        if nTrees == 0:  # base case
-            canAdd = True
-        elif nTrees == 1:
-            canAdd = True
-            canExpand = True
-            canEnd = True
-        elif nTrees == 2:
-            canExpand = True
-            canMerge = any(self._get_rxn_mask(tuple(state), raise_exc=False))
+        if state[0] is None and state[1] is None:  # empty tree
+            can_add = True
+        elif state[0] is not None and state[1] is None:
+            can_add = True
+            can_expand = True
+            can_end = True
+        elif state[0] is not None and state[1] is not None:
+            can_expand = True
+            can_merge = any(self._get_rxn_mask(state, raise_exc=False))
         else:
-            raise ValueError
+            raise AssertionError("Invalid state.")
 
         # Special cases.
         # Case: Syntree is 1 update apart from its max size, only allow to end it.
-        if nTrees == 1 and (syntree.num_actions == self.max_depth - 1):
+        if state[0] is not None and state[1] is None and (syntree.num_actions == self.max_depth - 1):
             logger.debug(
-                f"  Overriding action space to only allow action=end."
-                + f"({nTrees=}, {syntree.num_actions=}, {self.max_depth=})"
+                "  Overriding action space to only allow action=end."
+                + f"(1, {syntree.num_actions=}, {self.max_depth=})"
             )
-            canAdd, canMerge, canExpand = False, False, False
-            canEnd = True
-        elif nTrees == 2 and (syntree.num_actions == self.max_depth - 2):
+            can_add, can_merge, can_expand = False, False, False
+            can_end = True
+        elif state[0] is not None and state[1] is not None and (syntree.num_actions == self.max_depth - 2):
             # ATTN: This might result in an Exception,
             #       i.e. when no rxn template matches or the product is invalid etc.
             logger.debug(
-                f"  Overriding action space to forcefully merge trees."
-                + f"({nTrees=}, {syntree.num_actions=}, {self.max_depth=})"
+                "  Overriding action space to forcefully merge trees."
+                + f"(2, {syntree.num_actions=}, {self.max_depth=})"
             )
-            canAdd, canExpand, canEnd = False, False, False
-            canMerge = True
-        elif nTrees == 1 and (syntree.num_actions == self.max_depth - 3):
+            can_add, can_expand, can_end = False, False, False
+            can_merge = True
+        elif state[0] is not None and state[1] is None and (syntree.num_actions == self.max_depth - 3):
             # Handle case for max_depth=6 and [0, 1, 1, 1, 0, 2, 3] ?
             #                                              ^-- prevent this
             pass
         # Case: Syntree is 2 updates away from its max size, only allow to merge it.
         if syntree.num_actions < self.min_actions:
-            canEnd = False
+            can_end = False
+        return np.array((can_add, can_expand, can_merge, can_end), dtype=bool)
 
-        return np.array((canAdd, canExpand, canMerge, canEnd), dtype=bool)
-
-    def _get_rxn_mask(self, reactants: tuple[str, str], raise_exc=True) -> list[bool]:
+    def _get_rxn_mask(
+        self,
+        reactants: tuple[Optional[str], Optional[str]],
+        raise_exc: bool = True
+    ) -> npt.NDArray[np.bool_]:
         """Get a mask of possible reactions for the two reactants."""
         # First: Identify bi-molecular reactions
-        masks_bimol = [rxn.num_reactant == 2 for rxn in self.rxns]  # TODO: Cache?
+        masks_bimol = [rxn.num_reactant == 2 for rxn in self.reaction_set.rxns]  # TODO: Cache?
         # Second: Check if reactants match template in correct or reversed order, i.e.
         #         check if (r1->position1 & r2->position2) "ordered"
         #         or       (r1->position2 & r2->position1) "reversed"
         r1, r2 = reactants
         masks_r1 = [
             (rxn.is_reactant_first(r1), rxn.is_reactant_second(r1)) if is_bi else (False, False)
-            for is_bi, rxn in zip(masks_bimol, self.rxns)
+            for is_bi, rxn in zip(masks_bimol, self.reaction_set.rxns)
         ]
         masks_r2 = [
             (rxn.is_reactant_first(r2), rxn.is_reactant_second(r2)) if is_bi else (False, False)
-            for is_bi, rxn in zip(masks_bimol, self.rxns)
+            for is_bi, rxn in zip(masks_bimol, self.reaction_set.rxns)
         ]
 
         # Check if reactants match template the ordered or reversed way
@@ -254,18 +302,18 @@ class SynTreeGenerator:
 
         if raise_exc and not any(mask):
             raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
-        return mask
+        return np.asarray(mask)
 
     def _sample_action(self, syntree: SyntheticTree) -> int:
         """Samples an action conditioned on the state of the `SyntheticTree`"""
         p_action = self.rng.random((1, 4))  # (1,4)
         action_mask = self._get_action_mask(syntree)  # (1,4)
-        act = np.argmax(p_action * action_mask)  # (1,)
+        act = int(np.argmax(p_action * action_mask))  # (1,)
 
         logger.debug(f"  Sampled action: {self.ACTIONS[act]}")
         return act
 
-    def generate(self, max_depth: int = 8, min_actions: int = 1):
+    def generate(self, max_depth: int = 8, min_actions: int = 1) -> SyntheticTree:
         """Generate a syntree by random sampling."""
         assert min_actions < max_depth, "min_actions must be smaller than max_depth."
         assert max_depth > 1, "max_actions must be larger than 1. (smallest treee is [`add`,`end`]"
@@ -276,7 +324,8 @@ class SynTreeGenerator:
 
         # Init
         syntree = SyntheticTree()
-
+        recent_mol: Optional[str] = None
+        action = None
         for i in range(max_depth + 1):
             logger.debug(f"Iter {i} | {syntree.depth=} | num_actions={syntree.actions.__len__()} ")
 
@@ -288,6 +337,8 @@ class SynTreeGenerator:
                 r1, r2, p, idx_rxn = None, None, None, -1
             elif action == "expand":
                 # Expand this subtree: reaction, (reactant2), run it.
+                if recent_mol is None:
+                    raise AssertionError("Cannot expand without recent molecule.")
                 r1, r2, p, idx_rxn = self._expand(recent_mol)
             elif action == "add":
                 # Add a new subtree: sample first reactant, then expand from there.
@@ -306,7 +357,7 @@ class SynTreeGenerator:
 
             # Update tree
             syntree.update(action=int(act), rxn_id=int(idx_rxn), mol1=r1, mol2=r2, mol_product=p)
-            logger.debug(f"SynTree updated.")
+            logger.debug("SynTree updated.")
             if action == "end":
                 break
 
@@ -314,12 +365,14 @@ class SynTreeGenerator:
             raise MaxNumberOfActionsError(
                 f"Maximum number of actions exceeded. ({syntree.actions=}>{max_depth})."
             )
-        logger.debug(f"🙌 SynTree completed.")
+        logger.debug("SynTree completed.")
         return syntree
 
     def generate_safe(
-        self, *args, max_depth: int = 8, min_actions: int = 1
-    ) -> Tuple[Union[SyntheticTree, None], Union[Exception, None]]:
+        self,
+        max_depth: int = 8,
+        min_actions: int = 1
+    ) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
         """Wrapper for `self.generate()` to catch all errors."""
         try:
             st = self.generate(max_depth=max_depth, min_actions=min_actions)
@@ -348,7 +401,7 @@ class SynTreeGeneratorPostProc:
     @staticmethod
     def parse_generate_safe(
         results: List[Tuple[Union[SyntheticTree, None], Union[Exception, None]]]
-    ):
+    ) -> tuple[SyntheticTreeSet, dict[str, int]]:
         """Parses the result from `SynTreeGenerator.generate_safe`.
         In particular:
             - parses valid SynTrees and returns a `SyntheticTreeSet`
@@ -361,8 +414,8 @@ class SynTreeGeneratorPostProc:
 
         syntrees, exits = zip(*results)
         exit_codes = [e.__class__.__name__ if e is not None else "success" for e in exits]
-        syntrees = [st for st in syntrees if st is not None]
-        return SyntheticTreeSet(syntrees), dict(Counter(exit_codes))
+        valied_syntrees = [st for st in syntrees if st is not None]
+        return SyntheticTreeSet(valied_syntrees), dict(Counter(exit_codes))
 
 
 def load_syntreegenerator(file: str) -> SynTreeGenerator:
@@ -383,126 +436,120 @@ def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None
 # TODO: Move all these encoders to "from syn_net.encoding/"
 # TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
 
-import json
-from abc import ABC, abstractmethod
+
+ItemType = TypeVar("ItemType", bound=np.generic)
 
 
-class Encoder(ABC):
-    @abstractmethod
-    def encode(self, *args, **kwargs):
-        ...
-
-    def __repr__(self) -> str:
-        kwargs = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
-        return json.dumps({self.__class__.__name__: kwargs})
-
-    @property
-    def args(self) -> dict:
-        return {**self.__dict__, **{"name": self.__class__.__name__}}
-
-
-class OneHotEncoder(Encoder):
+class OneHotEncoder:
     def __init__(self, d: int) -> None:
         self.d = d
 
-    def encode(self, ind: int, datatype: np.dtype = np.float64) -> np.ndarray:
+    def __repr__(self) -> str:
+        return f"'{self.__class__.__name__}': {self.__dict__}"
+
+    @property
+    def args(self) -> dict[str, Any]:
+        return {**self.__dict__, **{"name": self.__class__.__name__}}
+
+    @property
+    def nbits(self) -> int:
+        return self.get_nbits()
+
+    def encode(self, ind: int, datatype: type = np.float64) -> npt.NDArray[ItemType]:
         """Returns a (1,d)-array with zeros and a 1 at index `ind`."""
+        onehot: npt.NDArray[Any]
         onehot = np.zeros((1, self.d), dtype=datatype)  # (1,d)
         onehot[0, ind] = 1.0
         return onehot  # (1,d)
 
+    def get_nbits(self) -> int:
+        """Return the dimensionality as nbits."""
+        return self.d
 
-class MorganFingerprintEncoder(Encoder):
+
+class MorganFingerprintEncoder:
     def __init__(self, radius: int, nbits: int) -> None:
         self.radius = radius
-        self.nbits = nbits
+        self._nbits = nbits
 
-    def encode(self, smi: str, allow_none: bool = True) -> np.ndarray:
-        if not allow_none and smi is None:
-            raise ValueError(f"SMILES ({smi=}) cannot be None if `{allow_none=}`.")
-        if smi is None:
-            fp = np.zeros((1, self.nbits))  # (1,d)
-        else:
-            mol = Chem.MolFromSmiles(smi)  # TODO: sanity check mol here or use datmol?
-            bv = Chem.AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, self.nbits)
-            fp = np.empty(self.nbits)
-            Chem.DataStructs.ConvertToNumpyArray(bv, fp)
-            fp = fp[None, :]
-        return fp  # (1,d)
+    def __repr__(self) -> str:
+        return f"'{self.__class__.__name__}': {self.__dict__}"
 
-    def encode_tuple(self, smis: tuple[Union[str, None]], **kwargs) -> np.ndarray:
-        """Encode a tuple.
+    @property
+    def args(self) -> dict[str, Any]:
+        return {**self.__dict__, **{"name": self.__class__.__name__}}
+
+    @property
+    def nbits(self) -> int:
+        return self.get_nbits()
+
+    def get_nbits(self) -> int:
+        """Return the number of bits aka. the dimensionality.
+
+        Properties and inheritance is not trivial and hence the property nbits maps to this function
+        which is used for inheritance.
+        """
+        return self._nbits
+
+    def encode(self, smi: Optional[str], allow_none: bool = True) -> npt.NDArray[np.float_]:
+        mol: Optional[Chem.Mol] = None
+        if smi is not None:
+            mol = Chem.MolFromSmiles(smi)
+
+        # Cath these pesky Nones
+        if mol is None:
+            if allow_none:  # If allowed return a vector of zeros
+                return np.zeros((1, self.nbits))  # (1,d)
+            # else raise an error
+            if smi is None:
+                raise ValueError(f"SMILES cannot be None if `{allow_none=}`.")
+            raise ValueError(f"SMILES ({smi}) encodes invalid molecule.")
+
+        # Encode the molecule
+        fp = np.array(AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, self.nbits))
+        return fp.reshape((1, -1))  # (1,d)
+
+    def encode_batch(
+        self, smis: Iterable[Optional[str]], allow_none: bool = True
+    ) -> npt.NDArray[np.float_]:
+        """Encode a batch.
 
         Info: Added for convenience for datasets to encode a state (target,root1,root2) in one go"""
         return np.asarray(
-            [self.encode(smi, **kwargs) for smi in smis]
+            [self.encode(smi, allow_none) for smi in smis]
         ).squeeze()  # (num_items, nbits)
 
 
-class DrfpStateEncoder(Encoder):
-    def __init__(
-        self,
-        drfp_encoder: DrfpEncoder = DrfpEncoder,
-        nbits: int = 4096,
-        radius: int = 3,
-        rings: bool = True,
-        min_radius: int = 0,
-        operation: str = "symmetric_difference",
-    ):
-        self.drfp_encoder = drfp_encoder
-        self.operation = operation
-        self.nbits = nbits
-        self.drfp_kwrargs = {
-            "radius": radius,
-            "rings": rings,
-            "min_radius": min_radius,
-        }
-
-    def encode(self, *args, **kwargs):
-        raise NotImplementedError
-
-    def encode_tuple(
-        self, state: tuple[str, Optional[str], Optional[str]], allow_none: bool = True
-    ):
-        assert allow_none, "DrfpStateEncoder does not support allow_none=False"
-
-        shingles = list()  # ATTN: Assuming first element is the root mol, hence always not None
-        for smi in state:
-            if smi is None:
-                sh = b""
-            else:
-                mol = Chem.MolFromSmiles(smi)
-                sh, _ = self.drfp_encoder.shingling_from_mol(mol, **self.drfp_kwrargs)
-            shingles.append(sh)
-
-        if self.operation == "symmetric_difference":
-            s = set(shingles[0]).symmetric_difference(
-                set(_sh for sublist in shingles[1:] for _sh in sublist)
-            )
-        else:
-            raise NotImplementedError(f"operation {self.operation} not implemented")
-
-        bv = self.drfp_encoder.hash(list(s))
-        fp, _ = self.drfp_encoder.fold(bv, length=self.nbits)
-        return fp[None, :]  # (1, nbits)
-
-
-class IdentityIntEncoder(Encoder):
+class IdentityIntEncoder:
     def __init__(self) -> None:
         pass
 
-    def encode(self, number: int):
+    @property
+    def args(self) -> dict[str, Any]:
+        return {**self.__dict__, **{"name": self.__class__.__name__}}
+
+    def __repr__(self) -> str:
+        return f"'{self.__class__.__name__}': {self.__dict__}"
+
+    @property
+    def nbits(self) -> int:
+        return self.get_nbits()
+
+    def encode(self, number: int) -> npt.NDArray[np.int_]:
         return np.atleast_2d(number)
+
+    def get_nbits(self) -> int:
+        return 1
 
 
 class SynTreeFeaturizer:
     def __init__(
         self,
         *,
-        reactant_embedder: Encoder,
-        mol_embedder: Encoder,
-        rxn_embedder: Encoder,
-        action_embedder: Encoder,
+        reactant_embedder: MorganFingerprintEncoder,
+        mol_embedder: MorganFingerprintEncoder,
+        rxn_embedder: IdentityIntEncoder,
+        action_embedder: IdentityIntEncoder,
     ) -> None:
         # Embedders
         self.reactant_embedder = reactant_embedder
@@ -513,7 +560,7 @@ class SynTreeFeaturizer:
     def __repr__(self) -> str:
         return f"{self.__dict__}"
 
-    def featurize(self, syntree: SyntheticTree):
+    def featurize(self, syntree: SyntheticTree) -> tuple[sparse.csc_matrix, sparse.csc_matrix]:
         """Featurize a synthetic tree at every state.
 
         Note:
@@ -525,17 +572,23 @@ class SynTreeFeaturizer:
               This step is: [action, z_rt1, reaction_id, z_rt2, z_root_mol_1]
         """
 
-        states, steps = [], []
-
+        states: list[npt.NDArray[np.float_]] = []
+        steps: list[npt.NDArray[np.float_]] = []
+        if syntree.root is None:
+            raise ValueError("Root is None.")
         target_mol = syntree.root.smiles
         z_target_mol = self.mol_embedder.encode(target_mol)
 
         # Recall: We can have at most 2 sub-trees, each with a root node.
+        mol1: Optional[str] = None
+        mol2: Optional[str] = None
         root_mol_1 = None
         root_mol_2 = None
+        rxn_node: Optional[NodeRxn] = None
         for i, action in enumerate(syntree.actions):
-
             # 1. Encode "state"
+            if root_mol_1 is None or root_mol_2 is None:
+                raise ValueError("Root molecules are not set.")
             z_root_mol_1 = self.mol_embedder.encode(root_mol_1)
             z_root_mol_2 = self.mol_embedder.encode(root_mol_2)
             state = np.atleast_2d(
@@ -544,6 +597,8 @@ class SynTreeFeaturizer:
 
             # 2. Encode "super"-step
             if action == 3:  # end
+                if rxn_node is None:
+                    raise ValueError("Reaction node is None.")
                 step = np.concatenate(
                     (
                         self.action_embedder.encode(action),
@@ -594,7 +649,7 @@ class SynTreeFeaturizer:
             steps.append(step)
 
         # Some housekeeping on dimensions
-        states = np.atleast_2d(np.asarray(states).squeeze())
-        steps = np.atleast_2d(np.asarray(steps).squeeze())
+        states_matrix = np.atleast_2d(np.asarray(states).squeeze())
+        steps_matrix = np.atleast_2d(np.asarray(steps).squeeze())
 
-        return sparse.csc_matrix(states), sparse.csc_matrix(steps)
+        return sparse.csc_matrix(states_matrix), sparse.csc_matrix(steps_matrix)

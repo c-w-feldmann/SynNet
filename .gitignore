@@ -1,7 +1,6 @@
 # === custom ===
 
 data/
-!src/synnet/data/
 figures/syntrees/
 results/
 checkpoints/

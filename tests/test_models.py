@@ -13,7 +13,7 @@ CHECKPOINT_ICLR_DIR = "checkpoints/iclr"
     reason="ICLR checkpoints are not available",
 )
 @pytest.mark.parametrize("model", "act rt1 rxn rt2".split())
-def test_can_load_iclr_checkpoints(model: str):
+def test_can_load_iclr_checkpoints(model: str) -> None:
     ckpt_file = find_best_model_ckpt(Path(CHECKPOINT_ICLR_DIR) / model)
     assert isinstance(ckpt_file, Path), f"Could not find checkpoint for {model}"
 

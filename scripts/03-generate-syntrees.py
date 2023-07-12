@@ -1,10 +1,13 @@
 """Generate synthetic trees.
 """
+from __future__ import annotations
+import argparse
+import os
+from typing import Any, Optional
 import json
 import logging
-from functools import partial
+import multiprocessing as mp
 from pathlib import Path
-
 import numpy as np
 from rdkit import RDLogger
 
@@ -14,18 +17,17 @@ from synnet.data_generation.preprocessing import (
     ReactionTemplateFileHandler,
 )
 from synnet.data_generation.syntrees import SynTreeGenerator, SynTreeGeneratorPostProc
-from synnet.utils.datastructures import ReactionSet
+from synnet.utils.data_utils import (
+    ReactionSet,
+    SyntheticTree,
+)
+from functools import partial
 
 logger = logging.getLogger(__name__)
-import multiprocessing as mp
-import os
-
 RDLogger.DisableLog("rdApp.*")
 
 
-def get_args():
-    import argparse
-
+def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     # File I/O
     parser.add_argument(
@@ -102,7 +104,7 @@ if __name__ == "__main__":
     logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
     stgen_kwargs = {"max_depth": args.max_actions, "min_actions": args.min_actions}
 
-    def stgen_with_fresh_seed(dummy, **stgen_kwargs):
+    def stgen_with_fresh_seed(dummy: None, **stgen_kwargs: Any) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
         stgen.rng = np.random.default_rng()
         return stgen.generate_safe(max_depth=args.max_actions, min_actions=args.min_actions)
 
@@ -126,4 +128,4 @@ if __name__ == "__main__":
     syntrees.save(args.output_file)
 
     logger.info(f"Generated syntrees: {len(syntrees)}")
-    logger.info(f"Completed.")
+    logger.info("Completed.")

@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 import pytest
 
@@ -16,30 +17,30 @@ def valid_smiles() -> list[str]:
 
 
 @pytest.fixture
-def valid_smi(valid_smiles) -> str:
+def valid_smi(valid_smiles: list[str]) -> str:
     return valid_smiles[0]
 
 
-def test_default_fp_embedding_single(valid_smi):
+def test_default_fp_embedding_single(valid_smi: str) -> None:
     fp = fp_embedding(valid_smi)
     assert isinstance(fp, np.ndarray)
     assert fp.shape == (4096,)
 
 
-def test_default_fp_embedding_multiple(valid_smiles):
+def test_default_fp_embedding_multiple(valid_smiles: list[str]) -> None:
     n = len(valid_smiles)
     fps = np.asarray([fp_embedding(smi) for smi in valid_smiles])
     assert fps.shape == (n, 4096)
 
 
-def test_fp_on_invalid_smiles(smi=None):
+def test_fp_on_invalid_smiles(smi: Optional[str] = None) -> None:
     fp = fp_embedding(smi)
     assert isinstance(fp, np.ndarray)
     assert fp.shape == (4096,)
     assert fp.sum() == 0
 
 
-def test_some_good_some_none(valid_smiles):
+def test_some_good_some_none(valid_smiles: list[str]) -> None:
     n = len(valid_smiles)
     m = 3
     fps = np.asarray([fp_embedding(smi) for smi in valid_smiles + [None] * m])
@@ -47,14 +48,14 @@ def test_some_good_some_none(valid_smiles):
 
 
 @pytest.mark.parametrize("nbits", [2**p for p in range(8, 13)])
-def test_fp_None_dim(nbits):
+def test_fp_None_dim(nbits: int) -> None:
     smi = None
     fp = fp_embedding(smi, _radius=2, _nBits=nbits)
     assert fp.shape == (nbits,)
 
 
 @pytest.mark.parametrize("nbits", [2**p for p in range(8, 13)])
-def test_fp_smiles_dim(nbits, valid_smi):
+def test_fp_smiles_dim(nbits: int, valid_smi: str) -> None:
     smi = valid_smi
     fp = fp_embedding(smi, _radius=2, _nBits=nbits)
     assert fp.shape == (nbits,)

@@ -1,5 +1,7 @@
 """Filter out building blocks that cannot react with any template.
 """
+import argparse
+import json
 import logging
 
 from rdkit import RDLogger
@@ -11,16 +13,13 @@ from synnet.data_generation.preprocessing import (
     BuildingBlockFilterMatchRxn,
     ReactionTemplateFileHandler,
 )
-from synnet.utils.datastructures import ReactionSet
+from synnet.utils.data_utils import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")
 logger = logging.getLogger(__file__)
-import json
 
 
-def get_args():
-    import argparse
-
+def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     # File I/O
     parser.add_argument(
@@ -65,15 +64,15 @@ if __name__ == "__main__":
     filtered_bblocks = BuildingBlockFilterHeuristics.filter(bblocks, verbose=args.verbose)
 
     #   building blocks that cannot react with any template
-    filtered_bblocks, reactions = BuildingBlockFilterMatchRxn.filter(
+    filtered_bblocks_list, reactions = BuildingBlockFilterMatchRxn().filter(
         filtered_bblocks, rxn_templates, ncpu=args.ncpu, verbose=args.verbose
     )
 
     # 3. Save
     #   filtered building blocks
-    BuildingBlockFileHandler().save(args.output_bblock_file, filtered_bblocks)
+    BuildingBlockFileHandler().save(args.output_bblock_file, filtered_bblocks_list)
 
     #   initialized reactions (these are initialized with available reactants)
-    ReactionSet(reactions).save(args.output_rxns_collection_file)
+    ReactionSet(reactions).save(args.output_rxns_collection_file, skip_without_building_block=False)
 
     logger.info("Completed.")

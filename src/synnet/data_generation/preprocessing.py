@@ -1,7 +1,13 @@
+from __future__ import annotations
 import logging
 from functools import partial
 from pathlib import Path
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Union
+
+try:
+    from typing import Self  # type: ignore[attr-defined]
+except ImportError:
+    from typing_extensions import Self
 
 import pandas as pd
 import rdkit
@@ -11,8 +17,9 @@ from rdkit.Chem import PandasTools, rdMolDescriptors
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
-from synnet.utils.datastructures import Reaction
+from synnet.utils.data_utils import Reaction
 from synnet.utils.parallel import chunked_parallel
+from synnet.utils.custom_types import PathType
 
 logger = logging.getLogger()
 
@@ -66,7 +73,7 @@ class BuildingBlockFilter:
         self.processes = processes
         self.verbose = verbose
 
-    def _match_mp(self):
+    def _match_mp(self) -> Self:
         def __match(_rxn: Reaction, *, bblocks: list[str]) -> Reaction:
             return _rxn.set_available_reactants(bblocks)
 
@@ -75,7 +82,7 @@ class BuildingBlockFilter:
             self.rxns = pool.map(func, self.rxns)
         return self
 
-    def _filter_bblocks_for_rxns(self):
+    def _filter_bblocks_for_rxns(self) -> Self:
         """Initializes a `Reaction` with a list of possible reactants."""
 
         if self.processes == 1:
@@ -87,7 +94,7 @@ class BuildingBlockFilter:
         self.rxns_initialised = True
         return self
 
-    def filter(self):
+    def filter(self) -> Self:
         """Filters out building blocks which do not match a reaction template."""
         if not self.rxns_initialised:
             self._filter_bblocks_for_rxns()
@@ -98,13 +105,11 @@ class BuildingBlockFilter:
 
 
 class BuildingBlockFileHandler:
-    def _load_csv(self, file: str) -> list[str]:
+    def _load_csv(self, file: PathType) -> list[str]:
         """Load building blocks as smiles from `*.csv` or `*.csv.gz`."""
-        import pandas as pd
-
         return pd.read_csv(file)["SMILES"].to_list()
 
-    def load(self, file: str) -> list[str]:
+    def load(self, file: PathType) -> list[str]:
         """Load building blocks from file."""
         file = Path(file)
         if ".csv" in file.suffixes:
@@ -112,7 +117,7 @@ class BuildingBlockFileHandler:
         else:
             raise NotImplementedError
 
-    def _save_csv(self, file: Path, building_blocks: list[str]):
+    def _save_csv(self, file: Path, building_blocks: list[str]) -> None:
         """Save building blocks to `*.csv.gz`"""
         import pandas as pd
 
@@ -123,11 +128,11 @@ class BuildingBlockFileHandler:
         # Save
         df = pd.DataFrame({"SMILES": building_blocks})
         df.to_csv(file, compression="gzip", index=False)
-        return None
 
-    def save(self, file: str, building_blocks: list[str]):
+    def save(self, file: PathType, building_blocks: list[str]) -> None:
         """Save building blocks to file."""
-        file = Path(file)
+        if not isinstance(file, Path):
+            file = Path(file)
         file.parent.mkdir(parents=True, exist_ok=True)
         if ".csv" in file.suffixes:
             self._save_csv(file, building_blocks)
@@ -148,7 +153,7 @@ class ReactionTemplateFileHandler:
 
         return rxn_templates
 
-    def save(self, file: str, rxn_templates: list[str]):
+    def save(self, file: str, rxn_templates: list[str]) -> None:
         """Save reaction templates to file."""
         with open(file, "wt") as f:
             f.writelines(t + "\n" for t in rxn_templates)
@@ -223,14 +228,14 @@ class BuildingBlockFilterHeuristics:
 
 
 class BuildingBlockFilterMatchRxn:
-    @staticmethod
     def filter(
+        self,
         bblocks: Iterable[str],
         rxn_templates: Iterable[str],
         *,
         ncpu: int = MAX_PROCESSES,
         verbose: bool = False,
-    ) -> Tuple[List[str], List[Reaction]]:
+    ) -> tuple[List[str], List[Reaction]]:
         """Filter building blocks based on a match to a reaction template.
         If a building block matches a reaction template, it is retained.
 
@@ -240,31 +245,34 @@ class BuildingBlockFilterMatchRxn:
         """
         # Match building blocks to reactions
         logger.info("Converting SMILES to `rdkit.Mol` objects...")
-        bblocks = chunked_parallel(bblocks, lambda x: Chem.MolFromSmiles(x), verbose=verbose)
+        bblocks = chunked_parallel(list(bblocks), lambda x: Chem.MolFromSmiles(x), verbose=verbose)
 
         logger.info("Converting reaction templates to `rdkit.Reaction` objects...")
         reactions = [Reaction(tmpl) for tmpl in rxn_templates]
 
-        def match_bblocks(
-            reaction: Reaction, *, building_blocks: Iterable[Union[str, Chem.rdchem.Mol]]
-        ) -> Reaction:
-            return reaction.set_available_reactants(building_blocks)
-
         logger.info("Matching building blocks to reactions...")
-        func = partial(match_bblocks, building_blocks=bblocks)
-        reactions: list[Reaction] = chunked_parallel(
+        func = partial(self.match_bblocks, building_blocks=bblocks)
+        reaction_list: list[Reaction] = chunked_parallel(
             reactions, func, verbose=verbose, max_cpu=ncpu, chunks=9
         )
 
         matched_bblocks: List[str] = list(
-            {x for rxn in reactions for x in rxn.get_available_reactants}
+            {x for rxn in reaction_list for x in rxn.get_available_reactants}
         )
 
         if verbose:
-            n_total = len(bblocks)
+            n_total = len(list(bblocks))
             n_keep = len(matched_bblocks)
             logger.info("Filtering building blocks based on match to reaction templates:")
             logger.info(f"  Total number of building blocks {n_total:d}")
-            logger.info(f"  Retained number of building blocks {n_keep:d} ({n_keep/n_total:.2%})")
+            logger.info(f"  Retained number of building blocks {n_keep:d} ({n_keep / n_total:.2%})")
 
-        return matched_bblocks, reactions
+        return matched_bblocks, reaction_list
+
+    @staticmethod
+    def match_bblocks(
+        reaction: Reaction,
+        *,
+        building_blocks: list[Union[str, Chem.rdchem.Mol]],
+    ) -> Reaction:
+        return reaction.set_available_reactants(building_blocks)

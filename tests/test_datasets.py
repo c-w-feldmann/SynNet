@@ -1,41 +1,30 @@
 import json
-from dataclasses import asdict
 from pathlib import Path
 
-import numpy
 import pytest
 
-from synnet.data.datasets import SynTreeChopper
-from synnet.utils.datastructures import SyntheticTree
+from synnet.datasets import ActSyntreeDataset
+from synnet.utils.data_utils import SyntheticTree
+
+base_dir = Path(__file__).parent.absolute()
 
 
-def syntree_from_json(file):
-    return SyntheticTree.from_dict(dict(json.loads(Path(file).read_text())))
+@pytest.fixture
+def syntree_simplified() -> SyntheticTree:
+    """Load a simplified syntree where SMILES are replaced with "n<int>"."""
+    return SyntheticTree.from_dict(
+        dict(json.load(open(base_dir / "assets/syntree-small-simple.json", "r", encoding="utf-8")))
+    )
 
 
-SYNTREE_FILES = [
-    "tests/assets/syntree-small-simple-1.json",
-    "tests/assets/syntree-small-simple-2.json",
-    "tests/assets/syntree-small-simple-3.json",
-]
-REFERENCE_FILES = [
-    "tests/assets/syntree-small-simple-1-chopped.json",
-    "tests/assets/syntree-small-simple-2-chopped.json",
-    "tests/assets/syntree-small-simple-3-chopped.json",
-]
-
-testdata = [*zip(SYNTREE_FILES, REFERENCE_FILES)]
-
-
-@pytest.mark.parametrize("syntree_file,syntree_chopped_file", testdata)
-def test_chop_syntrees(syntree_file, syntree_chopped_file):
-    syntree = syntree_from_json(syntree_file)
-    ref_chopped = json.loads(Path(syntree_chopped_file).read_text())
-
-    assert isinstance(syntree, SyntheticTree)
-
-    chunks = SynTreeChopper.chop(syntree)
-    chunks_json = [asdict(chunk) for chunk in chunks]
-    assert syntree_file == ref_chopped["meta"]["original_file"]
-
-    numpy.testing.assert_equal(chunks_json, ref_chopped["data"])
+def test_chop_syntree(syntree_simplified: SyntheticTree) -> None:
+    assert isinstance(syntree_simplified, SyntheticTree)
+    chopped = ActSyntreeDataset.chop_syntree(syntree_simplified)
+    ref_chopped = [
+        {"target": 0, "state": ("n8", None, None), "num_action": 0},
+        {"target": 0, "state": ("n8", "n3", None), "num_action": 1},
+        {"target": 2, "state": ("n8", "n6", "n3"), "num_action": 2},
+        {"target": 1, "state": ("n8", "n7", None), "num_action": 3},
+        {"target": 3, "state": ("n8", "n8", None), "num_action": 4},
+    ]
+    assert chopped == ref_chopped
