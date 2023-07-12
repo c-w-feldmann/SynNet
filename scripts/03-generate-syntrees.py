@@ -104,7 +104,9 @@ if __name__ == "__main__":
     logger.info(f"Start generation of {args.number_syntrees} SynTrees...")
     stgen_kwargs = {"max_depth": args.max_actions, "min_actions": args.min_actions}
 
-    def stgen_with_fresh_seed(dummy: None, **stgen_kwargs: Any) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
+    def stgen_with_fresh_seed(
+        dummy: None, **stgen_kwargs: Any
+    ) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
         stgen.rng = np.random.default_rng()
         return stgen.generate_safe(max_depth=args.max_actions, min_actions=args.min_actions)
 

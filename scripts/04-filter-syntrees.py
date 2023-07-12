@@ -98,7 +98,6 @@ def filter_syntree(syntree: SyntheticTree) -> Union[SyntheticTree, int]:
 if __name__ == "__main__":
     import argparse
 
-
     def get_args() -> argparse.Namespace:
 
         parser = argparse.ArgumentParser()
@@ -118,7 +117,6 @@ if __name__ == "__main__":
         parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
         parser.add_argument("--verbose", default=False, action="store_true")
         return parser.parse_args()
-
 
     logger.info("Start.")
 

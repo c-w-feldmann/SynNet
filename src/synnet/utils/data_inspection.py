@@ -26,7 +26,10 @@ def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter
     if isinstance(syntrees, SyntheticTree):
         syntrees = SyntheticTreeSet([syntrees])
     cnt: Counter[str] = Counter()
-    [cnt.update([chemical.smiles for chemical in st.chemicals]) for st in syntrees.synthetic_tree_list]
+    [
+        cnt.update([chemical.smiles for chemical in st.chemicals])
+        for st in syntrees.synthetic_tree_list
+    ]
     return cnt
 
 
@@ -170,10 +173,7 @@ def plot_reaction_heatmap(
     return ax
 
 
-def cnt_to_dataframe(
-    cnt: Counter[Any],
-    index_name: Optional[str] = None
-) -> pd.DataFrame:
+def cnt_to_dataframe(cnt: Counter[Any], index_name: Optional[str] = None) -> pd.DataFrame:
     df = pd.DataFrame().from_dict(cnt, columns=["count"], orient="index")
     df["count_rel"] = df["count"] / df["count"].sum()
     df["count_rel"] = df["count_rel"].round(4)
@@ -183,9 +183,7 @@ def cnt_to_dataframe(
 
 
 def col_as_percentage(
-    df: pd.DataFrame,
-    cols: Optional[Union[list[str], str, pd.Index]] = None,
-    replace: bool = False
+    df: pd.DataFrame, cols: Optional[Union[list[str], str, pd.Index]] = None, replace: bool = False
 ) -> pd.DataFrame:
     if not cols:
         cols = df.columns

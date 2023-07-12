@@ -70,7 +70,7 @@ class MLP(pl.LightningModule):
         modules: list[nn.Module] = [
             nn.Linear(input_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         ]
 
         # Input layer

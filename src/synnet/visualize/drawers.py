@@ -2,6 +2,7 @@ import uuid
 import warnings
 from pathlib import Path
 from typing import Optional, Union
+
 try:
     from typing import Self  # type: ignore[attr-defined]
 except ImportError:

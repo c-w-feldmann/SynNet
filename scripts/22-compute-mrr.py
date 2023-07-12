@@ -61,9 +61,7 @@ if __name__ == "__main__":
         metric = args.distance
 
     # Recall default: Morgan fingerprint with radius=2, nbits=256
-    mol_embedder = MolecularEmbeddingManager.from_folder(
-        args.embeddings_file
-    )
+    mol_embedder = MolecularEmbeddingManager.from_folder(args.embeddings_file)
     mol_embedder.init_balltree(metric=metric)
     n, d = mol_embedder.embeddings.shape
 

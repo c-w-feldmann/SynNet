@@ -19,10 +19,7 @@ from synnet.utils.custom_types import PathType
 logger = logging.getLogger(__file__)
 
 
-def init_save_dir(
-    path: PathType,
-    suffix: str = ""
-) -> Path:
+def init_save_dir(path: PathType, suffix: str = "") -> Path:
     """Creates folder with timestamp: `$path/<timestamp>$suffix`."""
     now = datetime.now().strftime("%Y_%m_%d-%H%M%S")
     save_dir = Path(path) / (now + suffix)
@@ -55,8 +52,7 @@ def xy_to_dataloader(
     if isinstance(n, int):
         if n > X.shape[0]:
             logger.warning(
-                f"n={n} exceeds size of dataset {X.shape[0]}. "
-                f"Setting n to {X.shape[0]}."
+                f"n={n} exceeds size of dataset {X.shape[0]}. " f"Setting n to {X.shape[0]}."
             )
             n = int(X.shape[0])
         X = X[:n]
@@ -84,14 +80,12 @@ def xy_to_dataloader(
 
 
 def _compute_class_weights_from_dataloader(
-    dataloader: torch_data.DataLoader,  # type: ignore[type-arg]
-    as_tensor: bool = False
+    dataloader: torch_data.DataLoader, as_tensor: bool = False  # type: ignore[type-arg]
 ) -> npt.NDArray[np.float_]:
     from sklearn.utils.class_weight import compute_class_weight
+
     if not hasattr(dataloader.dataset, "tensors"):
-        raise AssertionError(
-            "Dataloader must have a dataset with a `tensors`-attribute."
-        )
+        raise AssertionError("Dataloader must have a dataset with a `tensors`-attribute.")
     y: torch.Tensor = dataloader.dataset.tensors[-1]
     classes = y.unique().numpy()
     y = y.numpy()

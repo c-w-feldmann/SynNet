@@ -149,8 +149,7 @@ class SynTreeDecoder:
         return cls(**config)
 
     def _get_syntree_state_embedding(
-        self,
-        state: tuple[Optional[str], Optional[str]]
+        self, state: tuple[Optional[str], Optional[str]]
     ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
         """Compute state embedding for a state.
 
@@ -232,7 +231,9 @@ class SynTreeDecoder:
 
         return np.array((can_add, can_expand, can_merge, can_end), dtype=bool)
 
-    def _find_valid_bimolecular_rxns(self, reactants: Tuple[Optional[str], Optional[str]]) -> npt.NDArray[np.bool_]:
+    def _find_valid_bimolecular_rxns(
+        self, reactants: Tuple[Optional[str], Optional[str]]
+    ) -> npt.NDArray[np.bool_]:
         reaction_mask: list[bool] = []
         for _rxn in self.rxn_collection.rxns:
             try:
@@ -251,7 +252,9 @@ class SynTreeDecoder:
         final_mask = []
 
         # Remove reactions without available reactants as partner
-        for _rxn, is_selected in zip(self.rxn_collection.rxns, reaction_mask):  # type: Reaction, bool
+        for _rxn, is_selected in zip(
+            self.rxn_collection.rxns, reaction_mask
+        ):  # type: Reaction, bool
             if not is_selected:
                 final_mask.append(False)
             elif _rxn.num_reactant == 1:
@@ -354,7 +357,9 @@ class SynTreeDecoder:
                 break
             elif self.action_mapping[action_id] == "add":
                 # Start a new sub-syntree.
-                z_reactant1 = rt1.forward(z_state_tensor)  # TODO: z=z' as mol embedding dim is differnt
+                z_reactant1 = rt1.forward(
+                    z_state_tensor
+                )  # TODO: z=z' as mol embedding dim is differnt
                 z_reactant1 = z_reactant1.detach().numpy()  # (1,d')
 
                 # Select building block via kNN search
@@ -458,7 +463,9 @@ class SynTreeDecoder:
                     # Get position of available reactants in bblocks_manager
                     _emb = self.bblocks_manager.get_embedding_for(available_reactants_2)
                     if _emb.shape[0] == 0:
-                        raise NoSuitableReactantError(f"No reactant found for reaction: {reaction.smirks}")
+                        raise NoSuitableReactantError(
+                            f"No reactant found for reaction: {reaction.smirks}"
+                        )
                     logger.debug(f"  Subspace of available 2nd reactants: {_emb.shape[0]} ")
                     _dists = cosine_distances(_emb, z_reactant2)
                     idx = np.argmin(_dists)

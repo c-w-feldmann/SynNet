@@ -49,8 +49,7 @@ def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
 
 
 def rxn_template(
-    reaction_smarts: str,
-    reaction_template_name_dict: dict[AllChem.ChemicalReaction, str]
+    reaction_smarts: str, reaction_template_name_dict: dict[AllChem.ChemicalReaction, str]
 ) -> Optional[str]:
     """Check whether given reaction it matches any templates.
 
@@ -105,8 +104,7 @@ def rxn_template(
 
 
 def route_templates(
-    synthesis_route: list[str],
-    reaction_template_name_dict: dict[AllChem.ChemicalReaction, str]
+    synthesis_route: list[str], reaction_template_name_dict: dict[AllChem.ChemicalReaction, str]
 ) -> list[str]:
     """Check if given synthesis route matches any templates.
     Given synthesis route, checks whether all reaction steps are in template list
@@ -133,6 +131,7 @@ def route_templates(
 
 if __name__ == "__main__":
     from rdkit import RDLogger
+
     disable_RDLogger = True  # disables RDKit warnings
     if disable_RDLogger:
         RDLogger.DisableLog("rdApp.*")

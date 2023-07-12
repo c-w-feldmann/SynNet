@@ -62,9 +62,13 @@ def find_similar_fp(fp: npt.NDArray[Any], fps_reference: npt.NDArray[Any]) -> tu
     return similarity_score, idx
 
 
-def _compute_fp_bitvector(smiles: list[str], radius: int = 2, nbits: int = 1024) -> list[npt.NDArray[Any]]:
+def _compute_fp_bitvector(
+    smiles: list[str], radius: int = 2, nbits: int = 1024
+) -> list[npt.NDArray[Any]]:
     return [
-        np.array(AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits))
+        np.array(
+            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits)
+        )
         for smi in smiles
     ]
 

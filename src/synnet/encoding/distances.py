@@ -51,8 +51,7 @@ def _tanimoto_similarity(fp1: npt.NDArray[np.float_], fp2: npt.NDArray[np.float_
 
 
 def tanimoto_similarity(
-    target_fp: npt.NDArray[np.float_],
-    smis: list[str]
+    target_fp: npt.NDArray[np.float_], smis: list[str]
 ) -> npt.NDArray[np.float_]:
     """
     Returns the Tanimoto similarities between a target fingerprint and molecules

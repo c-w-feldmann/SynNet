@@ -3,6 +3,7 @@
 from __future__ import annotations
 import logging
 from typing import Any, Iterable, List, Optional, Tuple, TypeVar, Union
+
 try:
     from typing import Self  # type: ignore[attr-defined]
 except ImportError:
@@ -117,7 +118,9 @@ class SynTreeGenerator:
         Info: This can take a while for lots of possible reactants."""
         if self.processes == 1:
             rxns = tqdm(self.reaction_set) if self.verbose else self.reaction_set
-            self.reaction_set = ReactionSet([rxn.set_available_reactants(self.building_blocks) for rxn in rxns])
+            self.reaction_set = ReactionSet(
+                [rxn.set_available_reactants(self.building_blocks) for rxn in rxns]
+            )
         else:
             self.__match_mp()
 
@@ -140,10 +143,7 @@ class SynTreeGenerator:
             raise NoReactionAvailableError(f"Cannot find a reaction for reactant: {smiles}.")
         return np.asarray(rxn_mask)
 
-    def _sample_rxn(
-        self,
-        mask: Optional[npt.NDArray[np.bool_]] = None
-    ) -> Tuple[Reaction, int]:
+    def _sample_rxn(self, mask: Optional[npt.NDArray[np.bool_]] = None) -> Tuple[Reaction, int]:
         """Sample a reaction by index."""
         if mask is None:
             irxn_mask = self.IDX_RXNS  # all reactions are possible
@@ -247,14 +247,22 @@ class SynTreeGenerator:
 
         # Special cases.
         # Case: Syntree is 1 update apart from its max size, only allow to end it.
-        if state[0] is not None and state[1] is None and (syntree.num_actions == self.max_depth - 1):
+        if (
+            state[0] is not None
+            and state[1] is None
+            and (syntree.num_actions == self.max_depth - 1)
+        ):
             logger.debug(
                 "  Overriding action space to only allow action=end."
                 + f"(1, {syntree.num_actions=}, {self.max_depth=})"
             )
             can_add, can_merge, can_expand = False, False, False
             can_end = True
-        elif state[0] is not None and state[1] is not None and (syntree.num_actions == self.max_depth - 2):
+        elif (
+            state[0] is not None
+            and state[1] is not None
+            and (syntree.num_actions == self.max_depth - 2)
+        ):
             # ATTN: This might result in an Exception,
             #       i.e. when no rxn template matches or the product is invalid etc.
             logger.debug(
@@ -263,7 +271,11 @@ class SynTreeGenerator:
             )
             can_add, can_expand, can_end = False, False, False
             can_merge = True
-        elif state[0] is not None and state[1] is None and (syntree.num_actions == self.max_depth - 3):
+        elif (
+            state[0] is not None
+            and state[1] is None
+            and (syntree.num_actions == self.max_depth - 3)
+        ):
             # Handle case for max_depth=6 and [0, 1, 1, 1, 0, 2, 3] ?
             #                                              ^-- prevent this
             pass
@@ -273,9 +285,7 @@ class SynTreeGenerator:
         return np.array((can_add, can_expand, can_merge, can_end), dtype=bool)
 
     def _get_rxn_mask(
-        self,
-        reactants: tuple[Optional[str], Optional[str]],
-        raise_exc: bool = True
+        self, reactants: tuple[Optional[str], Optional[str]], raise_exc: bool = True
     ) -> npt.NDArray[np.bool_]:
         """Get a mask of possible reactions for the two reactants."""
         # First: Identify bi-molecular reactions
@@ -369,9 +379,7 @@ class SynTreeGenerator:
         return syntree
 
     def generate_safe(
-        self,
-        max_depth: int = 8,
-        min_actions: int = 1
+        self, max_depth: int = 8, min_actions: int = 1
     ) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
         """Wrapper for `self.generate()` to catch all errors."""
         try:
