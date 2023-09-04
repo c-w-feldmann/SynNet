@@ -240,7 +240,7 @@ class SynTreeDecoder:
                 p = _rxn.run_reaction(reactants, allow_to_fail=False)
                 is_valid_reaction = p is not None
             except Exception as e:
-                print(e)
+                #print(e)  # TODO: implement reaction.can_react(reactants) method returning a bool
                 # run_reactions() does some validity-checks and raises Exception
                 is_valid_reaction = False
             reaction_mask += [is_valid_reaction]
