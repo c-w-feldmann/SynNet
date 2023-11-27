@@ -1,7 +1,7 @@
 numba
 pathos
 pytest
-git+https://github.com/anyoptimization/pymoo.git
+pymoo @ git+https://github.com/anyoptimization/pymoo.git
 lightning
 rdkit
 scikit-learn>=1.1.0
