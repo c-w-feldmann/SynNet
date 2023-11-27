@@ -4,9 +4,9 @@ Multi-layer perceptron (MLP) class.
 import logging
 from typing import Any, Optional
 
+import lightning
 import numpy as np
 import numpy.typing as npt
-import pytorch_lightning as pl
 import sklearn.neighbors as skl_nn
 import torch
 import torch.nn.functional as torch_func
@@ -17,7 +17,7 @@ from synnet.encoding.embedding import MolecularEmbeddingManager
 logger = logging.getLogger(__name__)
 
 
-class MLP(pl.LightningModule):
+class MLP(lightning.LightningModule):
     TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
     VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
     OPTIMIZERS = "sgd adam".lower().split()
