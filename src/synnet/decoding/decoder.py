@@ -345,10 +345,11 @@ class SynTreeDecoder:
             state = syntree.get_state()
             z_state = self.get_state_embedding(state, z_target)  # (3d)
             z_state_tensor = torch.Tensor(z_state[None, :])  # (1,3d)
+            z_state_tensor  = z_state_tensor.to(act.device)
 
             # Prediction action
             p_action = act.forward(z_state_tensor)  # (1,4)
-            p_action = p_action.detach().numpy() + eps
+            p_action = p_action.detach().cpu().numpy() + eps
             action_mask = self._get_action_mask(syntree)
             action_id = int(np.argmax(p_action * action_mask))
             logger.debug(f" Action: {self.action_mapping[action_id]}. ({p_action.round(2)=})")
@@ -359,7 +360,7 @@ class SynTreeDecoder:
                 # Start a new sub-syntree.
                 # TODO: z=z' as mol embedding dim is differnt
                 z_reactant1 = rt1.forward(z_state_tensor)
-                z_reactant1 = z_reactant1.detach().numpy()  # (1,d')
+                z_reactant1 = z_reactant1.detach().cpu().numpy()  # (1,d')
 
                 # Select building block via kNN search
                 k = k_reactant1 if i == 0 else 1
@@ -388,11 +389,11 @@ class SynTreeDecoder:
             if reactant_1 is None:
                 raise AssertionError("No reactant_1 found.")
             # Predict reaction
-            z_reactant_1 = torch.Tensor(self.mol_encoder.encode(reactant_1))  # (1,d)
+            z_reactant_1 = torch.Tensor(self.mol_encoder.encode(reactant_1)).to(z_state_tensor.device)  # (1,d)
             x = torch.cat((z_state_tensor, z_reactant_1), dim=1)
             # x = torch.Tensor(np.concatenate((z_state_tensor, z_reactant_1), axis=1))
             p_rxn = rxn.forward(x)
-            p_rxn = p_rxn.detach().numpy() + eps
+            p_rxn = p_rxn.detach().cpu().numpy() + eps
             logger.debug(
                 "  Top 5 reactions: "
                 + ", ".join(
@@ -444,11 +445,11 @@ class SynTreeDecoder:
             elif self.action_mapping[action_id] in ["add", "expand"]:
                 if reaction.num_reactant == 2:
                     # Sample 2nd reactant
-                    z_rxn = torch.Tensor(self.rxn_encoder.encode(rxn_id))
+                    z_rxn = torch.Tensor(self.rxn_encoder.encode(rxn_id)).to(z_state_tensor.device)
                     x = torch.cat([z_state_tensor, z_reactant_1, z_rxn], dim=1)
 
                     z_reactant2 = rt2.forward(x)
-                    z_reactant2 = z_reactant2.detach().numpy()
+                    z_reactant2 = z_reactant2.cpu().detach().numpy()
 
                     # Select building block via kNN search
                     # does reactant 1 match position 0 or 1 in the template?
