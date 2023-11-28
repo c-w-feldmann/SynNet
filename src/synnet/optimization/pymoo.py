@@ -9,6 +9,13 @@ from pymoo.core.problem import Problem
 import numpy as np
 import numpy.typing as npt
 
+from rdkit import Chem
+from rdkit.Chem import AllChem
+from rdkit.DataStructs import (
+    TanimotoSimilarity
+)
+
+
 DecoderFunction = Callable[[npt.NDArray[Any]], Optional[str]]
 ScorerFunction = Callable[[Optional[str]], float]
 
@@ -34,6 +41,37 @@ class SmilesDuplicateElimination(ElementwiseDuplicateElimination):
         smiles_a = self._get_smiles(a)
         smiles_b = self._get_smiles(b)
         return smiles_a == smiles_b
+
+
+class SimilarityDuplicateElimination(ElementwiseDuplicateElimination):
+    """Duplicate elimination based on Tanimoto Similarity."""
+
+    def __init__(
+        self,
+        decoder: DecoderFunction,
+        threshold: float
+    ) -> None:
+        super().__init__()
+        self.decoder = decoder
+        self.threshold = threshold
+
+    def _get_smiles(self, individual: Individual) -> Optional[str]:
+        if individual.has("smiles"):
+            return individual.get("smiles")
+        else:
+            smiles = self.decoder(individual.X)
+            individual.set("smiles", smiles)
+            return smiles
+
+    def is_equal(self, a: Individual, b: Individual) -> bool:
+        mol_a = Chem.MolFromSmiles(self._get_smiles(a))
+        mol_b = Chem.MolFromSmiles(self._get_smiles(b))
+        if mol_a is None or mol_b is None:
+            return True
+        bit_vector_a = AllChem.GetMorganFingerprintAsBitVect(mol_a, 2)
+        bit_vector_b = AllChem.GetMorganFingerprintAsBitVect(mol_b, 2)
+        tanimoto = TanimotoSimilarity(bit_vector_a, bit_vector_b)
+        return tanimoto >= self.threshold
 
 
 class SmilesGenerationProblem(Problem):
