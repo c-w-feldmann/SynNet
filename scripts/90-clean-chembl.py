@@ -4,12 +4,13 @@ Info:
     Some SMILES in the chembl data are invalid.
     We clean all SMILES by converting them from `smiles`-> `mol`->`smiles`.
 """
-import pandas as pd
+
 from functools import partial
 
-from synnet.utils.custom_types import PathType
-
 import datamol as dm
+import pandas as pd
+
+from synnet.utils.custom_types import PathType
 
 
 def load(file: PathType) -> pd.DataFrame:

@@ -1,5 +1,6 @@
 """Extract chemicals as SMILES from a downloaded `*.sdf*` file.
 """
+
 import argparse
 import json
 import logging

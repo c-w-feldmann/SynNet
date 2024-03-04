@@ -1,20 +1,17 @@
 """Module with pymoo solver class for optimization."""
-from __future__ import annotations
-from typing import Any, Callable, Optional
 
-from pymoo.core.duplicate import ElementwiseDuplicateElimination
-from pymoo.core.population import Individual
-from pymoo.core.problem import Problem
+from __future__ import annotations
+
+from typing import Any, Callable, Optional
 
 import numpy as np
 import numpy.typing as npt
-
+from pymoo.core.duplicate import ElementwiseDuplicateElimination
+from pymoo.core.population import Individual
+from pymoo.core.problem import Problem
 from rdkit import Chem
 from rdkit.Chem import AllChem
-from rdkit.DataStructs import (
-    TanimotoSimilarity
-)
-
+from rdkit.DataStructs import TanimotoSimilarity
 
 DecoderFunction = Callable[[npt.NDArray[Any]], Optional[str]]
 ScorerFunction = Callable[[Optional[str]], float]
@@ -46,11 +43,7 @@ class SmilesDuplicateElimination(ElementwiseDuplicateElimination):
 class SimilarityDuplicateElimination(ElementwiseDuplicateElimination):
     """Duplicate elimination based on Tanimoto Similarity."""
 
-    def __init__(
-        self,
-        decoder: DecoderFunction,
-        threshold: float
-    ) -> None:
+    def __init__(self, decoder: DecoderFunction, threshold: float) -> None:
         super().__init__()
         self.decoder = decoder
         self.threshold = threshold
@@ -110,7 +103,9 @@ class SmilesGenerationProblem(Problem):
         smiles_list: Optional[list[Optional[str]]]
         smiles_list = _kwargs.get("smiles_list", None)
         if smiles_list is None:
-            smiles_list = [self.decoder(embedding) for embedding in embedded_representation]
+            smiles_list = [
+                self.decoder(embedding) for embedding in embedded_representation
+            ]
             out["smiles"] = smiles_list
         if len(smiles_list) != embedded_representation.shape[0]:
             raise AssertionError("Number of smiles and embeddings do not match.")

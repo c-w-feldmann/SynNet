@@ -1,13 +1,15 @@
 """Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set.
 """  # TODO: clean up, un-nest a couple of fcts
+
 from __future__ import annotations
-from typing import Any
+
 import argparse
 import json
 import logging
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -15,8 +17,8 @@ import pandas as pd
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
-from synnet.utils.data_utils import SyntheticTreeSet
 from synnet.config import MAX_PROCESSES
+from synnet.utils.data_utils import SyntheticTreeSet
 
 logger = logging.getLogger(__file__)
 
@@ -37,7 +39,9 @@ def get_args() -> argparse.Namespace:
         help="File to save similarity-values for test,valid-synthetic trees. (*csv.gz)",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 
@@ -52,7 +56,9 @@ def _match_dataset_filename(
     return files[0]
 
 
-def find_similar_fp(fp: npt.NDArray[Any], fps_reference: npt.NDArray[Any]) -> tuple[float, np.int_]:
+def find_similar_fp(
+    fp: npt.NDArray[Any], fps_reference: npt.NDArray[Any]
+) -> tuple[float, np.int_]:
     """Finds most similar fingerprint in a reference set for `fp`.
     Uses Tanimoto Similarity.
     """
@@ -67,7 +73,9 @@ def _compute_fp_bitvector(
 ) -> list[npt.NDArray[Any]]:
     return [
         np.array(
-            AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits)
+            AllChem.GetMorganFingerprintAsBitVect(
+                Chem.MolFromSmiles(smi), radius, nBits=nbits
+            )
         )
         for smi in smiles
     ]
@@ -126,10 +134,18 @@ if __name__ == "__main__":
     # Compute (mp)
     logger.info("Start computing most similar smiles...")
     df_valid = compute_most_similar_smiles(
-        "valid", fps_valid, smiles_valid, fps_reference=fps_train, smiles_reference=smiles_train
+        "valid",
+        fps_valid,
+        smiles_valid,
+        fps_reference=fps_train,
+        smiles_reference=smiles_train,
     )
     df_test = compute_most_similar_smiles(
-        "test", fps_test, smiles_test, fps_reference=fps_train, smiles_reference=smiles_train
+        "test",
+        fps_test,
+        smiles_test,
+        fps_reference=fps_train,
+        smiles_reference=smiles_train,
     )
     logger.info("Computed most similar smiles for {valid,test}-set.")
 

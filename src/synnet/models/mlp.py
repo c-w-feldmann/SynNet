@@ -1,6 +1,7 @@
 """
 Multi-layer perceptron (MLP) class.
 """
+
 import logging
 from typing import Any, Optional
 
@@ -125,7 +126,9 @@ class MLP(lightning.LightningModule):
         else:
             raise NotImplementedError(f"Loss function '{self.loss}' is not available.")
 
-        self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
         return loss
 
     def validation_step(
@@ -168,9 +171,13 @@ class MLP(lightning.LightningModule):
         elif self.valid_loss == "cosine_distance":
             loss = 1 - torch_func.cosine_similarity(y, y_hat).mean()
         else:
-            raise NotImplementedError(f"Loss function '{self.valid_loss}' is not available.")
+            raise NotImplementedError(
+                f"Loss function '{self.valid_loss}' is not available."
+            )
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
 
     def configure_optimizers(self) -> dict[str, Any]:
         """Define Optimerzers and LR schedulers."""
@@ -187,7 +194,9 @@ class MLP(lightning.LightningModule):
         return {"optimizer": optimizer}
 
 
-def nn_search_list(y: npt.NDArray[np.float_], kdtree: skl_nn.KDTree) -> npt.NDArray[np.int_]:
+def nn_search_list(
+    y: npt.NDArray[np.float_], kdtree: skl_nn.KDTree
+) -> npt.NDArray[np.int_]:
     y = np.atleast_2d(y)  # (n_samples, n_features)
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind

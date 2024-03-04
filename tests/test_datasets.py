@@ -13,7 +13,13 @@ base_dir = Path(__file__).parent.absolute()
 def syntree_simplified() -> SyntheticTree:
     """Load a simplified syntree where SMILES are replaced with "n<int>"."""
     return SyntheticTree.from_dict(
-        dict(json.load(open(base_dir / "assets/syntree-small-simple.json", "r", encoding="utf-8")))
+        dict(
+            json.load(
+                open(
+                    base_dir / "assets/syntree-small-simple.json", "r", encoding="utf-8"
+                )
+            )
+        )
     )
 
 

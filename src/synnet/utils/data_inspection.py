@@ -1,7 +1,9 @@
 """data_inspection.py
 Collection of functions to inspect data.
 """
+
 from __future__ import annotations
+
 import functools
 from collections import Counter
 from itertools import chain
@@ -12,8 +14,8 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 from synnet.utils.custom_types import PathType
+from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 
 @functools.lru_cache(maxsize=10)
@@ -33,7 +35,9 @@ def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter
     return cnt
 
 
-def count_building_blocks(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter[str]:
+def count_building_blocks(
+    syntrees: Union[SyntheticTree, SyntheticTreeSet]
+) -> Counter[str]:
     """Extract chemicals, which are leafes, in syntrees."""
     if isinstance(syntrees, SyntheticTree):
         syntrees = SyntheticTreeSet([syntrees])
@@ -173,7 +177,9 @@ def plot_reaction_heatmap(
     return ax
 
 
-def cnt_to_dataframe(cnt: Counter[Any], index_name: Optional[str] = None) -> pd.DataFrame:
+def cnt_to_dataframe(
+    cnt: Counter[Any], index_name: Optional[str] = None
+) -> pd.DataFrame:
     df = pd.DataFrame().from_dict(cnt, columns=["count"], orient="index")
     df["count_rel"] = df["count"] / df["count"].sum()
     df["count_rel"] = df["count_rel"].round(4)
@@ -183,7 +189,9 @@ def cnt_to_dataframe(cnt: Counter[Any], index_name: Optional[str] = None) -> pd.
 
 
 def col_as_percentage(
-    df: pd.DataFrame, cols: Optional[Union[list[str], str, pd.Index]] = None, replace: bool = False
+    df: pd.DataFrame,
+    cols: Optional[Union[list[str], str, pd.Index]] = None,
+    replace: bool = False,
 ) -> pd.DataFrame:
     if not cols:
         cols = df.columns

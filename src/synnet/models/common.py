@@ -1,7 +1,8 @@
 """Common methods and params shared by all models.
 """
-from datetime import datetime
+
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -12,8 +13,8 @@ import torch.utils.data as torch_data
 import yaml
 from scipy import sparse
 
-from synnet.models.mlp import MLP
 from synnet.encoding.embedding import MolecularEmbeddingManager
+from synnet.models.mlp import MLP
 from synnet.utils.custom_types import PathType
 
 logger = logging.getLogger(__file__)
@@ -52,7 +53,8 @@ def xy_to_dataloader(
     if isinstance(n, int):
         if n > X.shape[0]:
             logger.warning(
-                f"n={n} exceeds size of dataset {X.shape[0]}. " f"Setting n to {X.shape[0]}."
+                f"n={n} exceeds size of dataset {X.shape[0]}. "
+                f"Setting n to {X.shape[0]}."
             )
             n = int(X.shape[0])
         X = X[:n]
@@ -85,7 +87,9 @@ def _compute_class_weights_from_dataloader(
     from sklearn.utils.class_weight import compute_class_weight
 
     if not hasattr(dataloader.dataset, "tensors"):
-        raise AssertionError("Dataloader must have a dataset with a `tensors`-attribute.")
+        raise AssertionError(
+            "Dataloader must have a dataset with a `tensors`-attribute."
+        )
     y: torch.Tensor = dataloader.dataset.tensors[-1]
     classes = y.unique().numpy()
     y = y.numpy()
@@ -213,7 +217,9 @@ def _download_to_file(url: str, filename: str) -> None:
         r.raise_for_status()
         total_size = int(r.headers.get("content-length", 0))
 
-        with tqdm(total=total_size, desc=Path(filename).name, unit="iB", unit_scale=True) as pbar:
+        with tqdm(
+            total=total_size, desc=Path(filename).name, unit="iB", unit_scale=True
+        ) as pbar:
             with open(filename, "wb") as f:
                 for chunk in r.iter_content(chunk_size=1024 * 4):
                     pbar.update(len(chunk))

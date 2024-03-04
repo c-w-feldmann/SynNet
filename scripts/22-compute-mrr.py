@@ -1,6 +1,7 @@
 """Compute the mean reciprocal ranking for reactant 1
 selection using the different distance metrics in the k-NN search.
 """
+
 import argparse
 import json
 import logging
@@ -24,14 +25,22 @@ def get_args() -> argparse.Namespace:
         "--ckpt-file", type=str, help="Checkpoint to load trained reactant 1 network."
     )
     parser.add_argument(
-        "--embeddings-file", type=str, help="Pre-computed molecular embeddings for kNN search."
+        "--embeddings-file",
+        type=str,
+        help="Pre-computed molecular embeddings for kNN search.",
     )
-    parser.add_argument("--X-data-file", type=str, help="Featurized X data for network.")
-    parser.add_argument("--y-data-file", type=str, help="Featurized y data for network.")
+    parser.add_argument(
+        "--X-data-file", type=str, help="Featurized X data for network."
+    )
+    parser.add_argument(
+        "--y-data-file", type=str, help="Featurized y data for network."
+    )
     parser.add_argument(
         "--nbits", type=int, default=4096, help="Number of Bits for Morgan fingerprint."
     )
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument("--device", type=str, default="cuda:0", help="")
     parser.add_argument(
@@ -84,10 +93,16 @@ if __name__ == "__main__":
         X, y = X.to(args.device), y.to(args.device)
         y_hat = rt1_net(X)  # (batch_size,nbits)
 
-        ind_true = mol_embedder.kdtree.query(y.detach().cpu().numpy(), k=1, return_distance=False)
-        ind = mol_embedder.kdtree.query(y_hat.detach().cpu().numpy(), k=n, return_distance=False)
+        ind_true = mol_embedder.kdtree.query(
+            y.detach().cpu().numpy(), k=1, return_distance=False
+        )
+        ind = mol_embedder.kdtree.query(
+            y_hat.detach().cpu().numpy(), k=n, return_distance=False
+        )
 
-        irows, icols = np.nonzero(ind == ind_true)  # irows = range(batch_size), icols = ranks
+        irows, icols = np.nonzero(
+            ind == ind_true
+        )  # irows = range(batch_size), icols = ranks
         rank_list.append(icols)
 
     ranks_array = np.asarray(rank_list, dtype=int).flatten()  # (nSamples,)
@@ -101,4 +116,6 @@ if __name__ == "__main__":
     for i in TOP_N_RANKS:
         n_recovered = sum(ranks_array < i)
         n = len(ranks_array)
-        print(f"The Top-{i:<2d} recovery rate is: {n_recovered/n:.3f} ({n_recovered}/{n})")
+        print(
+            f"The Top-{i:<2d} recovery rate is: {n_recovered/n:.3f} ({n_recovered}/{n})"
+        )

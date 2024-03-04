@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import logging
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
@@ -7,13 +9,10 @@ from numpy import typing as npt
 from torch.utils.data.dataset import Dataset
 
 from synnet.config import MAX_PROCESSES
-
-import logging
-
-from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 from synnet.data_generation.syntrees import MorganFingerprintEncoder
-from synnet.utils.parallel import chunked_parallel
 from synnet.utils.custom_types import PathType
+from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
+from synnet.utils.parallel import chunked_parallel
 
 
 class SyntreeDataset(Dataset):  # type: ignore[type-arg]
@@ -36,7 +35,9 @@ class SyntreeDataset(Dataset):  # type: ignore[type-arg]
         elif isinstance(dataset, SyntreeDataset):
             self.syntree_set = dataset.syntree_set
         else:
-            raise ValueError(f"dataset must be a Path, string or Iterable, not {type(dataset)}")
+            raise ValueError(
+                f"dataset must be a Path, string or Iterable, not {type(dataset)}"
+            )
         self.num_workers = num_workers
 
     def __len__(self) -> int:
@@ -72,7 +73,9 @@ class ActSyntreeDataset(SyntreeDataset):
 
         # Extract data
         # For the ACT network the problem is classification.
-        chopped_syntrees = [self.chop_syntree(st) for st in self.syntree_set.synthetic_tree_list]
+        chopped_syntrees = [
+            self.chop_syntree(st) for st in self.syntree_set.synthetic_tree_list
+        ]
         self.data = [elem for sublist in chopped_syntrees for elem in sublist]
 
         # Featurize data
@@ -85,7 +88,9 @@ class ActSyntreeDataset(SyntreeDataset):
                 verbose=verbose,
             )
             self.features = (
-                np.asarray(_features).reshape((-1, 3 * self.featurizer.nbits)).astype("float32")
+                np.asarray(_features)
+                .reshape((-1, 3 * self.featurizer.nbits))
+                .astype("float32")
             )  # (num_states, 3*nbits)
         else:
             raise ValueError("No featurizer provided")
@@ -100,7 +105,11 @@ class ActSyntreeDataset(SyntreeDataset):
         root_mol_1 = None
         root_mol_2 = None
         for i, action in enumerate(syntree.actions):
-            state: tuple[str, Optional[str], Optional[str]] = (target_mol, root_mol_1, root_mol_2)
+            state: tuple[str, Optional[str], Optional[str]] = (
+                target_mol,
+                root_mol_1,
+                root_mol_2,
+            )
             target: int = action
             x = {"target": target, "state": state, "num_action": i}
 

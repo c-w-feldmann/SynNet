@@ -4,14 +4,17 @@ Computes the molecular embeddings of the purchasable building blocks.
 The embeddings are also referred to as "output embedding".
 In the embedding space, a kNN-search will identify the 1st or 2nd reactant.
 """
+
 import argparse
 import json
 import logging
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
-from synnet.encoding.embedding import MorganFingerprintEmbedding
-from synnet.encoding.embedding import MolecularEmbeddingManager
+from synnet.encoding.embedding import (
+    MolecularEmbeddingManager,
+    MorganFingerprintEmbedding,
+)
 
 logger = logging.getLogger(__file__)
 
@@ -44,7 +47,9 @@ def get_args() -> argparse.Namespace:
         help="Featurization function applied to each molecule.",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 

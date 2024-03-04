@@ -1,6 +1,7 @@
 import numba
 import numpy as np
 import numpy.typing as npt
+
 from synnet.encoding.embedding import MorganFingerprintEmbedding
 
 
@@ -12,7 +13,9 @@ def cosine_distance(v1: npt.NDArray[np.float_], v2: npt.NDArray[np.float_]) -> f
         cosine_similarity = x'y / (||x|| ||y||) in [-1,1]
         cosine_distance   = 1 - cosine_similarity in [0,2]
     """
-    return max(0, min(1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), 2))
+    return max(
+        0, min(1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), 2)
+    )
 
 
 def ce_distance(
@@ -36,7 +39,9 @@ def ce_distance(
 
 
 @numba.njit()
-def _tanimoto_similarity(fp1: npt.NDArray[np.float_], fp2: npt.NDArray[np.float_]) -> float:
+def _tanimoto_similarity(
+    fp1: npt.NDArray[np.float_], fp2: npt.NDArray[np.float_]
+) -> float:
     """
     Returns the Tanimoto similarity between two molecular fingerprints.
 

@@ -1,5 +1,6 @@
 """parallel.py
 """
+
 import logging
 from typing import Any, Callable, Optional, TypeVar
 
@@ -107,7 +108,9 @@ def chunked_parallel(
     num_chunks = compute_chunksize(input_list, max_cpu) if chunks is None else chunks
     step_size = len(input_list) // num_chunks
 
-    chunked_list = [input_list[i : i + step_size] for i in range(0, len(input_list), step_size)]
+    chunked_list = [
+        input_list[i : i + step_size] for i in range(0, len(input_list), step_size)
+    ]
     logging.debug(
         f"{max_cpu=}, {len(input_list)=}, {num_chunks=}, {step_size=}, {len(chunked_list)=}"
     )

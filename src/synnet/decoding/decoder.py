@@ -1,7 +1,9 @@
 """Decoder for a molecular embedding."""
+
 # Setup
 # * Imports
 from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -11,25 +13,19 @@ try:
 except ImportError:
     from typing_extensions import Self
 
+import lightning as ltg
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-import lightning as ltg
 import torch
+from sklearn.metrics.pairwise import cosine_distances
 
 from synnet.data_generation.preprocessing import Reaction
 from synnet.data_generation.syntrees import MorganFingerprintEncoder, OneHotEncoder
-
-from sklearn.metrics.pairwise import cosine_distances
-
-from synnet.utils.data_utils import (
-    ReactionSet,
-    SyntheticTree,
-    SyntheticTreeSet,
-)
-from synnet.utils.synnet_exceptions import NoSuitableReactantError, StateEmbeddingError
-from synnet.utils.custom_types import PathType
 from synnet.encoding.embedding import MolecularEmbeddingManager
+from synnet.utils.custom_types import PathType
+from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
+from synnet.utils.synnet_exceptions import NoSuitableReactantError, StateEmbeddingError
 
 # * Logging
 logger = logging.getLogger(__name__)
@@ -56,7 +52,9 @@ class HelperDataloader:
         if any(split in file_path.stem for split in ["train", "valid", "test"]):
             logger.info(f"Reading data from {file_path}")
             syntree_collection = SyntheticTreeSet().load(file_path)
-            all_root_list = [syntree.root for syntree in syntree_collection.synthetic_tree_list]
+            all_root_list = [
+                syntree.root for syntree in syntree_collection.synthetic_tree_list
+            ]
             if None in all_root_list:
                 raise ValueError("None in root_list")
             root_list = [root for root in all_root_list if root is not None]
@@ -73,7 +71,9 @@ class SynTreeDecoder:
 
     mol_encoder: MorganFingerprintEncoder
     rxn_collection: ReactionSet
-    similarity_fct: Optional[Callable[[npt.NDArray[np.float_], List[str]], npt.NDArray[np.float_]]]
+    similarity_fct: Optional[
+        Callable[[npt.NDArray[np.float_], List[str]], npt.NDArray[np.float_]]
+    ]
 
     def __init__(
         self,
@@ -169,19 +169,25 @@ class SynTreeDecoder:
         if state[0] is None and state[1] is None:
             z_mol_root1 = np.zeros(nbits)
             z_mol_root2 = np.zeros(nbits)
-        elif state[0] is not None and state[1] is None:  # Only one actively growing syntree
+        elif (
+            state[0] is not None and state[1] is None
+        ):  # Only one actively growing syntree
             z_mol_root1 = self.mol_encoder.encode(state[0])
             z_mol_root2 = np.zeros(nbits)
         elif state[0] is not None and state[1] is not None:  # Two syntrees
             z_mol_root1 = self.mol_encoder.encode(state[0])
             z_mol_root2 = self.mol_encoder.encode(state[1])
         else:
-            raise StateEmbeddingError(f"Unable to compute state embedding. Passed {state=}")
+            raise StateEmbeddingError(
+                f"Unable to compute state embedding. Passed {state=}"
+            )
 
         return np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)
 
     def get_state_embedding(
-        self, state: tuple[Optional[str], Optional[str]], z_target: npt.NDArray[np.float_]
+        self,
+        state: tuple[Optional[str], Optional[str]],
+        z_target: npt.NDArray[np.float_],
     ) -> npt.NDArray[np.float_]:
         """Computes embeddings for all molecules in the input space.
 
@@ -216,7 +222,11 @@ class SynTreeDecoder:
         state = syntree.get_state()
         if state[0] is None and state[1] is None:  # base case
             can_add = True
-        elif state[0] is not None and state[1] is None and (syntree.depth == self.max_depth - 1):
+        elif (
+            state[0] is not None
+            and state[1] is None
+            and (syntree.depth == self.max_depth - 1)
+        ):
             # syntree is 1 update apart from its max depth, only allow to end it.
             can_end = True
         elif state[0] is not None and state[1] is None:
@@ -224,7 +234,9 @@ class SynTreeDecoder:
             can_expand = True
             can_end = True
         elif state[0] is not None and state[1] is not None:
-            can_expand = True  # TODO: do not expand when we're 2 steps away from max depth
+            can_expand = (
+                True  # TODO: do not expand when we're 2 steps away from max depth
+            )
             can_merge = any(self.get_reaction_mask((state[0], state[1])))
         else:
             raise ValueError(f"Invalid state: {state}")
@@ -240,7 +252,7 @@ class SynTreeDecoder:
                 p = _rxn.run_reaction(reactants, allow_to_fail=False)
                 is_valid_reaction = p is not None
             except Exception as e:
-                #print(e)  # TODO: implement reaction.can_react(reactants) method returning a bool
+                # print(e)  # TODO: implement reaction.can_react(reactants) method returning a bool
                 # run_reactions() does some validity-checks and raises Exception
                 is_valid_reaction = False
             reaction_mask += [is_valid_reaction]
@@ -275,7 +287,9 @@ class SynTreeDecoder:
                     final_mask.append(is_selected)
         return np.asarray(final_mask)
 
-    def get_reaction_mask(self, reactants: Union[str, tuple[str, str]]) -> npt.NDArray[np.bool_]:
+    def get_reaction_mask(
+        self, reactants: Union[str, tuple[str, str]]
+    ) -> npt.NDArray[np.bool_]:
         """Get a mask of possible reactions for given reactants.
 
         Parameters
@@ -345,14 +359,16 @@ class SynTreeDecoder:
             state = syntree.get_state()
             z_state = self.get_state_embedding(state, z_target)  # (3d)
             z_state_tensor = torch.Tensor(z_state[None, :])  # (1,3d)
-            z_state_tensor  = z_state_tensor.to(act.device)
+            z_state_tensor = z_state_tensor.to(act.device)
 
             # Prediction action
             p_action = act.forward(z_state_tensor)  # (1,4)
             p_action = p_action.detach().cpu().numpy() + eps
             action_mask = self._get_action_mask(syntree)
             action_id = int(np.argmax(p_action * action_mask))
-            logger.debug(f" Action: {self.action_mapping[action_id]}. ({p_action.round(2)=})")
+            logger.debug(
+                f" Action: {self.action_mapping[action_id]}. ({p_action.round(2)=})"
+            )
 
             if self.action_mapping[action_id] == "end":
                 break
@@ -365,7 +381,9 @@ class SynTreeDecoder:
                 # Select building block via kNN search
                 k = k_reactant1 if i == 0 else 1
                 logger.debug(f"  k-NN search for 1st reactant with k={k}.")
-                idxs = self.bblocks_manager.kdtree.query(z_reactant1, k=k, return_distance=False)
+                idxs = self.bblocks_manager.kdtree.query(
+                    z_reactant1, k=k, return_distance=False
+                )
                 # idxs.shape = (1,k)
                 idx = idxs[0][k - 1]
                 reactant_1: Optional[str] = self.bblocks_manager.smiles_array[idx]
@@ -389,7 +407,9 @@ class SynTreeDecoder:
             if reactant_1 is None:
                 raise AssertionError("No reactant_1 found.")
             # Predict reaction
-            z_reactant_1 = torch.Tensor(self.mol_encoder.encode(reactant_1)).to(z_state_tensor.device)  # (1,d)
+            z_reactant_1 = torch.Tensor(self.mol_encoder.encode(reactant_1)).to(
+                z_state_tensor.device
+            )  # (1,d)
             x = torch.cat((z_state_tensor, z_reactant_1), dim=1)
             # x = torch.Tensor(np.concatenate((z_state_tensor, z_reactant_1), axis=1))
             p_rxn = rxn.forward(x)
@@ -435,17 +455,23 @@ class SynTreeDecoder:
                 f"  Selected {'bi' if reaction.num_reactant==2 else 'uni'} reaction {rxn_id=}"
             )
             if reaction.available_reactants is None:
-                raise AssertionError(f"Reaction has no available reactants: {reaction.smirks}")
+                raise AssertionError(
+                    f"Reaction has no available reactants: {reaction.smirks}"
+                )
             # We have three options:
             #  1. "merge" -> need to sample 2nd reactant
             #  2. "expand" or "expand" -> only sample 2nd reactant if reaction is bimol
             reactant_2 = None
             if self.action_mapping[action_id] == "merge":
-                reactant_2 = syntree.get_state()[1]  # "old" root mol, i.e. other in state
+                reactant_2 = syntree.get_state()[
+                    1
+                ]  # "old" root mol, i.e. other in state
             elif self.action_mapping[action_id] in ["add", "expand"]:
                 if reaction.num_reactant == 2:
                     # Sample 2nd reactant
-                    z_rxn = torch.Tensor(self.rxn_encoder.encode(rxn_id)).to(z_state_tensor.device)
+                    z_rxn = torch.Tensor(self.rxn_encoder.encode(rxn_id)).to(
+                        z_state_tensor.device
+                    )
                     x = torch.cat([z_state_tensor, z_reactant_1, z_rxn], dim=1)
 
                     z_reactant2 = rt2.forward(x)
@@ -466,7 +492,9 @@ class SynTreeDecoder:
                         raise NoSuitableReactantError(
                             f"No reactant found for reaction: {reaction.smirks}"
                         )
-                    logger.debug(f"  Subspace of available 2nd reactants: {_emb.shape[0]} ")
+                    logger.debug(
+                        f"  Subspace of available 2nd reactants: {_emb.shape[0]} "
+                    )
                     _dists = cosine_distances(_emb, z_reactant2)
                     idx = np.argmin(_dists)
                     reactant_2 = available_reactants_2[idx]
@@ -475,7 +503,9 @@ class SynTreeDecoder:
                     reactant_2 = None
 
             # Run reaction
-            product = reaction.run_reaction((reactant_1, reactant_2), allow_to_fail=False)
+            product = reaction.run_reaction(
+                (reactant_1, reactant_2), allow_to_fail=False
+            )
             logger.debug(f"  Ran reaction {reactant_1} + {reactant_2} -> {product}")
 
             # Validate outcome of reaction
@@ -524,14 +554,18 @@ class SynTreeDecoder:
     def compute_similarity_to_target(
         self,
         *,
-        similarity_fct: Callable[[npt.NDArray[np.float_], list[str]], npt.NDArray[np.float_]],
+        similarity_fct: Callable[
+            [npt.NDArray[np.float_], list[str]], npt.NDArray[np.float_]
+        ],
         z_target: npt.NDArray[np.float_],
         syntree: SyntheticTree,
     ) -> npt.NDArray[np.float_]:  # TODO: move to its own class?
         """Computes the similarity to a `z_target` for all nodes, as
         we can in theory truncate the tree to our liking.
         """
-        return np.array(similarity_fct(z_target, [smi for smi in syntree.nodes_as_smiles]))
+        return np.array(
+            similarity_fct(z_target, [smi for smi in syntree.nodes_as_smiles])
+        )
 
 
 class SynTreeDecoderGreedy:
@@ -571,7 +605,9 @@ class SynTreeDecoderGreedy:
             if max_similarity > best_similarity:
                 best_similarity = max_similarity
                 best_syntree = syntree
-            logger.debug(f"  Max similarity: {max_similarity:.3f} (best: {best_similarity:.3f})")
+            logger.debug(
+                f"  Max similarity: {max_similarity:.3f} (best: {best_similarity:.3f})"
+            )
             if objective == "best" and best_similarity == 1.0:
                 logger.debug(
                     f"Decoded syntree has similarity 1.0 and {objective=}; abort greedy search."

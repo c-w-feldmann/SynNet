@@ -1,11 +1,13 @@
 """Action network.
 """
+
 from __future__ import annotations
-from typing import Union
+
 import argparse
 import json
 import logging
 from pathlib import Path
+from typing import Union
 
 import pytorch_lightning as pl
 import yaml
@@ -49,10 +51,18 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--fast_dev_run", default=False, action="store_true")
 
     # data
-    parser.add_argument("--Xtrain_file", default="data/featurized-uni/Xy/X_act_train.npz", type=str)
-    parser.add_argument("--ytrain_file", default="data/featurized-uni/Xy/y_act_train.npz", type=str)
-    parser.add_argument("--Xvalid_file", default="data/featurized-uni/Xy/X_act_valid.npz", type=str)
-    parser.add_argument("--yvalid_file", default="data/featurized-uni/Xy/y_act_valid.npz", type=str)
+    parser.add_argument(
+        "--Xtrain_file", default="data/featurized-uni/Xy/X_act_train.npz", type=str
+    )
+    parser.add_argument(
+        "--ytrain_file", default="data/featurized-uni/Xy/y_act_train.npz", type=str
+    )
+    parser.add_argument(
+        "--Xvalid_file", default="data/featurized-uni/Xy/X_act_valid.npz", type=str
+    )
+    parser.add_argument(
+        "--yvalid_file", default="data/featurized-uni/Xy/y_act_valid.npz", type=str
+    )
 
     # parameters
     parser.add_argument("--task", default="classification", type=str)
@@ -83,7 +93,9 @@ def train() -> None:
     logger.info(f"Arguments: {json.dumps(kwargs,indent=2)}")
 
     # Set up logging dir
-    save_dir = init_save_dir(args.result_dir, suffix=("-debug" if kwargs["debug"] else ""))
+    save_dir = init_save_dir(
+        args.result_dir, suffix=("-debug" if kwargs["debug"] else "")
+    )
 
     # Dump args
     with open(save_dir / "kwargs.yaml", "wt") as f:

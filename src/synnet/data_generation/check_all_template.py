@@ -2,13 +2,13 @@
 This file checks if a set of reactions are represented by a set of reaction
 templates. Originally written by Jake. Wenhao edited.
 """
+
 from __future__ import annotations
+
 from typing import Optional
+
 import rdkit.Chem as Chem
-from rdkit.Chem import (
-    AllChem,
-    rdChemReactions,
-)
+from rdkit.Chem import AllChem, rdChemReactions
 
 
 def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
@@ -49,7 +49,8 @@ def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
 
 
 def rxn_template(
-    reaction_smarts: str, reaction_template_name_dict: dict[AllChem.ChemicalReaction, str]
+    reaction_smarts: str,
+    reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
 ) -> Optional[str]:
     """Check whether given reaction it matches any templates.
 
@@ -104,7 +105,8 @@ def rxn_template(
 
 
 def route_templates(
-    synthesis_route: list[str], reaction_template_name_dict: dict[AllChem.ChemicalReaction, str]
+    synthesis_route: list[str],
+    reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
 ) -> list[str]:
     """Check if given synthesis route matches any templates.
     Given synthesis route, checks whether all reaction steps are in template list

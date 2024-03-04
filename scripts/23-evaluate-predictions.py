@@ -1,6 +1,7 @@
 """Evaluate a batch of predictions on different metrics.
 The predictions are generated in `20-predict-targets.py`.
 """
+
 import argparse
 import json
 import logging
@@ -24,7 +25,9 @@ def get_args() -> argparse.Namespace:
         help="Dataframe with target- and prediction smiles and similarities (*.csv.gz).",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 
@@ -78,7 +81,9 @@ if __name__ == "__main__":
         evaluator = Evaluator(name=metric)
         try:
             score_recovered = evaluator(recovered["targets"], recovered["decoded"])
-            score_unrecovered = evaluator(unrecovered["targets"], unrecovered["decoded"])
+            score_unrecovered = evaluator(
+                unrecovered["targets"], unrecovered["decoded"]
+            )
         except TypeError:
             # Some evaluators only take 1 input args, try that.
             score_recovered = evaluator(recovered["decoded"])

@@ -13,13 +13,15 @@ from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
-from synnet.decoding.decoder import HelperDataloader, SynTreeDecoder, SynTreeDecoderGreedy
-from synnet.encoding.distances import tanimoto_similarity
-from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
-from synnet.encoding.embedding import (
-    MolecularEmbeddingManager,
-)
 from synnet.data_generation.syntrees import MorganFingerprintEncoder
+from synnet.decoding.decoder import (
+    HelperDataloader,
+    SynTreeDecoder,
+    SynTreeDecoderGreedy,
+)
+from synnet.encoding.distances import tanimoto_similarity
+from synnet.encoding.embedding import MolecularEmbeddingManager
+from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.utils.custom_types import PathType
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
@@ -46,18 +48,24 @@ def get_args() -> argparse.Namespace:
         help="Input file for the pre-computed embeddings (*.npy).",
     )
     parser.add_argument(
-        "--ckpt-dir", type=str, help="Directory with checkpoints for {act,rt1,rxn,rt2}-model."
+        "--ckpt-dir",
+        type=str,
+        help="Directory with checkpoints for {act,rt1,rxn,rt2}-model.",
     )
     parser.add_argument("--output-dir", type=str, help="Directory to save output.")
     # Parameters
-    parser.add_argument("--num", type=int, default=-1, help="Number of molecules to predict.")
+    parser.add_argument(
+        "--num", type=int, default=-1, help="Number of molecules to predict."
+    )
     parser.add_argument(
         "--data",
         type=str,
         help="File with molecules to decode.",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
@@ -122,8 +130,12 @@ def postprocess_results(
 
     df["is_valid"] = df["syntree"].apply(lambda x: x.is_valid)
 
-    df["decoded_smiles"] = df["syntree"].apply(lambda st: st.root.smiles if st.is_valid else None)
-    df["decoded_depth"] = df["syntree"].apply(lambda st: st.depth if st.is_valid else None)
+    df["decoded_smiles"] = df["syntree"].apply(
+        lambda st: st.root.smiles if st.is_valid else None
+    )
+    df["decoded_depth"] = df["syntree"].apply(
+        lambda st: st.depth if st.is_valid else None
+    )
 
     return df
 
@@ -184,14 +196,20 @@ if __name__ == "__main__":
     reaction_collection = ReactionSet().load(args.rxns_collection_file)
 
     # Load and init building blocks embedder (kdtree)
-    bblocks_molembedder = MolecularEmbeddingManager.from_folder(args.bblocks_embedder_dir)
+    bblocks_molembedder = MolecularEmbeddingManager.from_folder(
+        args.bblocks_embedder_dir
+    )
 
     # Load models
     logger.info("Start loading models from checkpoints...")
     ckpt_dir = Path(args.ckpt_dir)
 
-    ckpt_files = [find_best_model_ckpt(ckpt_dir / model) for model in ["act", "rt1", "rxn", "rt2"]]
-    act_net, rt1_net, rxn_net, rt2_net = [load_mlp_from_ckpt(file) for file in ckpt_files]
+    ckpt_files = [
+        find_best_model_ckpt(ckpt_dir / model) for model in ["act", "rt1", "rxn", "rt2"]
+    ]
+    act_net, rt1_net, rxn_net, rt2_net = [
+        load_mlp_from_ckpt(file) for file in ckpt_files
+    ]
 
     logger.info("...loading models completed.")
     # endregion-dataloading
@@ -217,7 +235,9 @@ if __name__ == "__main__":
 
     logger.info(f"Start decoding {len(targets)} targets.")
 
-    result_list = chunked_parallel(targets, _wrapper, max_cpu=args.ncpu, verbose=args.verbose)
+    result_list = chunked_parallel(
+        targets, _wrapper, max_cpu=args.ncpu, verbose=args.verbose
+    )
     syn_tree_list: list[SyntheticTree] = []
     similarity_list: list[Optional[float]] = []
     for syn_tree, similarity in result_list:

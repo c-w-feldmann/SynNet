@@ -1,5 +1,6 @@
 """Filter Synthetic Trees.
 """
+
 import abc
 import json
 import logging
@@ -114,7 +115,9 @@ if __name__ == "__main__":
         )
 
         # Processing
-        parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+        parser.add_argument(
+            "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+        )
         parser.add_argument("--verbose", default=False, action="store_true")
         return parser.parse_args()
 
@@ -126,7 +129,9 @@ if __name__ == "__main__":
 
     # Load previously generated synthetic trees
     syntree_collection = SyntheticTreeSet().load(args.input_file)
-    logger.info(f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees.")
+    logger.info(
+        f"Successfully loaded '{args.input_file}' with {len(syntree_collection)} syntrees."
+    )
 
     # Filter trees
     # TODO: Move to src/synnet/data_generation/filters.py ?
@@ -165,7 +170,9 @@ if __name__ == "__main__":
 
     # Save filtered synthetic trees on disk
     SyntheticTreeSet(syntrees_filtered).save(args.output_file)
-    logger.info(f"Successfully saved '{args.output_file}' with {len(syntrees_filtered)} syntrees.")
+    logger.info(
+        f"Successfully saved '{args.output_file}' with {len(syntrees_filtered)} syntrees."
+    )
 
     # Save short summary file
     summary_file = Path(args.output_file).parent / "filter-summary.txt"

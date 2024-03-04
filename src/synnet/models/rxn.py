@@ -1,5 +1,6 @@
 """Reaction network.
 """
+
 import argparse
 import json
 import logging
@@ -13,10 +14,7 @@ from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.callbacks.progress import TQDMProgressBar
 
 from synnet import RUNNING_ON_HPC
-from synnet.models.common import (
-    init_save_dir,
-    xy_to_dataloader,
-)
+from synnet.models.common import init_save_dir, xy_to_dataloader
 from synnet.models.mlp import MLP
 
 MAX_PROCESSES = 8
@@ -46,10 +44,18 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--fast_dev_run", default=False, action="store_true")
 
     # data
-    parser.add_argument("--Xtrain_file", default="data/featurized-uni/Xy/X_rxn_train.npz", type=str)
-    parser.add_argument("--ytrain_file", default="data/featurized-uni/Xy/y_rxn_train.npz", type=str)
-    parser.add_argument("--Xvalid_file", default="data/featurized-uni/Xy/X_rxn_valid.npz", type=str)
-    parser.add_argument("--yvalid_file", default="data/featurized-uni/Xy/y_rxn_valid.npz", type=str)
+    parser.add_argument(
+        "--Xtrain_file", default="data/featurized-uni/Xy/X_rxn_train.npz", type=str
+    )
+    parser.add_argument(
+        "--ytrain_file", default="data/featurized-uni/Xy/y_rxn_train.npz", type=str
+    )
+    parser.add_argument(
+        "--Xvalid_file", default="data/featurized-uni/Xy/X_rxn_valid.npz", type=str
+    )
+    parser.add_argument(
+        "--yvalid_file", default="data/featurized-uni/Xy/y_rxn_valid.npz", type=str
+    )
 
     # parameters
     parser.add_argument("--task", default="classification", type=str)
@@ -80,7 +86,9 @@ def train() -> None:
     logger.info(f"Arguments: {json.dumps(kwargs,indent=2)}")
 
     # Set up logging dir
-    save_dir = init_save_dir(kwargs["result_dir"], suffix=("-debug" if kwargs["debug"] else ""))
+    save_dir = init_save_dir(
+        kwargs["result_dir"], suffix=("-debug" if kwargs["debug"] else "")
+    )
 
     # Dump args
     with open(save_dir / "kwargs.yaml", "wt") as f:

@@ -1,12 +1,13 @@
 from __future__ import annotations
-from typing import Any
+
 import json
 import logging
-
 from pathlib import Path
+from typing import Any
+
 import pytest
 
-from synnet.utils.data_utils import SyntheticTree, NodeChemical
+from synnet.utils.data_utils import NodeChemical, SyntheticTree
 
 logger = logging.getLogger(__name__)
 
@@ -142,27 +143,39 @@ def test_syntree_with_repeating_bblock() -> None:
     # 1: add uni
     syntree.update(_ACT["add"], 0, "A", None, "B")
     assert syntree.get_state() == ("B", None), f"{syntree.get_state()=}"
-    logger.debug(f"Iteration 1 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}")
+    logger.debug(
+        f"Iteration 1 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}"
+    )
     # 2: add uni
     syntree.update(_ACT["add"], 1, "C", None, "D")
     assert syntree.get_state() == ("D", "B"), f"{syntree.get_state()=}"
-    logger.debug(f"Iteration 2 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}")
+    logger.debug(
+        f"Iteration 2 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}"
+    )
     # 3: expand bi
     syntree.update(_ACT["expand"], 2, "D", "E", "F")
     assert syntree.get_state() == ("F", "B"), f"{syntree.get_state()=}"
-    logger.debug(f"Iteration 3 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}")
+    logger.debug(
+        f"Iteration 3 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}"
+    )
     # 4: merge
     syntree.update(_ACT["merge"], 3, "F", "B", "G")
     assert syntree.get_state() == ("G", None), f"{syntree.get_state()=}"
-    logger.debug(f"Iteration 4 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}")
+    logger.debug(
+        f"Iteration 4 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}"
+    )
     # 5: add uni
     syntree.update(_ACT["add"], 1, "C", None, "D")
     assert syntree.get_state() == ("D", "G"), f"{syntree.get_state()=}"
-    logger.debug(f"Iteration 5 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}")
+    logger.debug(
+        f"Iteration 5 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}"
+    )
     # 6: expand bi
     syntree.update(_ACT["expand"], 2, "D", "E", "F")
     assert syntree.get_state() == ("F", "G"), f"{syntree.get_state()=}"
-    logger.debug(f"Iteration 6 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}")
+    logger.debug(
+        f"Iteration 6 | Syntree depth: {syntree.depth}, state: {syntree.get_state()}"
+    )
 
 
 def test_syntree_state() -> None:

@@ -1,5 +1,6 @@
 """Reactant1 network (for predicting 1st reactant).
 """
+
 import argparse
 import json
 import logging
@@ -43,10 +44,18 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--fast_dev_run", default=False, action="store_true")
 
     # data
-    parser.add_argument("--Xtrain_file", default="data/featurized-uni/Xy/X_rt1_train.npz", type=str)
-    parser.add_argument("--ytrain_file", default="data/featurized-uni/Xy/y_rt1_train.npz", type=str)
-    parser.add_argument("--Xvalid_file", default="data/featurized-uni/Xy/X_rt1_valid.npz", type=str)
-    parser.add_argument("--yvalid_file", default="data/featurized-uni/Xy/y_rt1_valid.npz", type=str)
+    parser.add_argument(
+        "--Xtrain_file", default="data/featurized-uni/Xy/X_rt1_train.npz", type=str
+    )
+    parser.add_argument(
+        "--ytrain_file", default="data/featurized-uni/Xy/y_rt1_train.npz", type=str
+    )
+    parser.add_argument(
+        "--Xvalid_file", default="data/featurized-uni/Xy/X_rt1_valid.npz", type=str
+    )
+    parser.add_argument(
+        "--yvalid_file", default="data/featurized-uni/Xy/y_rt1_valid.npz", type=str
+    )
     parser.add_argument("--aug-fraction", default=0.3, type=float)
 
     # parameters

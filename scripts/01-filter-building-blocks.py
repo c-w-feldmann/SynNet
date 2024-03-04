@@ -1,5 +1,6 @@
 """Filter out building blocks that cannot react with any template.
 """
+
 import argparse
 import json
 import logging
@@ -43,7 +44,9 @@ def get_args() -> argparse.Namespace:
         help="Output file for the collection of reactions matched with building-blocks.",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 
@@ -61,7 +64,9 @@ if __name__ == "__main__":
 
     # 2. Filter
     #   building blocks on heuristics
-    filtered_bblocks = BuildingBlockFilterHeuristics.filter(bblocks, verbose=args.verbose)
+    filtered_bblocks = BuildingBlockFilterHeuristics.filter(
+        bblocks, verbose=args.verbose
+    )
 
     #   building blocks that cannot react with any template
     filtered_bblocks_list, reactions = BuildingBlockFilterMatchRxn().filter(
@@ -73,6 +78,8 @@ if __name__ == "__main__":
     BuildingBlockFileHandler().save(args.output_bblock_file, filtered_bblocks_list)
 
     #   initialized reactions (these are initialized with available reactants)
-    ReactionSet(reactions).save(args.output_rxns_collection_file, skip_without_building_block=False)
+    ReactionSet(reactions).save(
+        args.output_rxns_collection_file, skip_without_building_block=False
+    )
 
     logger.info("Completed.")

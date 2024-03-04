@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import logging
 from functools import partial
 from pathlib import Path
@@ -17,9 +18,9 @@ from rdkit.Chem import PandasTools, rdMolDescriptors
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
+from synnet.utils.custom_types import PathType
 from synnet.utils.data_utils import Reaction
 from synnet.utils.parallel import chunked_parallel
-from synnet.utils.custom_types import PathType
 
 logger = logging.getLogger()
 
@@ -45,7 +46,9 @@ def parse_sdf_file(file: str) -> pd.DataFrame:
 
     # Canonicalize Smiles
     df["SMILES"] = df["raw_smiles"].apply(
-        lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x), canonical=True, isomericSmiles=False)
+        lambda x: Chem.MolToSmiles(
+            Chem.MolFromSmiles(x), canonical=True, isomericSmiles=False
+        )
     )
     return df
 
@@ -87,7 +90,9 @@ class BuildingBlockFilter:
 
         if self.processes == 1:
             self.rxns = tqdm(self.rxns) if self.verbose else self.rxns
-            self.rxns = [rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns]
+            self.rxns = [
+                rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns
+            ]
         else:
             self._match_mp()
 
@@ -216,7 +221,9 @@ class BuildingBlockFilterHeuristics:
             n_keep = len(df) - idx_remove.sum()
             logger.info("Filtering building blocks based on heuristics:")
             logger.info(f"  Total number of building blocks {n_total:d}")
-            logger.info(f"  Retained number of building blocks {n_keep:d} ({n_keep/n_total:.2%})")
+            logger.info(
+                f"  Retained number of building blocks {n_keep:d} ({n_keep/n_total:.2%})"
+            )
 
         if return_as == "list":
             return df.loc[~idx_remove, "SMILES"].tolist()
@@ -245,7 +252,9 @@ class BuildingBlockFilterMatchRxn:
         """
         # Match building blocks to reactions
         logger.info("Converting SMILES to `rdkit.Mol` objects...")
-        bblocks = chunked_parallel(list(bblocks), lambda x: Chem.MolFromSmiles(x), verbose=verbose)
+        bblocks = chunked_parallel(
+            list(bblocks), lambda x: Chem.MolFromSmiles(x), verbose=verbose
+        )
 
         logger.info("Converting reaction templates to `rdkit.Reaction` objects...")
         reactions = [Reaction(tmpl) for tmpl in rxn_templates]
@@ -263,9 +272,13 @@ class BuildingBlockFilterMatchRxn:
         if verbose:
             n_total = len(list(bblocks))
             n_keep = len(matched_bblocks)
-            logger.info("Filtering building blocks based on match to reaction templates:")
+            logger.info(
+                "Filtering building blocks based on match to reaction templates:"
+            )
             logger.info(f"  Total number of building blocks {n_total:d}")
-            logger.info(f"  Retained number of building blocks {n_keep:d} ({n_keep / n_total:.2%})")
+            logger.info(
+                f"  Retained number of building blocks {n_keep:d} ({n_keep / n_total:.2%})"
+            )
 
         return matched_bblocks, reaction_list
 

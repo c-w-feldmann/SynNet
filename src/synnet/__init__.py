@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import logging
 import os
 
@@ -17,4 +18,8 @@ logger = logging.getLogger(__name__)
 
 def get_loggers(name: str = "synnet") -> list[logging.Logger]:
     """Get all loggers that contain `name`."""
-    return [logging.getLogger(_name) for _name in logging.root.manager.loggerDict if name in _name]
+    return [
+        logging.getLogger(_name)
+        for _name in logging.root.manager.loggerDict
+        if name in _name
+    ]
