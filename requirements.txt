@@ -1,8 +1,10 @@
+click
 numba
 pathos
+pandas
 pytest
 pymoo @ git+https://github.com/anyoptimization/pymoo.git
-lightning
+lightning<1000
 rdkit
 scikit-learn>=1.1.0
 torch
