@@ -11,9 +11,8 @@ from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 from synnet.encoding.distances import ce_distance, cosine_distance
-from synnet.models.common import xy_to_dataloader
-from synnet.models.common import load_mlp_from_ckpt
 from synnet.encoding.embedding import MolecularEmbeddingManager
+from synnet.models.common import load_mlp_from_ckpt, xy_to_dataloader
 
 logger = logging.getLogger(__name__)
 

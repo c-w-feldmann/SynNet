@@ -2,13 +2,16 @@
 """
 
 from __future__ import annotations
+
 import argparse
-import os
-from typing import Any, Optional
 import json
 import logging
 import multiprocessing as mp
+import os
+from functools import partial
 from pathlib import Path
+from typing import Any, Optional
+
 import numpy as np
 from rdkit import RDLogger
 
@@ -18,11 +21,7 @@ from synnet.data_generation.preprocessing import (
     ReactionTemplateFileHandler,
 )
 from synnet.data_generation.syntrees import SynTreeGenerator, SynTreeGeneratorPostProc
-from synnet.utils.data_utils import (
-    ReactionSet,
-    SyntheticTree,
-)
-from functools import partial
+from synnet.utils.data_utils import ReactionSet, SyntheticTree
 
 logger = logging.getLogger(__name__)
 RDLogger.DisableLog("rdApp.*")
