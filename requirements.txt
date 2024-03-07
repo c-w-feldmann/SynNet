@@ -5,6 +5,7 @@ pandas
 pytest
 pymoo @ git+https://github.com/anyoptimization/pymoo.git
 lightning<1000
+loguru
 rdkit
 scikit-learn>=1.1.0
 torch
