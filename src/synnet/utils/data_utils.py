@@ -306,9 +306,7 @@ class Reaction:
 
         raise AssertionError("Reaction is neither uni- or bi-molecular!")
 
-    def set_available_reactants(
-        self, building_blocks: list[str]
-    ) -> Self:
+    def set_available_reactants(self, building_blocks: list[str]) -> Self:
         """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
         """
