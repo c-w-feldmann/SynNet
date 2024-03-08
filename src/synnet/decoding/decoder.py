@@ -197,7 +197,6 @@ class SynTreeDecoder:
         if state[1] is not None:
             z_mol_root2 = self.mol_encoder.encode(state[1])
             z_mol_root2 = np.squeeze(z_mol_root2)
-        z_mol_root1, z_mol_root2 = self._get_syntree_state_embedding(state)
         z_state = np.concatenate([z_mol_root1, z_mol_root2, z_target], axis=0)
         return z_state  # (d,)
 
