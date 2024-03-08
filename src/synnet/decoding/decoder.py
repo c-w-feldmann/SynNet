@@ -42,7 +42,7 @@ class HelperDataloader:
 
     @classmethod
     def _fetch_data_from_file(cls, file: PathType) -> list[str]:
-        with open(file, "rt") as f:
+        with open(file, "rt", encoding="UTF-8") as f:
             smis_query = [line.strip() for line in f]
         return smis_query
 
@@ -50,7 +50,7 @@ class HelperDataloader:
     def fetch_data(cls, file_str: PathType) -> list[str]:
         file_path = Path(file_str)
         if any(split in file_path.stem for split in ["train", "valid", "test"]):
-            logger.info(f"Reading data from {file_path}")
+            logger.info("Reading data from {}", file_path)
             syntree_collection = SyntheticTreeSet().load(file_path)
             all_root_list = [
                 syntree.root for syntree in syntree_collection.synthetic_tree_list
@@ -252,6 +252,7 @@ class SynTreeDecoder:
                 p = _rxn.run_reaction(reactants, allow_to_fail=False)
                 is_valid_reaction = p is not None
             except Exception as e:
+                logger.warning("Reaction failed: {}", _rxn.smirks)
                 # print(e)  # TODO: implement reaction.can_react(reactants) method returning a bool
                 # run_reactions() does some validity-checks and raises Exception
                 is_valid_reaction = False
@@ -380,7 +381,7 @@ class SynTreeDecoder:
 
                 # Select building block via kNN search
                 k = k_reactant1 if i == 0 else 1
-                logger.debug(f"  k-NN search for 1st reactant with k={k}.")
+                logger.debug("  k-NN search for 1st reactant with k={}.", k)
                 idxs = self.bblocks_manager.kdtree.query(
                     z_reactant1, k=k, return_distance=False
                 )
