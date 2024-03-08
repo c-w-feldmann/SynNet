@@ -122,9 +122,8 @@ class SynTreeGenerator:
 
         Info: This can take a while for lots of possible reactants."""
         if self.processes == 1:
-            rxns = tqdm(self.reaction_set) if self.verbose else self.reaction_set
             self.reaction_set = ReactionSet(
-                [rxn.set_available_reactants(self.building_blocks) for rxn in rxns]
+                [rxn.set_available_reactants(self.building_blocks) for rxn in self.reaction_set]
             )
         else:
             self.__match_mp()
@@ -210,8 +209,7 @@ class SynTreeGenerator:
             logger.debug(f"    Sampled second reactant: {reactant_2}")
 
         # Run reaction
-        reactants = (reactant_1, reactant_2)
-        product = rxn.run_reaction(reactants)
+        product = rxn.run_reaction(reactant_1, reactant_2)
         if raise_exc and product is None:
             raise NoReactionPossibleError(
                 f"Reaction (ID: {idx_rxn}) not possible with: `{reactant_1} + {reactant_2}`."
@@ -230,7 +228,7 @@ class SynTreeGenerator:
         # Sample reaction
         rxn, idx_rxn = self._sample_rxn(mask=rxn_mask)
         # Run reaction
-        p = rxn.run_reaction((r1, r2))
+        p = rxn.run_reaction(r1, r2)
         if p is None:
             raise NoMergeReactionPossibleError(
                 f"Reaction (ID: {idx_rxn}) not possible with: {r1} + {r2}."
