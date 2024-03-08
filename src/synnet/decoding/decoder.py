@@ -69,6 +69,7 @@ class HelperDataloader:
 class SynTreeDecoder:
     """Decoder for a molecular embedding."""
 
+    _device: str
     mol_encoder: MorganFingerprintEncoder
     rxn_collection: ReactionSet
     similarity_fct: Optional[
@@ -89,6 +90,7 @@ class SynTreeDecoder:
         similarity_fct: Optional[
             Callable[[npt.NDArray[np.float_], List[str]], npt.NDArray[np.float_]]
         ] = None,
+        device: str = "cpu",
     ) -> None:
         """Initialize a SynTreeDecoder.
 
@@ -142,11 +144,24 @@ class SynTreeDecoder:
             2: "merge",
             3: "end",
         }
+        self.device = device
 
     @classmethod
     def from_config_dict(cls, config: dict[str, Any]) -> Self:
         """Instantiate a SynTreeDecoder from a config dict."""
         return cls(**config)
+
+    @property
+    def device(self) -> str:
+        """Get the device."""
+        return self._device
+
+    @device.setter
+    def device(self, device: str) -> None:
+        """Set the device."""
+        self._device = device
+        for name, net in self.nets.items():
+            self.nets[name] = net.to(device)
 
     def _get_syntree_state_embedding(
         self, state: tuple[Optional[str], Optional[str]]
