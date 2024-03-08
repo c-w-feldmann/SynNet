@@ -154,7 +154,7 @@ class SynTreeGenerator:
             rxn_mask
         ):  # Do not raise exc when checking if two mols can react
             raise NoReactionAvailableError(
-                "Cannot find a reaction for reactant: {}.", smiles
+                f"Cannot find a reaction for reactant: {smiles}."
             )
         return np.asarray(rxn_mask)
 
@@ -219,10 +219,7 @@ class SynTreeGenerator:
         product = rxn.run_reaction(reactant_1, reactant_2)
         if raise_exc and product is None:
             raise NoReactionPossibleError(
-                "Reaction (ID: {}) not possible with: `{} + {}`.",
-                idx_rxn,
-                reactant_1,
-                reactant_2,
+                f"Reaction (ID: {idx_rxn}) not possible with: `{reactant_1} + {reactant_2}`."
             )
         return reactant_1, reactant_2, product, idx_rxn
 
