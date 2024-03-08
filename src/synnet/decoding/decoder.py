@@ -202,8 +202,6 @@ class SynTreeDecoder:
 
         Embedding = [z_mol1, z_mol2, z_target]
 
-        TODO: Handle None None
-
         Parameters
         ----------
         state : tuple[str, Optional[str]]
