@@ -163,36 +163,6 @@ class SynTreeDecoder:
         for name, net in self.nets.items():
             self.nets[name] = net.to(device)
 
-    def _get_syntree_state_embedding(
-        self, state: tuple[Optional[str], Optional[str]]
-    ) -> tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]:
-        """Compute state embedding for a state.
-
-        Parameters
-        ----------
-        state : tuple[Optional[str], Optional[str]]
-            State of the syntree.
-                First string is the root of the syntree.
-                Second string is the root of the second syntree, if any.
-
-        Returns
-        -------
-        tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]
-            State embedding.
-        """
-        if state[0] is None and state[1] is not None:
-            raise StateEmbeddingError(
-                f"Invalid state: {state}. Second syntree without first syntree."
-            )
-        nbits: int = self.mol_encoder.nbits
-        z_mol_root1 = np.zeros(nbits)
-        z_mol_root2 = np.zeros(nbits)
-        if state[0] is not None:
-            z_mol_root1 = self.mol_encoder.encode(state[0])
-        if state[1] is not None:
-            z_mol_root2 = self.mol_encoder.encode(state[1])
-        return np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)
-
     def get_state_embedding(
         self,
         state: tuple[Optional[str], Optional[str]],
@@ -214,6 +184,19 @@ class SynTreeDecoder:
         npt.NDArray[np.float_]
             Embedding of the state.
         """
+        if state[0] is None and state[1] is not None:
+            raise StateEmbeddingError(
+                f"Invalid state: {state}. Second syntree without first syntree."
+            )
+        nbits: int = self.mol_encoder.nbits
+        z_mol_root1 = np.zeros(nbits)
+        z_mol_root2 = np.zeros(nbits)
+        if state[0] is not None:
+            z_mol_root1 = self.mol_encoder.encode(state[0])
+            z_mol_root1 = np.squeeze(z_mol_root1)
+        if state[1] is not None:
+            z_mol_root2 = self.mol_encoder.encode(state[1])
+            z_mol_root2 = np.squeeze(z_mol_root2)
         z_mol_root1, z_mol_root2 = self._get_syntree_state_embedding(state)
         z_state = np.concatenate([z_mol_root1, z_mol_root2, z_target], axis=0)
         return z_state  # (d,)
