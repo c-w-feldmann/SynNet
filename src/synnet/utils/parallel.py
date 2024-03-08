@@ -49,13 +49,14 @@ def simple_parallel(
     retries = 0
     while True:
         try:
-            if verbose:
-                async_results = tqdm(async_results, total=len(input_list))
-            list_outputs = [async_result.get(timeout) for async_result in async_results]
+            list_outputs = []
+            iterator = tqdm(async_results, total=len(input_list), disable=not verbose)
+            for async_r in iterator:
+                list_outputs.append(async_r.get(timeout))
             break
         except TimeoutError:
             retries += 1
-            logging.info(f"Timeout Error (s > {timeout})")
+            logging.info("Timeout Error (s > {})", timeout)
             if retries <= max_retries:
                 pool, async_results = setup_pool()
                 logging.info(f"Retry attempt: {retries}")
@@ -97,9 +98,7 @@ def chunked_parallel(
     # Run plain list comp when no mp is necessary.
     # Note: Keeping this here to have a single interface.
     if max_cpu == 1:
-        if verbose:
-            input_list = tqdm(input_list)
-        return [function(i) for i in input_list]
+        return [function(i) for i in tqdm(input_list, disable=not verbose)]
 
     # Adding it here fixes some setting disrupted elsewhere
     def batch_func(list_inputs: list[Any]) -> list[Any]:
