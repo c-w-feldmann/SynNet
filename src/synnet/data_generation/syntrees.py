@@ -41,7 +41,10 @@ class SynTreeGenerator:
     """Generates synthetic trees by randomly applying reactions to building blocks."""
 
     ACTIONS: dict[int, str] = {
-        i: action for i, action in enumerate("add expand merge end".split())
+        0: "add",
+        1: "expand",
+        2: "merge",
+        3: "end",
     }
     reaction_set: ReactionSet
 
@@ -271,8 +274,9 @@ class SynTreeGenerator:
             and (syntree.num_actions == self.max_depth - 1)
         ):
             logger.debug(
-                "  Overriding action space to only allow action=end."
-                + f"(1, {syntree.num_actions=}, {self.max_depth=})"
+                "  Overriding action space to only allow action=end. (1, syntree.num_actions={}, max_depth={})",
+                syntree.num_actions,
+                self.max_depth,
             )
             can_add, can_merge, can_expand = False, False, False
             can_end = True
@@ -284,8 +288,9 @@ class SynTreeGenerator:
             # ATTN: This might result in an Exception,
             #       i.e. when no rxn template matches or the product is invalid etc.
             logger.debug(
-                "  Overriding action space to forcefully merge trees."
-                + f"(2, {syntree.num_actions=}, {self.max_depth=})"
+                "  Overriding action space to forcefully merge trees. (2, syntree.num_actions={}, max_depth={})",
+                syntree.num_actions,
+                self.max_depth,
             )
             can_add, can_expand, can_end = False, False, False
             can_merge = True
@@ -365,7 +370,9 @@ class SynTreeGenerator:
         ), "max_actions must be larger than 1. (smallest treee is [`add`,`end`]"
 
         logger.debug(
-            f"Starting synthetic tree generation with {min_actions=} and {max_depth=} "
+            "Starting synthetic tree generation with min_actions={} and max_depth={} ",
+            min_actions,
+            max_depth,
         )
         self.max_depth = max_depth  # TODO: rename to reflect "number of actions"
         self.min_actions = min_actions
@@ -376,7 +383,10 @@ class SynTreeGenerator:
         action = None
         for i in range(max_depth + 1):
             logger.debug(
-                f"Iter {i} | {syntree.depth=} | num_actions={syntree.actions.__len__()} "
+                "Iter {} | syntree.depth={} | num_actions={} ",
+                i,
+                syntree.depth,
+                len(syntree.actions),
             )
 
             # Sample action
@@ -440,8 +450,7 @@ class SynTreeGenerator:
         except Exception as e:
             logger.error(e, exc_info=e, stack_info=False)
             return None, e
-        else:
-            return st, None
+        return st, None
 
 
 class SynTreeGeneratorPostProc:
