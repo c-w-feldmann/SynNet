@@ -373,7 +373,7 @@ class SynTreeDecoder:
 
             if self.action_mapping[action_id] == "end":
                 break
-            elif self.action_mapping[action_id] == "add":
+            if self.action_mapping[action_id] == "add":
                 # Start a new sub-syntree.
                 # TODO: z=z' as mol embedding dim is differnt
                 z_reactant1 = rt1.forward(z_state_tensor)
