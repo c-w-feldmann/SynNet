@@ -127,7 +127,7 @@ class SynTreeGenerator:
             self.reaction_set = ReactionSet(
                 [
                     rxn.set_available_reactants(self.building_blocks)
-                    for rxn in self.reaction_set
+                    for rxn in self.reaction_set.rxns
                 ]
             )
         else:

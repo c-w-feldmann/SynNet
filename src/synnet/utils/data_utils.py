@@ -307,12 +307,12 @@ class Reaction:
         raise AssertionError("Reaction is neither uni- or bi-molecular!")
 
     def set_available_reactants(
-        self, building_blocks: list[str], verbose: bool = False
+        self, building_blocks: list[str]
     ) -> Self:
         """Finds applicable reactants from a list of building blocks.
         Sets `self.available_reactants`.
         """
-        _available_reactants = self._filter_reactants(building_blocks, verbose=verbose)
+        _available_reactants = self._filter_reactants(building_blocks)
         # Ensure molecules are stored as `str`
         _avail_r1 = [self.get_smiles(mol) for mol in _available_reactants[0]]
         if len(_avail_r1) == 0:

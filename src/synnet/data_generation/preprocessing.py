@@ -89,7 +89,6 @@ class BuildingBlockFilter:
         """Initializes a `Reaction` with a list of possible reactants."""
 
         if self.processes == 1:
-            self.rxns = tqdm(self.rxns) if self.verbose else self.rxns
             self.rxns = [
                 rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns
             ]
