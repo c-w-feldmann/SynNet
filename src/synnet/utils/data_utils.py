@@ -272,7 +272,7 @@ class Reaction:
             reactant_list.append(self.get_mol(second_reactant))
         r = reactant_list
         if len(r) > 1 and not self._check_smarts_match(*r):
-            r = reversed(r)
+            r = list(reversed(r))
         # Run reaction with rdkit
         reaction_result_list = self.rxn.RunReactants(tuple(r))
         single_product_reactions = []
