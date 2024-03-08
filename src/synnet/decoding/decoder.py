@@ -232,18 +232,11 @@ class SynTreeDecoder:
         return np.array((can_add, can_expand, can_merge, can_end), dtype=bool)
 
     def _find_valid_bimolecular_rxns(
-        self, reactants: Tuple[Optional[str], Optional[str]]
+        self, reactants: tuple[str, Optional[str]]
     ) -> npt.NDArray[np.bool_]:
         reaction_mask: list[bool] = []
         for _rxn in self.rxn_collection.rxns:
-            try:
-                p = _rxn.run_reaction(reactants, allow_to_fail=False)
-                is_valid_reaction = p is not None
-            except Exception as e:
-                logger.warning("Reaction failed: {}", _rxn.smirks)
-                # print(e)  # TODO: implement reaction.can_react(reactants) method returning a bool
-                # run_reactions() does some validity-checks and raises Exception
-                is_valid_reaction = False
+            is_valid_reaction = _rxn.can_run_reaction(reactants[0], reactants[1])
             reaction_mask += [is_valid_reaction]
         return np.asarray(reaction_mask)
 
@@ -493,7 +486,7 @@ class SynTreeDecoder:
 
             # Run reaction
             product = reaction.run_reaction(
-                (reactant_1, reactant_2), allow_to_fail=False
+                reactant_1, reactant_2
             )
             logger.debug(f"  Ran reaction {reactant_1} + {reactant_2} -> {product}")
 
