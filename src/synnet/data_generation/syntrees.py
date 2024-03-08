@@ -16,7 +16,6 @@ import numpy.typing as npt
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from scipy import sparse
-from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.exceptions import (
@@ -123,7 +122,10 @@ class SynTreeGenerator:
         Info: This can take a while for lots of possible reactants."""
         if self.processes == 1:
             self.reaction_set = ReactionSet(
-                [rxn.set_available_reactants(self.building_blocks) for rxn in self.reaction_set]
+                [
+                    rxn.set_available_reactants(self.building_blocks)
+                    for rxn in self.reaction_set
+                ]
             )
         else:
             self.__match_mp()
@@ -136,7 +138,7 @@ class SynTreeGenerator:
         idx = self.rng.choice(len(self.building_blocks))
         smiles = self.building_blocks[idx]
 
-        logger.debug(f"    Sampled molecule: {smiles}")
+        logger.debug("    Sampled molecule: {}", smiles)
         return smiles
 
     def _find_rxn_candidates(
@@ -149,7 +151,7 @@ class SynTreeGenerator:
             rxn_mask
         ):  # Do not raise exc when checking if two mols can react
             raise NoReactionAvailableError(
-                f"Cannot find a reaction for reactant: {smiles}."
+                "Cannot find a reaction for reactant: {}.", smiles
             )
         return np.asarray(rxn_mask)
 
@@ -166,7 +168,9 @@ class SynTreeGenerator:
         rxn = self.reaction_set[idx]
 
         logger.debug(
-            f"    Sampled {'uni' if rxn.num_reactant == 1 else 'bi'}-molecular reaction with id {idx:d}"
+            "    Sampled {}-molecular reaction with id {:d}",
+            "uni" if rxn.num_reactant == 1 else "bi",
+            idx,
         )
         return rxn, idx
 
@@ -206,13 +210,16 @@ class SynTreeGenerator:
                 )
 
             reactant_2 = self.rng.choice(reactant_2_candidate_list)
-            logger.debug(f"    Sampled second reactant: {reactant_2}")
+            logger.debug("    Sampled second reactant: {}", reactant_2)
 
         # Run reaction
         product = rxn.run_reaction(reactant_1, reactant_2)
         if raise_exc and product is None:
             raise NoReactionPossibleError(
-                f"Reaction (ID: {idx_rxn}) not possible with: `{reactant_1} + {reactant_2}`."
+                "Reaction (ID: {}) not possible with: `{} + {}`.",
+                idx_rxn,
+                reactant_1,
+                reactant_2,
             )
         return reactant_1, reactant_2, product, idx_rxn
 
@@ -331,11 +338,11 @@ class SynTreeGenerator:
         arr = arr.swapaxes(
             0, 1
         )  # view:         (nReaction, nReactant, first-second-position)
-        canReactOrdered = np.trace(arr, axis1=1, axis2=2) > 1  # (nReaction,)
-        canReactReversed = (
+        can_react_ordered = np.trace(arr, axis1=1, axis2=2) > 1  # (nReaction,)
+        can_react_reversed = (
             np.flip(arr, axis=1).trace(axis1=1, axis2=2) > 1
         )  # (nReaction,)
-        mask = np.logical_or(canReactOrdered, canReactReversed).tolist()
+        mask = np.logical_or(can_react_ordered, can_react_reversed).tolist()
 
         if raise_exc and not any(mask):
             raise NoBiReactionAvailableError(f"No reaction available for {reactants}.")
@@ -347,7 +354,7 @@ class SynTreeGenerator:
         action_mask = self._get_action_mask(syntree)  # (1,4)
         act = int(np.argmax(p_action * action_mask))  # (1,)
 
-        logger.debug(f"  Sampled action: {self.ACTIONS[act]}")
+        logger.debug("  Sampled action: {}", self.ACTIONS[act])
         return act
 
     def generate(self, max_depth: int = 8, min_actions: int = 1) -> SyntheticTree:
@@ -394,7 +401,7 @@ class SynTreeGenerator:
                 raise ValueError(f"Invalid action {action}")
 
             # Prepare next iteration
-            logger.debug(f"    Ran reaction {r1} + {r2} -> {p}")
+            logger.debug("    Ran reaction {} + {} -> {}", r1, r2, p)
 
             recent_mol = p
 
