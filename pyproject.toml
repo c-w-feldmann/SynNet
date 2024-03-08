@@ -5,6 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 dynamic = ["dependencies"]
 name = "synnet"
+authors = [
+
+    {name = "Wenhao Gao"},
+    {name = "Christian Ulmer"},
+    {name = "Christian W. Feldmann"}
+]
 version = "0.2.0"
 description = "Synthetic tree generation using neural networks."
 readme = "README.md"
@@ -20,4 +26,5 @@ synnet = "synnet.main_client:synnet"
 [tool.setuptools.dynamic]
 dependencies = {file = "requirements.txt"}
 
-[project.optional-dependencies]
+[tool.setuptools.package-data]
+"synnet" = ["py.typed"]
