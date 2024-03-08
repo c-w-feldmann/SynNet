@@ -242,11 +242,13 @@ class Reaction:
 
         first_reactant_mol = self.get_mol(first_reactant)
         second_reactant_mol = self.get_mol(second_reactant)
-        works_forward = self._check_smarts_match(first_reactant_mol, second_reactant_mol)
-        works_backward = self._check_smarts_match(second_reactant_mol, first_reactant_mol)
+        works_forward = self._check_smarts_match(
+            first_reactant_mol, second_reactant_mol
+        )
+        works_backward = self._check_smarts_match(
+            second_reactant_mol, first_reactant_mol
+        )
         return works_forward or works_backward
-
-
 
     def run_reaction(
         self,
@@ -280,9 +282,7 @@ class Reaction:
                 single_product_reactions.append(product_list.pop())
 
         if not single_product_reactions:
-            raise FailedReconstructionError(
-                f"No reaction with a single  {self.smirks}"
-            )
+            raise FailedReconstructionError(f"No reaction with a single  {self.smirks}")
         product_smiles = sorted(single_product_reactions)[0]
 
         mol = Chem.MolFromSmiles(product_smiles)

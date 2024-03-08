@@ -485,9 +485,7 @@ class SynTreeDecoder:
                     reactant_2 = None
 
             # Run reaction
-            product = reaction.run_reaction(
-                reactant_1, reactant_2
-            )
+            product = reaction.run_reaction(reactant_1, reactant_2)
             logger.debug(f"  Ran reaction {reactant_1} + {reactant_2} -> {product}")
 
             # Validate outcome of reaction
