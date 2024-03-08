@@ -223,9 +223,8 @@ class SynTreeDecoder:
             can_expand = True
             can_end = True
         elif state[0] is not None and state[1] is not None:
-            can_expand = (
-                True  # TODO: do not expand when we're 2 steps away from max depth
-            )
+            # TODO: do not expand when we're 2 steps away from max depth
+            can_expand = True
             can_merge = any(self.get_reaction_mask((state[0], state[1])))
         else:
             raise ValueError(f"Invalid state: {state}")
