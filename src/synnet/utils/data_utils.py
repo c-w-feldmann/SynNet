@@ -292,26 +292,16 @@ class Reaction:
             )
         return Chem.MolToSmiles(mol, isomericSmiles=False)
 
-    def _filter_reactants(
-        self, smiles: list[str], verbose: bool = False
-    ) -> tuple[list[str], list[str]]:
+    def _filter_reactants(self, smiles_list: list[str]) -> tuple[list[str], list[str]]:
         """Filters reactants which do not match the reaction."""
-        smiles_iterator = tqdm(smiles) if verbose else smiles
 
         if self.num_reactant == 1:  # uni-molecular reaction
-            reactants_1 = [
-                smi for smi in smiles_iterator if self.is_reactant_first(smi)
-            ]
+            reactants_1 = [smi for smi in smiles_list if self.is_reactant_first(smi)]
             return reactants_1, []
 
-        elif self.num_reactant == 2:  # bi-molecular reaction
-            reactants_1 = [
-                smi for smi in smiles_iterator if self.is_reactant_first(smi)
-            ]
-            reactants_2 = [
-                smi for smi in smiles_iterator if self.is_reactant_second(smi)
-            ]
-
+        if self.num_reactant == 2:  # bi-molecular reaction
+            reactants_1 = [smi for smi in smiles_list if self.is_reactant_first(smi)]
+            reactants_2 = [smi for smi in smiles_list if self.is_reactant_second(smi)]
             return reactants_1, reactants_2
 
         raise AssertionError("Reaction is neither uni- or bi-molecular!")
