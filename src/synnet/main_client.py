@@ -1,10 +1,9 @@
-import argparse
-import json
+"""Main client to run the synnet package from commandline."""
+
 from pathlib import Path
 
 import click
 from loguru import logger
-from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import (
@@ -22,8 +21,8 @@ from synnet.utils.data_utils import ReactionSet
 
 
 @click.group()
-def synnet():
-    print("synnet")
+def synnet() -> None:
+    """Main command for the synnet package. Requires subcommands."""
 
 
 @synnet.command()
@@ -47,7 +46,6 @@ def extract_smiles(input_file: str, output_file: str) -> None:
         raise ValueError("Input and output files must be different.")
     df = parse_sdf_file(input_file)
     df.to_csv(output_file, index=False)
-    return None
 
 
 @synnet.command()
@@ -65,6 +63,25 @@ def filter_building_blocks(
     ncpu: int,
     verbose: bool,
 ) -> None:
+    """Filter building blocks based to remove those that cannot react with any template.
+
+    Also filters reactions for which no reactants are available.
+
+    Parameters
+    ----------
+    building_blocks_file : str
+        Input file containing building blocks.
+    rxn_templates_file : str
+        Input file containing reaction templates.
+    output_bblock_file : str
+        Output file for filtered building blocks.
+    output_rxns_collection_file : str
+        Output file for filtered reactions.
+    ncpu : int
+        Number of cpus to use.
+    verbose : bool
+        Whether to print verbose output.
+    """
     logger.info("Start.")
     print(Path(".").resolve())
     # 1. Load assets
@@ -102,6 +119,19 @@ def compute_embeddings(
     featurization_fct: str,
     n_jobs: int = MAX_PROCESSES,
 ) -> None:
+    """Compute embeddings for a list of building blocks.
+
+    Parameters
+    ----------
+    building_blocks_file : str
+        File containing building blocks.
+    output_folder : str
+        Folder to save the embeddings.
+    featurization_fct : str
+        Name of the featurization function to use.
+    n_jobs : int
+        Number of cpus to use.
+    """
     functions: dict[str, MorganFingerprintEmbedding] = {
         "fp_4096": MorganFingerprintEmbedding(radius=2, n_bits=4096),
         "fp_2048": MorganFingerprintEmbedding(radius=2, n_bits=2048),
