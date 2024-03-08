@@ -180,23 +180,17 @@ class SynTreeDecoder:
         tuple[npt.NDArray[np.float_], npt.NDArray[np.float_]]
             State embedding.
         """
-        nbits: int = self.mol_encoder.nbits
-        if state[0] is None and state[1] is None:
-            z_mol_root1 = np.zeros(nbits)
-            z_mol_root2 = np.zeros(nbits)
-        elif (
-            state[0] is not None and state[1] is None
-        ):  # Only one actively growing syntree
-            z_mol_root1 = self.mol_encoder.encode(state[0])
-            z_mol_root2 = np.zeros(nbits)
-        elif state[0] is not None and state[1] is not None:  # Two syntrees
-            z_mol_root1 = self.mol_encoder.encode(state[0])
-            z_mol_root2 = self.mol_encoder.encode(state[1])
-        else:
+        if state[0] is None and state[1] is not None:
             raise StateEmbeddingError(
-                f"Unable to compute state embedding. Passed {state=}"
+                f"Invalid state: {state}. Second syntree without first syntree."
             )
-
+        nbits: int = self.mol_encoder.nbits
+        z_mol_root1 = np.zeros(nbits)
+        z_mol_root2 = np.zeros(nbits)
+        if state[0] is not None:
+            z_mol_root1 = self.mol_encoder.encode(state[0])
+        if state[1] is not None:
+            z_mol_root2 = self.mol_encoder.encode(state[1])
         return np.squeeze(z_mol_root1), np.squeeze(z_mol_root2)
 
     def get_state_embedding(
