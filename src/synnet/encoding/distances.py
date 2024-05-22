@@ -40,7 +40,7 @@ def ce_distance(
 
 @numba.njit()
 def _tanimoto_similarity(
-    fp1: npt.NDArray[np.float_], fp2: npt.NDArray[np.float_]
+    fp1: npt.NDArray[np.int_], fp2: npt.NDArray[np.float_]
 ) -> float:
     """
     Returns the Tanimoto similarity between two molecular fingerprints.
@@ -56,10 +56,11 @@ def _tanimoto_similarity(
 
 
 def tanimoto_similarity(
-    target_fp: npt.NDArray[np.float_], smis: list[str]
+    target_fp: npt.NDArray[np.int_], smis: list[str]
 ) -> npt.NDArray[np.float_]:
-    """
-    Returns the Tanimoto similarities between a target fingerprint and molecules
+    """Calculate Tanimoto similarities.
+
+    Tanimoto similarities between a target fingerprint and molecules
     in an input list of SMILES.
 
     Parameters
