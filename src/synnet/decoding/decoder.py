@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -73,7 +73,10 @@ class SynTreeDecoder:
     mol_encoder: MorganFingerprintEncoder
     rxn_collection: ReactionSet
     similarity_fct: Optional[
-        Callable[[npt.NDArray[np.float_], List[str]], npt.NDArray[np.float_]]
+        Callable[
+            [npt.NDArray[np.float_] | npt.NDArray[np.int_], list[str]],
+            npt.NDArray[np.float_],
+        ]
     ]
 
     def __init__(
@@ -88,7 +91,10 @@ class SynTreeDecoder:
         rxn_encoder: OneHotEncoder = OneHotEncoder(91),
         mol_encoder: MorganFingerprintEncoder = MorganFingerprintEncoder(2, 4096),
         similarity_fct: Optional[
-            Callable[[npt.NDArray[np.float_], List[str]], npt.NDArray[np.float_]]
+            Callable[
+                [Union[npt.NDArray[np.float_] | npt.NDArray[np.int_]], list[str]],
+                npt.NDArray[np.float_],
+            ]
         ] = None,
         device: str = "cpu",
     ) -> None:
@@ -112,7 +118,7 @@ class SynTreeDecoder:
             Encoder for the reaction, by default OneHotEncoder(91)
         mol_encoder : MorganFingerprintEncoder
             Object for encoding molecules as vector, by default MorganFingerprintEncoder(2, 4096)
-        similarity_fct : Optional[Callable[[npt.NDArray[np.float_], List[str]], npt.NDArray[np.float_]]], optional
+        similarity_fct : Optional[Callable[[npt.NDArray[np.float_], list[str]], npt.NDArray[np.float_]]], optional
             Similarity function for the reactants, by default None
 
         Returns
