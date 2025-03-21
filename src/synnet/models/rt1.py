@@ -76,6 +76,7 @@ def get_args() -> argparse.Namespace:
 
 
 def train() -> None:
+    """Train the model."""
     logger.info("Start.")
 
     # Parse input args
