@@ -159,17 +159,12 @@ def save_results(output_dir: PathType, df: pd.DataFrame) -> None:
 
 def _setup_loggers() -> None:
     if args.verbose:
-        Path(args.output_dir).mkdir(exist_ok=True, parents=True)
-        logger.addHandler(
-            logging.FileHandler(
-                filename=Path(args.output_dir) / ".log",
-                mode="w",
-            )
-        )
+        log_path = Path(args.output_dir) / "inference.log"
+        log_path.parent.mkdir(exist_ok=True, parents=True)
+        logger.add(log_path, level="INFO")
 
     if args.debug:
-        debug_logger = logging.getLogger("synnet.decoding.decoder")
-        debug_logger.setLevel("DEBUG")
+        logger.level("DEBUG")
     else:
         RDLogger.DisableLog("rdApp.*")
 
