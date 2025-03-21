@@ -99,6 +99,8 @@ class MolecularEmbedder(abc.ABC):
             Molecular embedding.
         """
         mol = Chem.MolFromSmiles(smiles)
+        if mol is None:
+            raise ValueError(f"Could not parse SMILES string: {smiles}")
         return self.transform(mol)
 
 
