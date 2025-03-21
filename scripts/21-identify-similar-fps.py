@@ -1,4 +1,7 @@
-"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set."""  # TODO: clean up, un-nest a couple of fcts
+"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set."""
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
 
 from __future__ import annotations
 

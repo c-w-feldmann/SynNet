@@ -1,6 +1,10 @@
 """Compute the mean reciprocal ranking for reactant 1
+
 selection using the different distance metrics in the k-NN search.
 """
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
 
 import argparse
 import json

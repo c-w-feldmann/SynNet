@@ -1,5 +1,8 @@
 """Extract chemicals as SMILES from a downloaded `*.sdf*` file."""
 
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
+
 import argparse
 import json
 import logging

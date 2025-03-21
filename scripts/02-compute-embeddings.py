@@ -1,9 +1,11 @@
-"""
-Computes the molecular embeddings of the purchasable building blocks.
+"""Computes the molecular embeddings of the purchasable building blocks.
 
 The embeddings are also referred to as "output embedding".
 In the embedding space, a kNN-search will identify the 1st or 2nd reactant.
 """
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
 
 import argparse
 import json

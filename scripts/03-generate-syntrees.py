@@ -1,5 +1,8 @@
 """Generate synthetic trees."""
 
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
+
 from __future__ import annotations
 
 import argparse
