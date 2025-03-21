@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import argparse
 from functools import partial
 from pathlib import Path
 from time import time
