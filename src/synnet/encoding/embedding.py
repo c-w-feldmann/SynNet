@@ -111,9 +111,7 @@ class MorganFingerprintEmbedding(MolecularEmbedder):
 
     def transform(self, mol: Chem.Mol) -> npt.NDArray[np.bool_]:
         """Transform a RDKit molecule into a Morgan fingerprint."""
-        fingerprint = AllChem.GetMorganGenerator(
-            radius=self.radius, fpSize=self.length
-        )
+        fingerprint = AllChem.GetMorganGenerator(radius=self.radius, fpSize=self.length)
         return fingerprint.GetFingerprintAsNumPy(mol).astype(bool)
 
     def to_dict(self) -> dict[str, Any]:
@@ -127,7 +125,6 @@ class MorganFingerprintEmbedding(MolecularEmbedder):
         data = super().to_dict()
         data.update({"radius": self.radius, "n_bits": self.length})
         return data
-
 
 
 class MolecularEmbeddingManager:
@@ -372,4 +369,3 @@ class MolecularEmbeddingManager:
             compound_list_file=folder / "building_blocks.txt",
             precalculated_embedding_file=folder / "embeddings.npy",
         )
-
