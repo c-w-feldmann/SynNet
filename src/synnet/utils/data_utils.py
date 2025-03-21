@@ -548,7 +548,7 @@ class SyntheticTree:
         print("===============Stored Reactions===============")
         for reaction_node in self.reactions:
             print(
-                f"{reaction_node.rxn_id} ({'bi ' if reaction_node.rtype==2 else 'uni'})"
+                f"{reaction_node.rxn_id} ({'bi ' if reaction_node.rtype == 2 else 'uni'})"
             )
         print("===============Followed Actions===============")
         print(self.actions)
