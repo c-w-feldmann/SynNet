@@ -54,7 +54,7 @@ def parse_sdf_file(file: str) -> pd.DataFrame:
     return df
 
 
-class BuildingBlockFilter:
+class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
     """Filter building blocks."""
 
     building_blocks_filtered: list[str] = []
@@ -126,9 +126,11 @@ class BuildingBlockFileHandler:
 
 
 class ReactionTemplateFileHandler:
+    """Handler for reaction templates files."""
+
     def load(self, file: str) -> list[str]:
         """Load reaction templates from file."""
-        with open(file, "rt") as f:
+        with open(file, "rt", encoding="UTF-8") as f:
             rxn_templates = f.readlines()
 
         rxn_templates = [tmplt.strip() for tmplt in rxn_templates]
@@ -140,7 +142,7 @@ class ReactionTemplateFileHandler:
 
     def save(self, file: str, rxn_templates: list[str]) -> None:
         """Save reaction templates to file."""
-        with open(file, "wt") as f:
+        with open(file, "wt", encoding="UTF-8") as f:
             f.writelines(t + "\n" for t in rxn_templates)
 
     def _validate(self, rxn_template: str) -> bool:
@@ -153,7 +155,7 @@ class ReactionTemplateFileHandler:
         Note:
           - only uses std-lib functions, very basic validation only
         """
-        reactants, agents, products = rxn_template.split(">")
+        reactants, _, products = rxn_template.split(">")
         is_uni_or_bimolecular = len(reactants) == 1 or len(reactants) == 2
         has_single_product = len(products) == 1
 
@@ -161,60 +163,84 @@ class ReactionTemplateFileHandler:
 
 
 class BuildingBlockFilterHeuristics:
-    @staticmethod
-    def filter(
-        bblocks: Iterable[str], return_as: str = "list", verbose: bool = False
-    ) -> Union[pd.DataFrame, List[str]]:
+    """Filter building blocks based on heuristics."""
+
+    descriptor_dict = {
+        "NumHeavyAtoms": rdMolDescriptors.CalcNumHeavyAtoms,
+        "NumAmideBonds": rdMolDescriptors.CalcNumAmideBonds,
+        "NumRings": rdMolDescriptors.CalcNumRings,
+        "FractionCSP3": rdMolDescriptors.CalcFractionCSP3,
+        "ExactMolWt": rdMolDescriptors.CalcExactMolWt,
+        "NumRotatableBonds": rdMolDescriptors.CalcNumRotatableBonds,
+    }
+    descriptor_range_dict: dict[str, tuple[int, int]] = {
+        "NumHeavyAtoms": (0, 40),
+        "NumRotatableBonds": (0, 16),
+        "NumAmideBonds": (0, 5),
+    }
+
+    def __init__(self, descriptor_range_dict: dict[str, tuple[int, int]] | None, verbose: bool = False):
+        """Initialize the BuildingBlockFilterHeuristics object.
+
+        Parameters
+        ----------
+        descriptor_range_dict : dict[str, tuple[int, int]] | None
+            Dictionary of descriptor ranges used for filtering building blocks.
+            If None, the default descriptor ranges are used.
+        verbose : bool
+            Print verbose output.
+        """
+
+
+        self.descriptor_range_dict = descriptor_range_dict or BuildingBlockFilterHeuristics.descriptor_range_dict
+        self.verbose = verbose
+
+    def filter(self, bblocks: Iterable[str]) -> pd.DataFrame:
         """Filter building blocks based on heuristics.
 
         See: https://doi.org/10.1021/acs.jcim.2c00785, SI Figure 12)
         """
         # Convert bblocks to DataFrame for convenience
         df = pd.DataFrame(bblocks, columns=["SMILES"])
+        df["all_in_range"] = True
         PandasTools.AddMoleculeColumnToFrame(df, smilesCol="SMILES", molCol="mol")
 
-        # Compute properties
-        functions = [
-            rdMolDescriptors.CalcNumHeavyAtoms,
-            rdMolDescriptors.CalcNumAmideBonds,
-            rdMolDescriptors.CalcNumRings,
-            rdMolDescriptors.CalcFractionCSP3,
-            rdMolDescriptors.CalcExactMolWt,
-            rdMolDescriptors.CalcNumRotatableBonds,
-        ]
+        for descriptor, desc_range in self.descriptor_range_dict.items():
+            df[descriptor] = df["mol"].apply(self.descriptor_dict[descriptor])
+            df["all_in_range"] &= df[descriptor].between(*desc_range)
 
-        for func in functions:
-            name = func.__name__.removeprefix("Calc")
-            df[name] = df["mol"].apply(func)
 
-        # Filter based on heuristics
-        idx_remove = (
-            (df["SMILES"].isna())  # (df["NumHeavyAtoms"] < 5) \
-            | (df["NumHeavyAtoms"] > 40)
-            | (df["NumRotatableBonds"] > 16)
-            | (df["NumAmideBonds"] > 5)
-            | (df["NumHeavyAtoms"] > 40)
-        )
-
-        if verbose:
-            n_total = len(df)
-            n_keep = len(df) - idx_remove.sum()
+        if self.verbose:
+            n_total = df.shape[0]
+            n_keep = df["all_in_range"].sum()
             logger.info("Filtering building blocks based on heuristics:")
             logger.info(f"  Total number of building blocks {n_total:d}")
             logger.info(
                 f"  Retained number of building blocks {n_keep:d} ({n_keep/n_total:.2%})"
             )
+        return df.loc[df["all_in_range"]].drop(columns=["all_in_range"])
 
-        if return_as == "list":
-            return df.loc[~idx_remove, "SMILES"].tolist()
-        elif return_as == "df":
-            df["idx_remove"] = idx_remove
-            return df
-        else:
-            return df.loc[~idx_remove]
+    def filter_to_list(
+        self, bblocks: Iterable[str],
+    ) -> list[str]:
+        """Filter building blocks based on heuristics and return as list.
+
+        Parameters
+        ----------
+        bblocks : Iterable[str]
+            Iterable of building blocks
+
+        Returns
+        -------
+        list[str]
+            List of filtered building blocks
+        """
+        return self.filter(bblocks)["SMILES"].tolist()
 
 
 class BuildingBlockFilterMatchRxn:
+    """Filter building blocks based on a match to a reaction template."""
+
     def filter(
         self,
         bblocks: Iterable[str],
@@ -233,7 +259,7 @@ class BuildingBlockFilterMatchRxn:
         # Match building blocks to reactions
         logger.info("Converting SMILES to `rdkit.Mol` objects...")
         bblocks = chunked_parallel(
-            list(bblocks), lambda x: AllChem.MolFromSmiles(x), verbose=verbose
+            list(bblocks), AllChem.MolFromSmiles, verbose=verbose
         )
 
         logger.info("Converting reaction templates to `rdkit.Reaction` objects...")
@@ -268,4 +294,18 @@ class BuildingBlockFilterMatchRxn:
         *,
         building_blocks: list[Union[str, AllChem.rdchem.Mol]],
     ) -> Reaction:
+        """Set the available reactants for a given reaction.
+
+        Parameters
+        ----------
+        reaction : Reaction
+            Reaction object
+        building_blocks : list[Union[str, AllChem.rdchem.Mol]]
+            List of building blocks
+
+        Returns
+        -------
+        Reaction
+            Reaction object with available reactants set
+        """
         return reaction.set_available_reactants(building_blocks)
