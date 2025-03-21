@@ -64,7 +64,13 @@ class MolecularEmbedder(abc.ABC):
         return self._length
 
     def to_dict(self) -> dict[str, Any]:
-        """Returns a dictionary representation of the embedding."""
+        """Returns a dictionary representation of the embedding.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary representation of the embedding.
+        """
         return {
             "class": self.__class__.__name__,
             "module": self.__class__.__module__,
@@ -108,11 +114,31 @@ class MorganFingerprintEmbedding(MolecularEmbedder):
     """Morgan fingerprint embedding."""
 
     def __init__(self, radius: int = 2, n_bits: int = 4096) -> None:
+        """Initialize the Morgan fingerprint embedding.
+
+        Parameters
+        ----------
+        radius : int
+            Radius of the fingerprint.
+        n_bits : int
+            Length of the fingerprint.
+        """
         self.radius = radius
         self._length = n_bits
 
     def transform(self, mol: Chem.Mol) -> npt.NDArray[np.bool_]:
-        """Transform a RDKit molecule into a Morgan fingerprint."""
+        """Transform a RDKit molecule into a Morgan fingerprint.
+
+        Parameters
+        ----------
+        mol : Chem.Mol
+            RDKit molecule.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Morgan fingerprint.
+        """
         fingerprint = AllChem.GetMorganGenerator(radius=self.radius, fpSize=self.length)
         return fingerprint.GetFingerprintAsNumPy(mol).astype(bool)
 
@@ -163,10 +189,6 @@ class MolecularEmbeddingManager:
             Metric used for the kdtree. Default is cosine.
         n_jobs: int
             Number of cores used for computing the embeddings.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
@@ -221,7 +243,22 @@ class MolecularEmbeddingManager:
         compound_list_file: PathType,
         precalculated_embedding_file: Optional[PathType] = None,
     ) -> Self:
-        """Create a new instance from a file."""
+        """Create a new instance from a file.
+
+        Parameters
+        ----------
+        configuration_file : PathType
+            File with the configuration.
+        compound_list_file : PathType
+            File with the list of compounds.
+        precalculated_embedding_file : Optional[PathType]
+            File with the precalculated embeddings.
+
+        Returns
+        -------
+        Self
+            Returns the instance.
+        """
         compound_list = np.loadtxt(compound_list_file, dtype=str, comments=None)
         with open(configuration_file, "r", encoding="UTF-8") as f:
             config = yaml.safe_load(f)
@@ -250,7 +287,18 @@ class MolecularEmbeddingManager:
 
     @classmethod
     def from_folder(cls, folder: PathType) -> Self:
-        """Initialize from a folder."""
+        """Initialize from a folder.
+
+        Parameters
+        ----------
+        folder : PathType
+            Folder with the files.
+
+        Returns
+        -------
+        Self
+            Returns the instance.
+        """
         folder = Path(folder)
         return cls.from_files(
             configuration_file=folder / "configuration.yaml",
@@ -264,18 +312,46 @@ class MolecularEmbeddingManager:
         return self._smiles_idx_df.index.values
 
     def get_embeddings(self) -> npt.NDArray[np.int_]:
-        """Returns `self.embeddings` as 2d-array."""
+        """Returns `self.embeddings` as 2d-array.
+
+        Returns
+        -------
+        npt.NDArray[np.int_]
+            Embeddings as 2d-array.
+        """
         return np.atleast_2d(self.embeddings)
 
     def get_embedding_for(self, smiles_list: list[str]) -> npt.NDArray[np.int_]:
-        """Returns the embeddings for the given SMILES strings."""
+        """Returns the embeddings for the given SMILES strings.
+
+        Parameters
+        ----------
+        smiles_list : list[str]
+            List of SMILES strings.
+
+        Returns
+        -------
+        npt.NDArray[np.int_]
+            Embeddings for the given SMILES strings.
+        """
         positions: npt.NDArray[np.int_]
         smiles_array = np.atleast_1d(smiles_list)
         positions = self._smiles_idx_df.loc[smiles_array, "index"].values.astype(int)
         return self.embeddings[positions]
 
     def _compute_mp(self, data: list[str]) -> list[npt.NDArray[Any]]:
+        """Compute embeddings in parallel.
 
+        Parameters
+        ----------
+        data : list[str]
+            List of SMILES strings.
+
+        Returns
+        -------
+        list[npt.NDArray[Any]]
+            List of embeddings.
+        """
         with mp.Pool(processes=self.n_jobs) as pool:
             embeddings = pool.map(self.embedding_method.transform_smiles, data)
         return embeddings
@@ -307,6 +383,18 @@ class MolecularEmbeddingManager:
         return self
 
     def _save_npy(self, file: str) -> Self:
+        """Save the embeddings to a file.
+
+        Parameters
+        ----------
+        file : str
+            File to save the embeddings.
+
+        Returns
+        -------
+        Self
+            Returns the instance.
+        """
         if self.embeddings is None:
             raise ValueError("Must have computed embeddings to save.")
 
@@ -321,8 +409,20 @@ class MolecularEmbeddingManager:
     ) -> Self:
         """Initializes a `BallTree`.
 
-        Note:
-            Can take a couple of minutes."""
+        Notes
+        -----
+        Can take a couple of minutes.
+
+        Parameters
+        ----------
+        metric : Union[Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64], str]
+            Metric to use for the kdtree.
+
+        Returns
+        -------
+        Self
+            Returns the instance with the kdtree initialized.
+        """
         if self.embeddings is None:
             raise ValueError("Need emebddings to compute kdtree.")
         self.kdtree_metric = metric.__name__ if not isinstance(metric, str) else metric
@@ -336,7 +436,17 @@ class MolecularEmbeddingManager:
         compound_list_file: PathType,
         precalculated_embedding_file: Optional[PathType] = None,
     ) -> None:
-        """Save the instance to files."""
+        """Save the instance to files.
+
+        Parameters
+        ----------
+        configuration_file : PathType
+            File to save the configuration.
+        compound_list_file : PathType
+            File to save the list of compounds.
+        precalculated_embedding_file : Optional[PathType]
+            File to save the precalculated embeddings.
+        """
         np.savetxt(compound_list_file, self.smiles_array, fmt="%s")
         config = {
             "embedding_method": self.embedding_method.to_dict(),
