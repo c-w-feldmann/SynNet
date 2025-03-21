@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 try:
     from pathos import multiprocessing as mp
-except ImportError as e:
+except ImportError:
     logger.warning("Pathos not found, using multiprocessing instead")
     import multiprocessing as mp
 
