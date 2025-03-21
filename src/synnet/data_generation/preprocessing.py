@@ -179,7 +179,11 @@ class BuildingBlockFilterHeuristics:
         "NumAmideBonds": (0, 5),
     }
 
-    def __init__(self, descriptor_range_dict: dict[str, tuple[int, int]] | None, verbose: bool = False):
+    def __init__(
+        self,
+        descriptor_range_dict: dict[str, tuple[int, int]] | None = None,
+        verbose: bool = False,
+    ):
         """Initialize the BuildingBlockFilterHeuristics object.
 
         Parameters
@@ -191,8 +195,9 @@ class BuildingBlockFilterHeuristics:
             Print verbose output.
         """
 
-
-        self.descriptor_range_dict = descriptor_range_dict or BuildingBlockFilterHeuristics.descriptor_range_dict
+        self.descriptor_range_dict = (
+            descriptor_range_dict or BuildingBlockFilterHeuristics.descriptor_range_dict
+        )
         self.verbose = verbose
 
     def filter(self, bblocks: Iterable[str]) -> pd.DataFrame:
@@ -209,7 +214,6 @@ class BuildingBlockFilterHeuristics:
             df[descriptor] = df["mol"].apply(self.descriptor_dict[descriptor])
             df["all_in_range"] &= df[descriptor].between(*desc_range)
 
-
         if self.verbose:
             n_total = df.shape[0]
             n_keep = df["all_in_range"].sum()
@@ -221,7 +225,8 @@ class BuildingBlockFilterHeuristics:
         return df.loc[df["all_in_range"]].drop(columns=["all_in_range"])
 
     def filter_to_list(
-        self, bblocks: Iterable[str],
+        self,
+        bblocks: Iterable[str],
     ) -> list[str]:
         """Filter building blocks based on heuristics and return as list.
 
