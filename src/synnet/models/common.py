@@ -1,6 +1,5 @@
 """Common methods and params shared by all models."""
 
-import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional, Union
