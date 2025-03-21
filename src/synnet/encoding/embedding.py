@@ -1,20 +1,18 @@
 """Module for molecular embeddings."""
 
+import abc
+from pathlib import Path
 from typing import Any, Callable, Iterable, Optional, Union
-
-import yaml
 
 try:
     from typing import Self  # type: ignore[attr-defined]
 except ImportError:
     from typing_extensions import Self
 
-import abc
-from pathlib import Path
-
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import yaml
 from loguru import logger
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -23,7 +21,7 @@ from sklearn.neighbors import BallTree
 try:
     from pathos import multiprocessing as mp
 except ImportError:
-    logger.warning(f"Could not import pathos, using multiprocessing instead.")
+    logger.warning("Could not import pathos, using multiprocessing instead.")
     import multiprocessing as mp
 
 from synnet.config import MAX_PROCESSES
