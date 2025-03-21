@@ -910,11 +910,11 @@ class SyntheticTreeSet:
 
         return cls(syntrees)
 
-    def save(self, file: str) -> None:
+    def save(self, file: PathType) -> None:
         """Save a collection of synthetic trees to a `*.json.gz` file."""
-        assert str(file).endswith(
-            ".json.gz"
-        ), f"Incompatible file extension for file {file}"
+        file = Path(file)
+        if file.suffixes != [".json", ".gz"]:
+            raise ValueError(f"Incompatible file extension for file {file}")
 
         syntrees_as_json = {
             "trees": [st.to_dict() for st in self.synthetic_tree_list if st is not None]
