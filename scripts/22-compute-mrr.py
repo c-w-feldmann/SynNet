@@ -110,12 +110,12 @@ if __name__ == "__main__":
     ranks_array = np.asarray(rank_list, dtype=int).flatten()  # (nSamples,)
     rrs = 1 / (ranks_array + 1)  # +1 for offset 0-based indexing
 
-    print(f"Result using metric: {metric}")
-    print(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
+    logger.info(f"Result using metric: {metric}")
+    logger.info(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
     TOP_N_RANKS = (1, 3, 5, 10, 15, 30)
     for i in TOP_N_RANKS:
         n_recovered = sum(ranks_array < i)
         n = len(ranks_array)
-        print(
+        logger.info(
             f"The Top-{i:<2d} recovery rate is: {n_recovered/n:.3f} ({n_recovered}/{n})"
         )
