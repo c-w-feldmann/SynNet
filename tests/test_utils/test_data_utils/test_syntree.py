@@ -16,7 +16,7 @@ class TestSynTree(unittest.TestCase):
     """Test the SyntheticTree class."""
 
     def setUp(self) -> None:
-        self.reference_hash = "56a21aa7ed31577f313401cb9945fc43"
+        """Set up the test."""
         with open(SYNTREE_FILE, "rt", encoding="UTF-8") as f:
             self.syntree_dict = json.load(f)
 
