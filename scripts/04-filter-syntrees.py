@@ -5,18 +5,16 @@
 
 import abc
 import json
-import logging
 from pathlib import Path
 from typing import Any, Union
 
 import numpy as np
+from loguru import logger
 from rdkit import Chem, RDLogger
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
-
-logger = logging.getLogger(__name__)
 
 RDLogger.DisableLog("rdApp.*")
 

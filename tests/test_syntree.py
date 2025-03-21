@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 from typing import Any
 
 import pytest
+from loguru import logger
 
 from synnet.utils.data_utils import NodeChemical, SyntheticTree
-
-logger = logging.getLogger(__name__)
 
 base_dir = Path(__file__).parent.absolute()
 SYNTREE_FILE = base_dir / "assets/syntree-small.json"

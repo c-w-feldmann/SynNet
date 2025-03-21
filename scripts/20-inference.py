@@ -7,13 +7,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 from functools import partial
 from pathlib import Path
 from time import time
 from typing import Any, Optional, Union
 
 import pandas as pd
+from loguru import logger
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
@@ -30,8 +30,6 @@ from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.utils.custom_types import PathType
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
-
-logger = logging.getLogger(__file__)
 
 
 def get_args() -> argparse.Namespace:

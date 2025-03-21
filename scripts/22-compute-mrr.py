@@ -8,17 +8,15 @@ selection using the different distance metrics in the k-NN search.
 
 import argparse
 import json
-import logging
 
 import numpy as np
+from loguru import logger
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
 from synnet.encoding.distances import ce_distance, cosine_distance
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.common import load_mlp_from_ckpt, xy_to_dataloader
-
-logger = logging.getLogger(__name__)
 
 
 def get_args() -> argparse.Namespace:

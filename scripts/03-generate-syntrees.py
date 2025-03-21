@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import multiprocessing as mp
 import os
 from functools import partial
@@ -15,6 +14,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import numpy as np
+from loguru import logger
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
@@ -25,7 +25,6 @@ from synnet.data_generation.preprocessing import (
 from synnet.data_generation.syntrees import SynTreeGenerator, SynTreeGeneratorPostProc
 from synnet.utils.data_utils import ReactionSet, SyntheticTree
 
-logger = logging.getLogger(__name__)
 RDLogger.DisableLog("rdApp.*")
 
 

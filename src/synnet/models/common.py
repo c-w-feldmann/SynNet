@@ -10,13 +10,12 @@ import numpy.typing as npt
 import torch
 import torch.utils.data as torch_data
 import yaml
+from loguru import logger
 from scipy import sparse
 
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.mlp import MLP
 from synnet.utils.custom_types import PathType
-
-logger = logging.getLogger(__file__)
 
 
 def init_save_dir(path: PathType, suffix: str = "") -> Path:

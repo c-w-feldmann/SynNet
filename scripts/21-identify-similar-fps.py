@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
@@ -16,13 +15,12 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from loguru import logger
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import SyntheticTreeSet
-
-logger = logging.getLogger(__file__)
 
 
 def get_args() -> argparse.Namespace:

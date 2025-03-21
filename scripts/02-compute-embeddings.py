@@ -9,7 +9,8 @@ In the embedding space, a kNN-search will identify the 1st or 2nd reactant.
 
 import argparse
 import json
-import logging
+
+from loguru import logger
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
@@ -17,8 +18,6 @@ from synnet.encoding.embedding import (
     MolecularEmbeddingManager,
     MorganFingerprintEmbedding,
 )
-
-logger = logging.getLogger(__file__)
 
 FUNCTIONS: dict[str, MorganFingerprintEmbedding] = {
     "fp_4096": MorganFingerprintEmbedding(radius=2, n_bits=4096),

@@ -10,21 +10,19 @@ except ImportError:
     from typing_extensions import Self
 
 import abc
-import logging
 import multiprocessing as mp
 from pathlib import Path
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from loguru import logger
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from sklearn.neighbors import BallTree
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.custom_types import MetricType, PathType
-
-logger = logging.getLogger(__name__)
 
 
 class MolecularEmbeddingManager:

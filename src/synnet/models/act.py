@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import logging
 from pathlib import Path
 from typing import Union
 
 import pytorch_lightning as pl
 import yaml
+from loguru import logger
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
@@ -24,7 +24,6 @@ from synnet.models.common import (
 from synnet.models.mlp import MLP
 
 MAX_PROCESSES = 8
-logger = logging.getLogger(__file__)
 
 
 def get_args() -> argparse.Namespace:

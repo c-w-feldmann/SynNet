@@ -12,7 +12,7 @@ except ImportError:
 
 import pandas as pd
 import rdkit
-from pathos import multiprocessing as mp
+from loguru import logger
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import PandasTools, rdMolDescriptors
 from tqdm import tqdm

@@ -1,8 +1,8 @@
 """parallel.py"""
 
-import logging
 from typing import Any, Callable, Optional, TypeVar
 
+from loguru import logger
 from tqdm import tqdm
 
 from synnet.config import MAX_PROCESSES
@@ -55,10 +55,10 @@ def simple_parallel(
             break
         except TimeoutError:
             retries += 1
-            logging.info("Timeout Error (s > {})", timeout)
+            logger.info("Timeout Error (s > {})", timeout)
             if retries <= max_retries:
                 pool, async_results = setup_pool()
-                logging.info(f"Retry attempt: {retries}")
+                logger.info(f"Retry attempt: {retries}")
             else:
                 raise ValueError()
 
@@ -109,7 +109,7 @@ def chunked_parallel(
     chunked_list = [
         input_list[i : i + step_size] for i in range(0, len(input_list), step_size)
     ]
-    logging.debug(
+    logger.debug(
         f"{max_cpu=}, {len(input_list)=}, {num_chunks=}, {step_size=}, {len(chunked_list)=}"
     )
 

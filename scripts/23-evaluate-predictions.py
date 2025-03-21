@@ -8,15 +8,13 @@ The predictions are generated in `20-predict-targets.py`.
 
 import argparse
 import json
-import logging
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from tdc import Evaluator
 
 from synnet.config import MAX_PROCESSES
-
-logger = logging.getLogger(__name__)
 
 
 def get_args() -> argparse.Namespace:

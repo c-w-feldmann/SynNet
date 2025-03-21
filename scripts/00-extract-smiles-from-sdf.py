@@ -5,6 +5,7 @@
 
 import argparse
 import json
+
 from loguru import logger
 
 from synnet.data_generation.preprocessing import parse_sdf_file

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
 import numpy as np
 from numpy import typing as npt
+from loguru import logger as logging
 from torch.utils.data.dataset import Dataset
 
 from synnet.config import MAX_PROCESSES
