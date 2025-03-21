@@ -133,9 +133,7 @@ class Reaction:
             return Chem.MolFromSmiles(smi)
         if isinstance(smi, Chem.rdchem.Mol):
             return smi
-        raise TypeError(
-            f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`"
-        )
+        raise TypeError(f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`")
 
     def get_smiles(self, mol: Union[str, Chem.rdchem.Mol]) -> str:
         """Convert `Chem.rdchem.Mol` to SMILES `str`."""
@@ -143,9 +141,7 @@ class Reaction:
             return mol
         if isinstance(mol, Chem.rdchem.Mol):
             return Chem.MolToSmiles(mol)
-        raise TypeError(
-            f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`"
-        )
+        raise TypeError(f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`")
 
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
@@ -284,7 +280,9 @@ class Reaction:
             second_reactant_mol = self.get_mol(second_reactant)
         else:
             second_reactant_mol = None
-        if len(r) > 1 and not self._check_smarts_match(self.get_mol(first_reactant), second_reactant_mol):
+        if len(r) > 1 and not self._check_smarts_match(
+            self.get_mol(first_reactant), second_reactant_mol
+        ):
             r = list(reversed(r))
         # Run reaction with rdkit
         reaction_result_list = self.rxn.RunReactants(tuple(r))
