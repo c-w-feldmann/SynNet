@@ -6,7 +6,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from functools import partial
 from pathlib import Path
 from time import time
@@ -18,7 +17,6 @@ from loguru import logger
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
-from synnet.data_generation.preprocessing import BuildingBlockFileHandler
 from synnet.data_generation.syntrees import MorganFingerprintEncoder
 from synnet.decoding.decoder import (
     HelperDataloader,
