@@ -1,0 +1,1 @@
+"""Initilize the encoding module."""
