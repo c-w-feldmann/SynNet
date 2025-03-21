@@ -58,15 +58,12 @@ def wrapper(
     **kwargs : Any
         Additional keyword arguments for the decoder.
     """
-    # Encode target
     try:
         z_target = mol_encoder.encode(target)
-
     except ValueError as e:
         logger.error(f"Failed to encode {target}: {e}")
         return SyntheticTree(), None
 
-    # Decode target
     try:
         res = syntree_decoder.decode(z_target, **kwargs)
     except FailedReconstructionError as e:
@@ -136,6 +133,15 @@ def postprocess_results(
 
 
 def save_results(output_dir: PathType, df: pd.DataFrame) -> None:
+    """Save the results.
+
+    Parameters
+    ----------
+    output_dir : PathType
+        Directory to save output.
+    df : pd.DataFrame
+        Dataframe with the results.
+    """
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
