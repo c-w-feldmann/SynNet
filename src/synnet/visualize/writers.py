@@ -19,6 +19,13 @@ class PrefixWriter:  # pylint: disable=too-few-public-methods
         self.prefix = self._default_prefix() if file is None else self._load(file)
 
     def _default_prefix(self) -> list[str]:
+        """Return the default prefix.
+
+        Returns
+        -------
+        list[str]
+            The default prefix.
+        """
         md = [
             "# Synthetic Tree Visualisation",
             "",
@@ -104,12 +111,32 @@ class SynTreeWriter:
         prefixer: PrefixWriter = PrefixWriter(),
         postfixer: PostfixWriter = PostfixWriter(),
     ) -> None:
+        """Initialize the writer.
+
+        Parameters
+        ----------
+        prefixer : PrefixWriter, optional
+            The prefix writer, by default PrefixWriter()
+        postfixer : PostfixWriter, optional
+            The postfix writer, by default PostfixWriter()
+        """
         self.prefixer = prefixer
         self.postfixer = postfixer
         self._text = None
 
     def write(self, out: list[str]) -> Self:
-        """Write the text to the writer."""
+        """Write the text to the writer.
+
+        Parameters
+        ----------
+        out : list[str]
+            The text to write.
+
+        Returns
+        -------
+        Self
+            The writer.
+        """
         out = self.prefixer.write() + out + self.postfixer.write()
         self._text = out
         return self
@@ -143,11 +170,41 @@ def subgraph(
         <output of function that is decorated>
     end
     ```
-    """
 
+    Parameters
+    ----------
+    argument : str, optional
+        The argument to the subgraph, by default ""
+
+    Returns
+    -------
+    Callable[[Callable[[Any], Any]], Callable[[Any], Any]]
+        The decorator
+    """
     def _subgraph(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+        """Put the decorated function in a subgraph.
+
+        Parameters
+        ----------
+        func : Callable[[Any], Any]
+            The function to decorate.
+
+        Returns
+        -------
+        Callable[[Any], Any]
+            The decorated function.
+        """
         @wraps(func)
-        def wrapper(*args: list[Any], **kwargs: dict[str, Any]) -> list[str]:
+        def wrapper(*args: Any, **kwargs: Any) -> list[str]:
+            """Wrap the function in a subgraph.
+
+            Parameters
+            ----------
+            args : Any
+                The arguments to the function.
+            kwargs : Any
+                The keyword arguments to the function.
+            """
             out = f"subgraph {argument}"
             inner = func(*args, **kwargs)
             # add a tab to inner
