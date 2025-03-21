@@ -1,3 +1,5 @@
+"""Distance functions for comparing molecular fingerprints."""
+
 import numba
 import numpy as np
 import numpy.typing as npt
@@ -9,9 +11,22 @@ from synnet.encoding.embedding import MorganFingerprintEmbedding
 def cosine_distance(v1: npt.NDArray[np.float64], v2: npt.NDArray[np.float64]) -> float:
     """Compute the cosine distance between two 1d-vectors.
 
-    Note:
-        cosine_similarity = x'y / (||x|| ||y||) in [-1,1]
-        cosine_distance   = 1 - cosine_similarity in [0,2]
+    Notes
+    -----
+    cosine_similarity = x'y / (||x|| ||y||) in [-1,1]
+    cosine_distance   = 1 - cosine_similarity in [0,2]
+
+    Parameters
+    ----------
+    v1 : npt.NDArray[np.float64]
+        First vector.
+    v2 : npt.NDArray[np.float64]
+        Second vector.
+
+    Returns
+    -------
+    float
+        The cosine distance
     """
     return max(
         0, min(1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), 2)
@@ -23,16 +38,21 @@ def ce_distance(
     y_pred: npt.NDArray[np.float64],
     eps: float = 1e-15,
 ) -> float:
-    """Computes the cross-entropy between two vectors.
+    """Compute the cross-entropy between two vectors.
 
-    Args:
-        y (np.ndarray): First vector.
-        y_pred (np.ndarray): Second vector.
-        eps (float, optional): Small value, for numerical stability. Defaults
-            to 1e-15.
+    Parameters
+    ----------
+    y : npt.NDArray[np.float64]
+        First vector.
+    y_pred : npt.NDArray[np.float64]
+        Second vector.
+    eps : float, optional
+        Small value, for numerical stability, by default 1e-15
 
-    Returns:
-        float: The cross-entropy.
+    Returns
+    -------
+    float
+        The cross-entropy.
     """
     y_pred = np.clip(y_pred, eps, 1 - eps)
     return -np.sum((y * np.log(y_pred) + (1 - y) * np.log(1 - y_pred)))
@@ -42,15 +62,19 @@ def ce_distance(
 def _tanimoto_similarity(
     fp1: npt.NDArray[np.int_], fp2: npt.NDArray[np.float64]
 ) -> float:
-    """
-    Returns the Tanimoto similarity between two molecular fingerprints.
+    """Return the Tanimoto similarity between two molecular fingerprints.
 
-    Args:
-        fp1 (np.ndarray): Molecular fingerprint 1.
-        fp2 (np.ndarray): Molecular fingerprint 2.
+    Parameters
+    ----------
+    fp1 : npt.NDArray[np.int_]
+        Molecular fingerprint 1.
+    fp2 : npt.NDArray[np.float64]
+        Molecular fingerprint 2.
 
-    Returns:
-        float: Tanimoto similarity.
+    Returns
+    -------
+    float
+        Tanimoto similarity.
     """
     return np.sum(fp1 * fp2) / (np.sum(fp1) + np.sum(fp2) - np.sum(fp1 * fp2))
 
