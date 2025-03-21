@@ -90,7 +90,7 @@ def filter_building_blocks(
 
     # 2. Filter
     #   building blocks on heuristics
-    filtered_bblocks = BuildingBlockFilterHeuristics.filter(bblocks, verbose=verbose)
+    filtered_bblocks = BuildingBlockFilterHeuristics(verbose=verbose).filter(bblocks)
 
     #   building blocks that cannot react with any template
     filtered_bblocks_list, reactions = BuildingBlockFilterMatchRxn().filter(
