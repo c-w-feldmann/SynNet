@@ -32,48 +32,6 @@ from synnet.utils.parallel import chunked_parallel
 from synnet.utils.synnet_exceptions import FailedReconstructionError
 
 
-def get_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    # File I/O
-    parser.add_argument(
-        "--building-blocks-file",
-        type=str,
-        help="Input file with SMILES strings (First row `SMILES`, then one per line).",
-    )
-    parser.add_argument(
-        "--rxns-collection-file",
-        type=str,
-        help="Input file for the collection of reactions matched with building-blocks.",
-    )
-    parser.add_argument(
-        "--embeddings-knn-file",
-        type=str,
-        help="Input file for the pre-computed embeddings (*.npy).",
-    )
-    parser.add_argument(
-        "--ckpt-dir",
-        type=str,
-        help="Directory with checkpoints for {act,rt1,rxn,rt2}-model.",
-    )
-    parser.add_argument("--output-dir", type=str, help="Directory to save output.")
-    # Parameters
-    parser.add_argument(
-        "--num", type=int, default=-1, help="Number of molecules to predict."
-    )
-    parser.add_argument(
-        "--data",
-        type=str,
-        help="File with molecules to decode.",
-    )
-    # Processing
-    parser.add_argument(
-        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
-    )
-    parser.add_argument("--verbose", default=False, action="store_true")
-    parser.add_argument("--debug", default=False, action="store_true")
-    return parser.parse_args()
-
-
 def wrapper(
     target: str,
     *,
@@ -83,10 +41,23 @@ def wrapper(
 ) -> tuple[SyntheticTree, Optional[float]]:
     """Wrapper function to decode targets into `SyntheticTree` & catch Exceptions.
 
-    Info:
+    Notes
+    -----
         Always return a Dict *with* a `SyntheticTree`.
         This allows easily keep everything in order when saving to a file via `SyntheticTreeSet` and
-        allows to call its method `is_valid()` on the entire list."""
+        allows to call its method `is_valid()` on the entire list.
+
+    Parameters
+    ----------
+    target : str
+        The target SMILES string.
+    syntree_decoder : Union[SynTreeDecoder, SynTreeDecoderGreedy]
+        The decoder.
+    mol_encoder : MorganFingerprintEncoder
+        The encoder.
+    **kwargs : Any
+        Additional keyword arguments for the decoder.
+    """
     # Encode target
     try:
         z_target = mol_encoder.encode(target)
@@ -106,6 +77,15 @@ def wrapper(
 
 
 def print_stats(df: pd.DataFrame, data: str) -> None:
+    """Log some statistics about the results.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe with the results.
+    data : str
+        File with molecules to decode.
+    """
     n_valid = df["is_valid"].sum()
     n_recovered = (df["max_similarity"] == 1.0).sum()
     recovery_rate = n_recovered / n_valid
@@ -124,6 +104,20 @@ def postprocess_results(
     tree_list: list[SyntheticTree],
     similarity_array: Optional[list[Optional[float]]] = None,
 ) -> pd.DataFrame:
+    """Postprocess the results.
+
+    Parameters
+    ----------
+    tree_list : list[SyntheticTree]
+        List of decoded syntrees.
+    similarity_array : Optional[list[Optional[float]]], optional
+        List of similarities, by default None
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with the results.
+    """
     df = pd.DataFrame()
     df["syntree"] = tree_list
     if similarity_array is not None:
@@ -156,7 +150,7 @@ def save_results(output_dir: PathType, df: pd.DataFrame) -> None:
 
 
 def _setup_loggers(verbose: bool, debug: bool, output_dir: PathType) -> None:
-    """Setup loggers.
+    """Set up the loggers.
 
     Parameters
     ----------
@@ -284,7 +278,8 @@ def inference(
     logger.info("Start loading models from checkpoints...")
 
     ckpt_files = [
-        find_best_model_ckpt(Path(ckpt_dir) / model) for model in ["act", "rt1", "rxn", "rt2"]
+        find_best_model_ckpt(Path(ckpt_dir) / model)
+        for model in ["act", "rt1", "rxn", "rt2"]
     ]
     act_net, rt1_net, rxn_net, rt2_net = [
         load_mlp_from_ckpt(file) for file in ckpt_files
