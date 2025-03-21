@@ -1,4 +1,4 @@
-"""Compute the mean reciprocal ranking for reactant 1
+"""Compute the mean reciprocal ranking for reactant 1.
 
 selection using the different distance metrics in the k-NN search.
 """
