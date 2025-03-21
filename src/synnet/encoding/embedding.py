@@ -179,6 +179,18 @@ class MolecularEmbeddingManager:
         return embeddings
 
     def compute_embeddings(self, building_blocks: list[str]) -> Self:
+        """Compute embeddings for a list of building blocks.
+
+        Parameters
+        ----------
+        building_blocks: list[str]
+            List of SMILES strings.
+
+        Returns
+        -------
+        Self
+            Returns the instance with the computed embeddings.
+        """
         logger.info(f"Will compute embedding with {self.n_jobs} processes.")
         if self.n_jobs == 1:
             embeddings = list(
