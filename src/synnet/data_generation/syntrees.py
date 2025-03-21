@@ -84,7 +84,7 @@ class SynTreeGenerator:
             [Reaction(template=tmplt) for tmplt in rxn_templates]
         )
         self.rng = rng
-        self.IDX_RXNS = np.arange(len(self.reaction_set))
+        self.reaction_indices = np.arange(len(self.reaction_set))
         self.processes = processes
         self.verbose = verbose
         if not verbose:
@@ -162,9 +162,9 @@ class SynTreeGenerator:
     ) -> Tuple[Reaction, int]:
         """Sample a reaction by index."""
         if mask is None:
-            irxn_mask = self.IDX_RXNS  # all reactions are possible
+            irxn_mask = self.reaction_indices  # all reactions are possible
         else:
-            irxn_mask = self.IDX_RXNS[mask]
+            irxn_mask = self.reaction_indices[mask]
 
         idx = self.rng.choice(irxn_mask)
         rxn = self.reaction_set[idx]
@@ -315,6 +315,8 @@ class SynTreeGenerator:
         #         check if (r1->position1 & r2->position2) "ordered"
         #         or       (r1->position2 & r2->position1) "reversed"
         r1, r2 = reactants
+        if r1 is None or r2 is None:
+            raise AssertionError("Cannot get reactants and reaction masks.")
         masks_r1 = [
             (
                 (rxn.is_reactant_first(r1), rxn.is_reactant_second(r1))
