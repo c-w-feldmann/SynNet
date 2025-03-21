@@ -3,7 +3,7 @@ numba
 pathos
 pandas
 pytest
-pymoo @ https://github.com/anyoptimization/pymoo/archive/refs/heads/main.zip
+pymoo
 lightning<1000
 loguru
 rdkit
