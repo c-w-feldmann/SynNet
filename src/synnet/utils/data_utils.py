@@ -955,8 +955,14 @@ class SyntheticTreeSet:
         return trees_by_depth_dict
 
     def _print(self, x: int = 3) -> None:
-        """Helper function for debugging."""
+        """Helper function for debugging.
+
+        Parameters
+        ----------
+        x: int
+            Number of trees to print.
+        """
         for i, r in enumerate(self.synthetic_tree_list):
             if i >= x:
                 break
-            print(r.to_dict())
+            logger.info(r.to_dict())
