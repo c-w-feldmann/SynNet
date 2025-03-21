@@ -22,7 +22,7 @@ from synnet.utils.data_utils import SyntheticTreeSet
 
 
 def _match_dataset_filename(path: PathType, dataset_type: str) -> Path:
-    """Helper to find the exact filename for {train,valid,test} file.
+    """Find the exact filename for {train,valid,test} file.
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def _match_dataset_filename(path: PathType, dataset_type: str) -> Path:
 def find_similar_fp(
     fp: npt.ArrayLike, fps_reference: npt.ArrayLike
 ) -> tuple[float, int]:
-    """Finds fingerprint with highest Tanimoto similarity to `fp` in `fps_reference`.
+    """Find fingerprint with highest Tanimoto similarity to `fp` in `fps_reference`.
 
     Parameters
     ----------
