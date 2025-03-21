@@ -360,8 +360,19 @@ class MolecularEmbeddingManager:
         if precalculated_embedding_file is not None:
             np.save(precalculated_embedding_file, self.embeddings)
 
-    def to_folder(self, folder: PathType) -> None:
-        """Save the instance to a folder."""
+    def to_folder(self, folder: PathType) -> Self:
+        """Save the instance to a folder.
+
+        Parameters
+        ----------
+        folder : PathType
+            Folder to save the files
+
+        Returns
+        -------
+        Self
+            Returns the instance.
+        """
         folder = Path(folder)
         folder.mkdir(parents=True, exist_ok=True)
         self.to_files(
@@ -369,3 +380,4 @@ class MolecularEmbeddingManager:
             compound_list_file=folder / "building_blocks.txt",
             precalculated_embedding_file=folder / "embeddings.npy",
         )
+        return self
