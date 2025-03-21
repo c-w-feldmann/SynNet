@@ -144,7 +144,8 @@ class Reaction:
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
 
-        Usage:
+        Examples
+        --------
             * In Jupyter:
 
                 >>> from IPython.display import Image
@@ -156,6 +157,15 @@ class Reaction:
                 >>> img = rxn.to_image()
                 >>> pathlib.Path("out.png").write_bytes(img)
 
+        Parameters
+        ----------
+        size: tuple[int, int]
+            Size of the image in pixels.
+
+        Returns
+        -------
+        bytes
+            PNG image of the reaction.
         """
         rxn = AllChem.ReactionFromSmarts(self.smirks)
         d2d = Draw.MolDraw2DCairo(*size)
