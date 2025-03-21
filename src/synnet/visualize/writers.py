@@ -1,12 +1,16 @@
+"""Module for writing mermaid diagrams to a file."""
+
 from __future__ import annotations
 
 from functools import wraps
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Self
 
 from synnet.utils.custom_types import PathType
 
+TAB_CHAR = " " * 4
 
-class PrefixWriter:
+
+class PrefixWriter:  # pylint: disable=too-few-public-methods
     """Class for writing mermaid diagrams with a prefix."""
 
     prefix: list[str]
@@ -51,19 +55,40 @@ class PrefixWriter:
 
     @staticmethod
     def _load(file: PathType) -> list[str]:
-        with open(file, "rt") as f:
+        """Load the prefix from a file.
+
+        Parameters
+        ----------
+        file : PathType
+            The file to load the prefix from.
+        """
+        with open(file, "rt", encoding="UTF-8") as f:
             out = [line.removesuffix("\n") for line in f]
         return out
 
     def write(self) -> list[str]:
+        """Return the prefix.
+
+        Returns
+        -------
+        list[str]
+            The prefix.
+        """
         return self.prefix
 
 
-class PostfixWriter:
+class PostfixWriter:  # pylint: disable=too-few-public-methods
     """Class for writing mermaid diagrams with a postfix."""
 
     @staticmethod
     def write() -> list[str]:
+        """Return the postfix.
+
+        Returns
+        -------
+        list[str]
+            The postfix.
+        """
         return ["```"]
 
 
@@ -83,22 +108,28 @@ class SynTreeWriter:
         self.postfixer = postfixer
         self._text = None
 
-    def write(self, out: list[str]) -> SynTreeWriter:
+    def write(self, out: list[str]) -> Self:
+        """Write the text to the writer."""
         out = self.prefixer.write() + out + self.postfixer.write()
         self._text = out
         return self
 
     def to_file(self, file: PathType, text: Optional[list[str]] = None) -> None:
+        """Write the text to a file.
+
+        Parameters
+        ----------
+        file : PathType
+            The file to write the text to.
+        text : Optional[list[str]], optional
+            The text to write, by default None.
+        """
         text = text or self._text
         if text is None:
             raise ValueError("No text to write.")
 
-        with open(file, "wt") as f:
+        with open(file, "wt", encoding="UTF-8") as f:
             f.writelines((line.rstrip() + "\n" for line in text))
-
-    @property
-    def text(self) -> list[str]:
-        return self.text
 
 
 def subgraph(
@@ -120,7 +151,6 @@ def subgraph(
             out = f"subgraph {argument}"
             inner = func(*args, **kwargs)
             # add a tab to inner
-            TAB_CHAR = " " * 4
             inner = [f"{TAB_CHAR}{line}" for line in inner]
             return [out] + inner + ["end"]
 
