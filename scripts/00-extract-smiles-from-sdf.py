@@ -60,6 +60,5 @@ def main() -> None:
     logger.info("Complete.")
 
 
-
 if __name__ == "__main__":
     main()

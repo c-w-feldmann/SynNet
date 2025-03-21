@@ -93,5 +93,6 @@ def filter_building_blocks() -> None:
 
     logger.info("Completed.")
 
+
 if __name__ == "__main__":
     filter_building_blocks()
