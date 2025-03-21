@@ -93,6 +93,8 @@ class OracleFilter(Filter):
 def filter_syntree(syntree: SyntheticTree) -> Union[SyntheticTree, int]:
     """Apply filters to `syntree` and return it, if all filters are passed. Else, return error code."""
     # Filter 1: Is root molecule valid?
+    valid_root_mol_filter = ValidRootMolFilter()
+    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng(42))
     keep_tree = valid_root_mol_filter.filter(syntree)
     if not keep_tree:
         return -1
@@ -150,9 +152,6 @@ def main() -> None:
     )
 
     # Filter trees
-    # TODO: Move to src/synnet/data_generation/filters.py ?
-    valid_root_mol_filter = ValidRootMolFilter()
-    interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng(42))
 
     syntrees = [s for s in syntree_collection.synthetic_tree_list if s is not None]
 
