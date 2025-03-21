@@ -46,9 +46,7 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _match_dataset_filename(
-    path: str, dataset_type: str
-) -> Path:  # TODO: consolidate with code in script/05-*
+def _match_dataset_filename(path: str, dataset_type: str) -> Path:
     """Helper to find the exact filename for {train,valid,test} file."""
     files = list(Path(path).glob(f"*{dataset_type}*.json.gz"))
     if len(files) != 1:
