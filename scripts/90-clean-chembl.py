@@ -8,42 +8,61 @@ Info:
 # pylint: disable=invalid-name
 # pylint: enable=invalid-name  # disable and enable to ignore the file name only.
 
-from functools import partial
-
-import datamol as dm
 import pandas as pd
+from loguru import logger
+from rdkit import Chem
 
-from synnet.utils.custom_types import PathType
 
+def smiles2smiles(smiles: str) -> str | None:
+    """Convert smiles -> mol -> smiles.
 
-def load(file: PathType) -> pd.DataFrame:
-    df = dm.read_csv(file, sep="\t")
-    df = df.rename({"smiles": "smiles_raw"}, axis=1)
-    return df
+    Parameters
+    ----------
+    smiles : str
+        A SMILES string.
+
+    Returns
+    -------
+    str or None
+        A valid SMILES string or None.
+    """
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return None
+    return Chem.MolToSmiles(mol)
 
 
 def clean(df: pd.DataFrame) -> pd.DataFrame:
-    func = partial(dm.sanitize_smiles, isomeric=False)
-    smiles = dm.parallelized(func, df["smiles_raw"].to_list())
+    """Clean the SMILES in the dataframe.
 
-    df["smiles"] = smiles
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A dataframe with the chembl data.
+
+    Returns
+    -------
+    pd.DataFrame
+        A dataframe with the chembl data and cleaned SMILES.
+    """
+    df["smiles"] = [smiles2smiles(smiles) for smiles in df["smiles_raw"]]
 
     # Remove smiles that are `None`
     num_invalid = df["smiles"].isna().sum()
-    print(f"Deleted {num_invalid} ({num_invalid/len(df):.2%}) invalid smiles")
+    logger.info(f"Deleted {num_invalid} ({num_invalid/len(df):.2%}) invalid smiles")
     df = df.dropna(subset="smiles")
     return df
 
 
-def to_file(df: pd.DataFrame, file: PathType) -> None:
-    df.to_csv(file, sep="\t", index=False)
-    print(f"Saved to: {file}")
-    return None
+def main() -> None:
+    """Clean the chembl data."""
+    chembl_df = pd.read_csv("data/assets/molecules/chembl.tab", sep="\t")
+    chembl_df = chembl_df.rename({"smiles": "smiles_raw"}, axis=1)
+    chembl_df = clean(chembl_df)
+    out_file = "data/assets/molecules/chembl-sanitized.tab"
+    chembl_df.to_csv(out_file, sep="\t", index=False)
+    logger.info(f"Saved to: {out_file}")
 
 
 if __name__ == "__main__":
-    in_file = "data/assets/molecules/chembl.tab"
-    chembl_df = load(in_file)
-    chembl_df = clean(chembl_df)
-    out_file = "data/assets/molecules/chembl-sanitized.tab"
-    to_file(chembl_df, out_file)
+    main()
