@@ -1,14 +1,16 @@
-from typing import Optional
+"""Unit tests for the encoding module."""
+
+import unittest
 
 import numpy as np
-import pytest
 
-from synnet.encoding.fingerprints import fp_embedding
+from synnet.encoding.embedding import MorganFingerprintEmbedding
 
 
-@pytest.fixture
-def valid_smiles() -> list[str]:
-    return [
+class TestMorganFingerprintEmbedding(unittest.TestCase):
+    """Test the Morgan emeddings of SMILES strings."""
+
+    valid_smiles = [
         "CC(C)(C)C(C(=O)O)n1cn[nH]c1=O",
         "C=CC1CN(C(=O)OC(C)(C)C)CCC1CCO",
         "COC(=O)c1coc(-c2cnn(C)c2)n1",
@@ -16,47 +18,18 @@ def valid_smiles() -> list[str]:
         "CN(C)C(=O)N1CCCNCC1.C",
     ]
 
+    def setUp(self):
+        """Set up the test."""
+        self.fp_embedding = MorganFingerprintEmbedding()
 
-@pytest.fixture
-def valid_smi(valid_smiles: list[str]) -> str:
-    return valid_smiles[0]
+    def test_default_fp_embedding_single(self) -> None:
+        """Test the embedding of a single SMILES string."""
+        fp = self.fp_embedding.transform_smiles(self.valid_smiles[0])
+        self.assertIsInstance(fp, np.ndarray)
+        self.assertEqual(fp.dtype, bool)
+        self.assertEqual(fp.shape, (4096,))
 
-
-def test_default_fp_embedding_single(valid_smi: str) -> None:
-    fp = fp_embedding(valid_smi)
-    assert isinstance(fp, np.ndarray)
-    assert fp.shape == (4096,)
-
-
-def test_default_fp_embedding_multiple(valid_smiles: list[str]) -> None:
-    n = len(valid_smiles)
-    fps = np.asarray([fp_embedding(smi) for smi in valid_smiles])
-    assert fps.shape == (n, 4096)
-
-
-def test_fp_on_invalid_smiles(smi: Optional[str] = None) -> None:
-    fp = fp_embedding(smi)
-    assert isinstance(fp, np.ndarray)
-    assert fp.shape == (4096,)
-    assert fp.sum() == 0
-
-
-def test_some_good_some_none(valid_smiles: list[str]) -> None:
-    n = len(valid_smiles)
-    m = 3
-    fps = np.asarray([fp_embedding(smi) for smi in valid_smiles + [None] * m])
-    assert fps.shape == (n + m, 4096)
-
-
-@pytest.mark.parametrize("nbits", [2**p for p in range(8, 13)])
-def test_fp_None_dim(nbits: int) -> None:
-    smi = None
-    fp = fp_embedding(smi, _radius=2, _nBits=nbits)
-    assert fp.shape == (nbits,)
-
-
-@pytest.mark.parametrize("nbits", [2**p for p in range(8, 13)])
-def test_fp_smiles_dim(nbits: int, valid_smi: str) -> None:
-    smi = valid_smi
-    fp = fp_embedding(smi, _radius=2, _nBits=nbits)
-    assert fp.shape == (nbits,)
+    def test_fp_on_invalid_smiles(self) -> None:
+        """Test the embedding of invalid SMILES strings."""
+        with self.assertRaises(ValueError):
+            self.fp_embedding.transform_smiles("invalid_smiles")
