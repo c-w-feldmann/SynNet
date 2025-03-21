@@ -79,6 +79,7 @@ if __name__ == "__main__":
     dataloader = xy_to_dataloader(
         X_file=args.X_data_file,
         y_file=args.y_data_file,
+        task="classification",
         n=None if not args.debug else 128,
         batch_size=args.batch_size,
         num_workers=args.ncpu,

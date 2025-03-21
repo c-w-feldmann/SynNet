@@ -102,7 +102,7 @@ class TestSynTree(unittest.TestCase):
             syn_tree.get_state(), (smiles_list[7], None), f"{syn_tree.get_state()=}"
         )
         self.assertIsInstance(syn_tree.root, NodeChemical)
-        self.assertEqual(syn_tree.root.smiles, smiles_list[7])
+        self.assertEqual(syn_tree.root.smiles, smiles_list[7])  # type: ignore
         self.assertIsInstance(syn_tree.to_dict(), dict)
         self.assertEqual(syn_tree.to_dict(), self.syntree_dict)
 

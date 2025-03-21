@@ -29,7 +29,7 @@ The model consists of four modules, each containing a multi-layer perceptron (ML
 
 4. A *Second Reactant* selection function that identifies the second reactant if the sampled template is bi-molecular. The model predicts an embedding for the second reactant, and a candidate is then sampled via a k-NN search from the masked set of building blocks.
 
-![the model](./figures/network.png "model scheme")
+![the model](docs/figures/network.png "model scheme")
 
 These four modules predict the probability distributions of actions to be taken within a single reaction step, and determine the nodes to be added to the synthetic tree under construction.
 All of these networks are conditioned on the target molecule embedding.
@@ -43,7 +43,7 @@ For this task, we can take a molecular embedding for the desired product, and us
 If the desired product is successfully recovered, then the final root molecule will match the desired molecule used to create the input embedding.
 If the desired product is not successully recovered, it is possible the final root molecule may still be *similar* to the desired molecule used to create the input embedding, and thus our tool can also be used for *synthesizable analog recommendation*.
 
-![the generation process](./figures/generation_process.png "generation process")
+![the generation process](docs/figures/generation_process.png "generation process")
 
 ### Synthesizable molecular design
 

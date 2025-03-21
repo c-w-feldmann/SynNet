@@ -84,7 +84,7 @@ class SynTreeGenerator:
             [Reaction(template=tmplt) for tmplt in rxn_templates]
         )
         self.rng = rng
-        self.IDX_RXNS = np.arange(len(self.reaction_set))
+        self.reaction_indices = np.arange(len(self.reaction_set))
         self.processes = processes
         self.verbose = verbose
         if not verbose:
@@ -162,9 +162,9 @@ class SynTreeGenerator:
     ) -> Tuple[Reaction, int]:
         """Sample a reaction by index."""
         if mask is None:
-            irxn_mask = self.IDX_RXNS  # all reactions are possible
+            irxn_mask = self.reaction_indices  # all reactions are possible
         else:
-            irxn_mask = self.IDX_RXNS[mask]
+            irxn_mask = self.reaction_indices[mask]
 
         idx = self.rng.choice(irxn_mask)
         rxn = self.reaction_set[idx]
@@ -315,6 +315,8 @@ class SynTreeGenerator:
         #         check if (r1->position1 & r2->position2) "ordered"
         #         or       (r1->position2 & r2->position1) "reversed"
         r1, r2 = reactants
+        if r1 is None or r2 is None:
+            raise AssertionError("Cannot get reactants and reaction masks.")
         masks_r1 = [
             (
                 (rxn.is_reactant_first(r1), rxn.is_reactant_second(r1))
@@ -588,23 +590,42 @@ class IdentityIntEncoder:
 
     @property
     def args(self) -> dict[str, Any]:
+        """Return the arguments.
+
+        Returns
+        -------
+        dict[str, Any]
+            Arguments of the object as a dictionary.
+        """
         return {**self.__dict__, **{"name": self.__class__.__name__}}
 
     def __repr__(self) -> str:
+        """Return a string representation of the object."""
         return f"'{self.__class__.__name__}': {self.__dict__}"
 
     @property
     def nbits(self) -> int:
+        """Return the number of bits."""
         return self.get_nbits()
 
     def encode(self, number: int) -> npt.NDArray[np.int_]:
+        """Returns a (1,1)-array with the number."""
         return np.atleast_2d(number)
 
     def get_nbits(self) -> int:
+        """Return the number of bits.
+
+        Returns
+        -------
+        int
+            Number of bits
+        """
         return 1
 
 
 class SynTreeFeaturizer:
+    """Featurizer for synthetic trees."""
+
     def __init__(
         self,
         *,
@@ -613,6 +634,19 @@ class SynTreeFeaturizer:
         rxn_embedder: IdentityIntEncoder,
         action_embedder: IdentityIntEncoder,
     ) -> None:
+        """Initializes a `SynTreeFeaturizer`.
+
+        Parameters
+        ----------
+        reactant_embedder : MorganFingerprintEncoder
+            Encoder for reactants.
+        mol_embedder : MorganFingerprintEncoder
+            Encoder for molecules.
+        rxn_embedder : IdentityIntEncoder
+            Encoder for reactions.
+        action_embedder : IdentityIntEncoder
+            Encoder for actions.
+        """
         # Embedders
         self.reactant_embedder = reactant_embedder
         self.mol_embedder = mol_embedder
@@ -620,6 +654,13 @@ class SynTreeFeaturizer:
         self.action_embedder = action_embedder
 
     def __repr__(self) -> str:
+        """Return a string representation of the object.
+
+        Returns
+        -------
+        str
+            String representation of the object
+        """
         return f"{self.__dict__}"
 
     def featurize(

@@ -64,11 +64,12 @@ def xy_to_dataloader(
     else:
         pass  #
     X = np.atleast_2d(np.asarray(X.todense()))
-    y = (
-        np.atleast_2d(np.asarray(y.todense()))
-        if task == "regression"
-        else np.asarray(y.todense()).squeeze()
-    )
+
+    if task == "regression":
+        y = np.atleast_2d(np.asarray(y.todense()))
+    else:
+        y = np.asarray(y.todense()).squeeze()
+
     dataset = torch.utils.data.TensorDataset(
         torch.Tensor(X),
         torch.Tensor(y),
