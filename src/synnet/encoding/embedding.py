@@ -122,7 +122,8 @@ class MolecularEmbeddingManager:
     ) -> Self:
         """Create a new instance from a file."""
         compound_list = np.loadtxt(compound_list_file, dtype=str, comments=None)
-        config = yaml.safe_load(open(configuration_file, "r"))
+        with open(configuration_file, "r", encoding="UTF-8") as f:
+            config = yaml.safe_load(f)
 
         if precalculated_embedding_file is not None:
             precalculated_embeddings = np.load(precalculated_embedding_file)
@@ -256,7 +257,7 @@ class MolecularEmbeddingManager:
                 f"Invalid type for kdtree_metric: {type(self.kdtree_metric)}"
             )
 
-        with open(configuration_file, "w") as f:
+        with open(configuration_file, "w", encoding="UTF-8") as f:
             yaml.dump(config, f)
         if precalculated_embedding_file is not None:
             np.save(precalculated_embedding_file, self.embeddings)
