@@ -1,3 +1,5 @@
+"""Custom exceptions for the synnet package."""
+
 class FailedReconstructionError(Exception):
     """Raised when the no valid reactant ist found."""
 
