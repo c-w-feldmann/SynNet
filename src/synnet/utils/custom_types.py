@@ -8,5 +8,5 @@ import numpy.typing as npt
 
 PathType = Union[str, Path]
 MetricType = Union[
-    str, Callable[[npt.NDArray[Any], npt.NDArray[Any]], npt.NDArray[np.float_]]
+    str, Callable[[npt.NDArray[Any], npt.NDArray[Any]], npt.NDArray[np.float64]]
 ]

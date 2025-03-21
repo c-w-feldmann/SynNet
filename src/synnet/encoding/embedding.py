@@ -318,7 +318,7 @@ class MolecularEmbeddingManager:
     def init_balltree(
         self,
         metric: Union[
-            Callable[[npt.NDArray[Any], npt.NDArray[Any]], npt.NDArray[np.float_]], str
+            Callable[[npt.NDArray[Any], npt.NDArray[Any]], npt.NDArray[np.float64]], str
         ],
     ) -> Self:
         """Initializes a `BallTree`.

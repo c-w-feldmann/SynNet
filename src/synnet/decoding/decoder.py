@@ -71,8 +71,8 @@ class SynTreeDecoder:
     rxn_collection: ReactionSet
     similarity_fct: Optional[
         Callable[
-            [npt.NDArray[np.float_] | npt.NDArray[np.int_], list[str]],
-            npt.NDArray[np.float_],
+            [npt.NDArray[np.float64] | npt.NDArray[np.int_], list[str]],
+            npt.NDArray[np.float64],
         ]
     ]
 
@@ -89,8 +89,8 @@ class SynTreeDecoder:
         mol_encoder: MorganFingerprintEncoder = MorganFingerprintEncoder(2, 4096),
         similarity_fct: Optional[
             Callable[
-                [Union[npt.NDArray[np.float_] | npt.NDArray[np.int_]], list[str]],
-                npt.NDArray[np.float_],
+                [Union[npt.NDArray[np.float64] | npt.NDArray[np.int_]], list[str]],
+                npt.NDArray[np.float64],
             ]
         ] = None,
         device: str = "cpu",
@@ -115,7 +115,7 @@ class SynTreeDecoder:
             Encoder for the reaction, by default OneHotEncoder(91)
         mol_encoder : MorganFingerprintEncoder
             Object for encoding molecules as vector, by default MorganFingerprintEncoder(2, 4096)
-        similarity_fct : Optional[Callable[[npt.NDArray[np.float_], list[str]], npt.NDArray[np.float_]]], optional
+        similarity_fct : Optional[Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]]], optional
             Similarity function for the reactants, by default None
 
         Returns
@@ -169,8 +169,8 @@ class SynTreeDecoder:
     def get_state_embedding(
         self,
         state: tuple[Optional[str], Optional[str]],
-        z_target: npt.NDArray[np.float_],
-    ) -> npt.NDArray[np.float_]:
+        z_target: npt.NDArray[np.float64],
+    ) -> npt.NDArray[np.float64]:
         """Computes embeddings for all molecules in the input space.
 
         Embedding = [z_mol1, z_mol2, z_target]
@@ -179,12 +179,12 @@ class SynTreeDecoder:
         ----------
         state : tuple[str, Optional[str]]
             State of the syntree.
-        z_target : npt.NDArray[np.float_]
+        z_target : npt.NDArray[np.float64]
             Embedding of the target molecule.
 
         Returns
         -------
-        npt.NDArray[np.float_]
+        npt.NDArray[np.float64]
             Embedding of the state.
         """
         if state[0] is None and state[1] is not None:
@@ -294,7 +294,7 @@ class SynTreeDecoder:
 
     def decode(
         self,
-        z_target: npt.NDArray[np.float_],
+        z_target: npt.NDArray[np.float64],
         *,
         k_reactant1: int = 1,
         max_depth: int = 15,
@@ -307,7 +307,7 @@ class SynTreeDecoder:
 
         Parameters
         ----------
-        z_target : npt.NDArray[np.float_]
+        z_target : npt.NDArray[np.float64]
             Target molecule embedding.
         k_reactant1 : int, optional
             Number of reactants to sample for the first reactant, by default 1
@@ -538,11 +538,11 @@ class SynTreeDecoder:
         self,
         *,
         similarity_fct: Callable[
-            [npt.NDArray[np.float_], list[str]], npt.NDArray[np.float_]
+            [npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]
         ],
-        z_target: npt.NDArray[np.float_],
+        z_target: npt.NDArray[np.float64],
         syntree: SyntheticTree,
-    ) -> npt.NDArray[np.float_]:  # TODO: move to its own class?
+    ) -> npt.NDArray[np.float64]:  # TODO: move to its own class?
         """Computes the similarity to a `z_target` for all nodes, as
         we can in theory truncate the tree to our liking.
         """
@@ -557,7 +557,7 @@ class SynTreeDecoderGreedy:
 
     def decode(
         self,
-        z_target: npt.NDArray[np.float_],
+        z_target: npt.NDArray[np.float64],
         *,
         attempts: int = 3,
         objective: Optional[str] = "best",  # "best", "best+shortest"

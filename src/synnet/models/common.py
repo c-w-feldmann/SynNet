@@ -80,7 +80,7 @@ def xy_to_dataloader(
 
 def _compute_class_weights_from_dataloader(
     dataloader: torch_data.DataLoader, as_tensor: bool = False  # type: ignore[type-arg]
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     from sklearn.utils.class_weight import compute_class_weight
 
     if not hasattr(dataloader.dataset, "tensors"):

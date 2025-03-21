@@ -6,7 +6,7 @@ from synnet.encoding.embedding import MorganFingerprintEmbedding
 
 
 @numba.njit()
-def cosine_distance(v1: npt.NDArray[np.float_], v2: npt.NDArray[np.float_]) -> float:
+def cosine_distance(v1: npt.NDArray[np.float64], v2: npt.NDArray[np.float64]) -> float:
     """Compute the cosine distance between two 1d-vectors.
 
     Note:
@@ -19,8 +19,8 @@ def cosine_distance(v1: npt.NDArray[np.float_], v2: npt.NDArray[np.float_]) -> f
 
 
 def ce_distance(
-    y: npt.NDArray[np.float_],
-    y_pred: npt.NDArray[np.float_],
+    y: npt.NDArray[np.float64],
+    y_pred: npt.NDArray[np.float64],
     eps: float = 1e-15,
 ) -> float:
     """Computes the cross-entropy between two vectors.
@@ -40,7 +40,7 @@ def ce_distance(
 
 @numba.njit()
 def _tanimoto_similarity(
-    fp1: npt.NDArray[np.int_], fp2: npt.NDArray[np.float_]
+    fp1: npt.NDArray[np.int_], fp2: npt.NDArray[np.float64]
 ) -> float:
     """
     Returns the Tanimoto similarity between two molecular fingerprints.
@@ -57,7 +57,7 @@ def _tanimoto_similarity(
 
 def tanimoto_similarity(
     target_fp: npt.NDArray[np.int_], smis: list[str]
-) -> npt.NDArray[np.float_]:
+) -> npt.NDArray[np.float64]:
     """Calculate Tanimoto similarities.
 
     Tanimoto similarities between a target fingerprint and molecules
@@ -72,7 +72,7 @@ def tanimoto_similarity(
 
     Returns
     -------
-    npt.NDArray[np.float_]
+    npt.NDArray[np.float64]
         Tanimoto similarities.
     """
     morgan_fp = MorganFingerprintEmbedding(radius=2, n_bits=4096)

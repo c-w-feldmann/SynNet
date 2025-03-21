@@ -41,7 +41,7 @@ class MLP(lightning.LightningModule):
         val_freq: int,
         ncpu: Optional[int] = None,
         molembedder: Optional[MolecularEmbeddingManager] = None,  # for knn-accuracy
-        class_weights: Optional[npt.NDArray[np.float_]] = None,
+        class_weights: Optional[npt.NDArray[np.float64]] = None,
     ) -> None:
         if loss not in self.TRAIN_LOSSES:
             raise ValueError(f"Unsupported loss function {loss}")
@@ -195,7 +195,7 @@ class MLP(lightning.LightningModule):
 
 
 def nn_search_list(
-    y: npt.NDArray[np.float_], kdtree: skl_nn.KDTree
+    y: npt.NDArray[np.float64], kdtree: skl_nn.KDTree
 ) -> npt.NDArray[np.int_]:
     y = np.atleast_2d(y)  # (n_samples, n_features)
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)

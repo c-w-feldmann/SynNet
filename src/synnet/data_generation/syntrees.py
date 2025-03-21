@@ -550,7 +550,7 @@ class MorganFingerprintEncoder:
 
     def encode(
         self, smi: Optional[str], allow_none: bool = True
-    ) -> npt.NDArray[np.float_]:
+    ) -> npt.NDArray[np.float64]:
         mol: Optional[Chem.Mol] = None
         if smi is not None:
             mol = Chem.MolFromSmiles(smi)
@@ -572,7 +572,7 @@ class MorganFingerprintEncoder:
 
     def encode_batch(
         self, smis: Iterable[Optional[str]], allow_none: bool = True
-    ) -> npt.NDArray[np.float_]:
+    ) -> npt.NDArray[np.float64]:
         """Encode a batch.
 
         Info: Added for convenience for datasets to encode a state (target,root1,root2) in one go
@@ -636,8 +636,8 @@ class SynTreeFeaturizer:
               This step is: [action, z_rt1, reaction_id, z_rt2, z_root_mol_1]
         """
 
-        states: list[npt.NDArray[np.float_]] = []
-        steps: list[npt.NDArray[np.float_]] = []
+        states: list[npt.NDArray[np.float64]] = []
+        steps: list[npt.NDArray[np.float64]] = []
         if syntree.root is None:
             raise ValueError("Root is None.")
         target_mol = syntree.root.smiles
