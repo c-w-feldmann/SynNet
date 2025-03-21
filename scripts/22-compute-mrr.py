@@ -109,8 +109,6 @@ if __name__ == "__main__":
     ranks_array = np.asarray(rank_list, dtype=int).flatten()  # (nSamples,)
     rrs = 1 / (ranks_array + 1)  # +1 for offset 0-based indexing
 
-    # np.save("ranks_" + metric + ".npy", ranks)  # TODO: do not hard code
-
     print(f"Result using metric: {metric}")
     print(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
     TOP_N_RANKS = (1, 3, 5, 10, 15, 30)
