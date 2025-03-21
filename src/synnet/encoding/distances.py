@@ -1,21 +1,28 @@
 import numba
 import numpy as np
+import numpy.typing as npt
 
-from synnet.encoding.fingerprints import fp_embedding
+from synnet.encoding.embedding import MorganFingerprintEmbedding
 
 
 @numba.njit()
-def cosine_distance(v1, v2):
+def cosine_distance(v1: npt.NDArray[np.float64], v2: npt.NDArray[np.float64]) -> float:
     """Compute the cosine distance between two 1d-vectors.
 
     Note:
         cosine_similarity = x'y / (||x|| ||y||) in [-1,1]
         cosine_distance   = 1 - cosine_similarity in [0,2]
     """
-    return max(0, min(1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), 2))
+    return max(
+        0, min(1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2)), 2)
+    )
 
 
-def ce_distance(y, y_pred, eps=1e-15):
+def ce_distance(
+    y: npt.NDArray[np.float64],
+    y_pred: npt.NDArray[np.float64],
+    eps: float = 1e-15,
+) -> float:
     """Computes the cross-entropy between two vectors.
 
     Args:
@@ -32,7 +39,9 @@ def ce_distance(y, y_pred, eps=1e-15):
 
 
 @numba.njit()
-def _tanimoto_similarity(fp1: np.ndarray, fp2: np.ndarray):
+def _tanimoto_similarity(
+    fp1: npt.NDArray[np.int_], fp2: npt.NDArray[np.float64]
+) -> float:
     """
     Returns the Tanimoto similarity between two molecular fingerprints.
 
@@ -41,22 +50,31 @@ def _tanimoto_similarity(fp1: np.ndarray, fp2: np.ndarray):
         fp2 (np.ndarray): Molecular fingerprint 2.
 
     Returns:
-        np.float: Tanimoto similarity.
+        float: Tanimoto similarity.
     """
     return np.sum(fp1 * fp2) / (np.sum(fp1) + np.sum(fp2) - np.sum(fp1 * fp2))
 
 
-def tanimoto_similarity(target_fp: np.ndarray, smis: list[str]):
-    """
-    Returns the Tanimoto similarities between a target fingerprint and molecules
+def tanimoto_similarity(
+    target_fp: npt.NDArray[np.int_], smis: list[str]
+) -> npt.NDArray[np.float64]:
+    """Calculate Tanimoto similarities.
+
+    Tanimoto similarities between a target fingerprint and molecules
     in an input list of SMILES.
 
-    Args:
-        target_fp (np.ndarray): Contains the reference (target) fingerprint.
-        smis (list of str): Contains SMILES to compute similarity to.
+    Parameters
+    ----------
+    target_fp: np.ndarray
+        Contains the reference (target) fingerprint.
+    smis: list[str]
+        Contains SMILES to compute similarity to.
 
-    Returns:
-        list of np.ndarray: Contains Tanimoto similarities.
+    Returns
+    -------
+    npt.NDArray[np.float64]
+        Tanimoto similarities.
     """
-    fps = [fp_embedding(smi, 2, 4096) for smi in smis]
-    return [_tanimoto_similarity(target_fp, fp) for fp in fps]
+    morgan_fp = MorganFingerprintEmbedding(radius=2, n_bits=4096)
+    fps = [morgan_fp.transform_smiles(smi) for smi in smis]
+    return np.array([_tanimoto_similarity(target_fp, fp) for fp in fps])

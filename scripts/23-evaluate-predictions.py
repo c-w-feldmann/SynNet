@@ -1,21 +1,24 @@
 """Evaluate a batch of predictions on different metrics.
+
 The predictions are generated in `20-predict-targets.py`.
 """
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
+
+import argparse
 import json
-import logging
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from tdc import Evaluator
 
 from synnet.config import MAX_PROCESSES
 
-logger = logging.getLogger(__name__)
 
-
-def get_args():
-    import argparse
-
+def get_args() -> argparse.Namespace:
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -24,7 +27,9 @@ def get_args():
         help="Dataframe with target- and prediction smiles and similarities (*.csv.gz).",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 
@@ -78,7 +83,9 @@ if __name__ == "__main__":
         evaluator = Evaluator(name=metric)
         try:
             score_recovered = evaluator(recovered["targets"], recovered["decoded"])
-            score_unrecovered = evaluator(unrecovered["targets"], unrecovered["decoded"])
+            score_unrecovered = evaluator(
+                unrecovered["targets"], unrecovered["decoded"]
+            )
         except TypeError:
             # Some evaluators only take 1 input args, try that.
             score_recovered = evaluator(recovered["decoded"])

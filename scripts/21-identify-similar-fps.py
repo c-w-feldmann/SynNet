@@ -1,26 +1,29 @@
-"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set.
-"""  # TODO: clean up, un-nest a couple of fcts
+"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set."""
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
+
+from __future__ import annotations
+
+import argparse
 import json
-import logging
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
-from typing import Tuple
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
+from loguru import logger
 from rdkit import Chem, DataStructs
 from rdkit.Chem import AllChem
 
-from synnet.utils.datastructures import SyntheticTreeSet
-
-logger = logging.getLogger(__file__)
-
 from synnet.config import MAX_PROCESSES
+from synnet.utils.data_utils import SyntheticTreeSet
 
 
-def get_args():
-    import argparse
+def get_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser()
     # File I/O
@@ -36,14 +39,14 @@ def get_args():
         help="File to save similarity-values for test,valid-synthetic trees. (*csv.gz)",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     return parser.parse_args()
 
 
-def _match_dataset_filename(
-    path: str, dataset_type: str
-) -> Path:  # TODO: consolidate with code in script/05-*
+def _match_dataset_filename(path: str, dataset_type: str) -> Path:
     """Helper to find the exact filename for {train,valid,test} file."""
     files = list(Path(path).glob(f"*{dataset_type}*.json.gz"))
     if len(files) != 1:
@@ -51,39 +54,51 @@ def _match_dataset_filename(
     return files[0]
 
 
-def find_similar_fp(fp: np.ndarray, fps_reference: np.ndarray):
+def find_similar_fp(
+    fp: npt.ArrayLike, fps_reference: npt.ArrayLike
+) -> tuple[float, np.int_]:
     """Finds most similar fingerprint in a reference set for `fp`.
     Uses Tanimoto Similarity.
     """
     dists = np.asarray(DataStructs.BulkTanimotoSimilarity(fp, fps_reference))
-    similarity_score, idx = dists.max(), dists.argmax()
+    similarity_score = float(dists.max())
+    idx = dists.argmax()
     return similarity_score, idx
 
 
-def _compute_fp_bitvector(smiles: list[str], radius: int = 2, nbits: int = 1024):
+def _compute_fp_bitvector(
+    smiles: list[str], radius: int = 2, nbits: int = 1024
+) -> list[npt.NDArray[Any]]:
     return [
-        AllChem.GetMorganFingerprintAsBitVect(Chem.MolFromSmiles(smi), radius, nBits=nbits)
+        np.array(
+            AllChem.GetMorganFingerprintAsBitVect(
+                Chem.MolFromSmiles(smi), radius, nBits=nbits
+            )
+        )
         for smi in smiles
     ]
 
 
-def get_smiles_and_fps(dataset: str) -> Tuple[list[str], list[np.ndarray]]:
+def get_smiles_and_fps(dataset: str) -> tuple[list[str], npt.NDArray[Any]]:
     file = _match_dataset_filename(args.input_dir, dataset)
     syntree_collection = SyntheticTreeSet().load(file)
-    smiles = [st.root.smiles for st in syntree_collection]
-    fps = _compute_fp_bitvector(smiles)
-    return smiles, fps
+    smiles_list = []
+    for syntenic_tree in syntree_collection.synthetic_tree_list:
+        if syntenic_tree.root is not None:
+            if syntenic_tree.root.smiles is not None:
+                smiles_list.append(syntenic_tree.root.smiles)
+    fps = np.vstack(_compute_fp_bitvector(smiles_list))
+    return smiles_list, fps
 
 
 def compute_most_similar_smiles(
     split: str,
-    fps: np.ndarray,
+    fps: npt.NDArray[Any],
     smiles: list[str],
     /,
-    fps_reference: np.ndarray,
+    fps_reference: npt.NDArray[Any],
     smiles_reference: list[str],
 ) -> pd.DataFrame:
-
     func = partial(find_similar_fp, fps_reference=fps_reference)
     with mp.Pool(processes=args.ncpu) as pool:
         results = pool.map(func, fps)
@@ -117,10 +132,18 @@ if __name__ == "__main__":
     # Compute (mp)
     logger.info("Start computing most similar smiles...")
     df_valid = compute_most_similar_smiles(
-        "valid", fps_valid, smiles_valid, fps_reference=fps_train, smiles_reference=smiles_train
+        "valid",
+        fps_valid,
+        smiles_valid,
+        fps_reference=fps_train,
+        smiles_reference=smiles_train,
     )
     df_test = compute_most_similar_smiles(
-        "test", fps_test, smiles_test, fps_reference=fps_train, smiles_reference=smiles_train
+        "test",
+        fps_test,
+        smiles_test,
+        fps_reference=fps_train,
+        smiles_reference=smiles_train,
     )
     logger.info("Computed most similar smiles for {valid,test}-set.")
 

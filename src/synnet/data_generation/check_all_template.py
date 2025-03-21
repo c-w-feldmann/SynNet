@@ -1,21 +1,29 @@
 """
-This file checks if a set of reactions are represented by a set of reaction 
+This file checks if a set of reactions are represented by a set of reaction
 templates. Originally written by Jake. Wenhao edited.
 """
+
+from __future__ import annotations
+
+from typing import Optional
+
 import rdkit.Chem as Chem
-from rdkit import RDLogger
 from rdkit.Chem import AllChem, rdChemReactions
 
 
-def split_rxn_parts(rxn):
+def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
     """
     Given SMILES reaction, splits into reactants, agents, and products
 
-    Args:
-        rxn (str): SMILES-encoded reaction.
+    Parameters
+    ----------
+    rxn (str):
+        SMILES-encoded reaction.
 
-    Returns:
-        list: Contains sets of reactants, agents, and products as RDKit molecules.
+    Returns
+    -------
+    list
+        Contains sets of reactants, agents, and products as RDKit molecules.
     """
     rxn_parts = rxn.strip().split(">")
     rxn_reactants = set(rxn_parts[0].split("."))
@@ -37,25 +45,31 @@ def split_rxn_parts(rxn):
     for p in rxn_products:
         products.add(Chem.MolFromSmiles(p))
 
-    return [reactants, agents, products]
+    return reactants, agents, products
 
 
-def rxn_template(rxn_smiles, templates):
+def rxn_template(
+    reaction_smarts: str,
+    reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
+) -> Optional[str]:
+    """Check whether given reaction it matches any templates.
+
+    Parameters
+    ----------
+    reaction_smarts: str
+        Reaction in Reaction SMARTS format.
+    reaction_template_name_dict: dict[str, str]
+        Maps RDKit reactions to template names.
+
+    Returns
+    -------
+    Optional[str]
+        Matching template name. If no templates matched, returns None.
     """
-    Given a reaction, checks whether it matches any templates.
-
-    Args:
-        rxn_smiles (str): Reaction in Reaction SMILES format.
-        templates (dict): Maps RDKit reactions to template names.
-
-    Returns:
-        str: Matching template name. If no templates matched, returns None.
-    """
-    rxn_parts = split_rxn_parts(rxn_smiles)
-    reactants, agents, products = rxn_parts[0], rxn_parts[1], rxn_parts[2]
+    reactants, agents, products = split_rxn_parts(reaction_smarts)
     temp_match = None
 
-    for t in templates:
+    for t in reaction_template_name_dict:
         agents_match = None
         products_match = None
 
@@ -84,30 +98,31 @@ def rxn_template(rxn_smiles, templates):
             temp_match = t
 
     if not temp_match:
-        return temp_match
+        return None
 
     # get matching template names
-    return templates[temp_match]
+    return reaction_template_name_dict[temp_match]
 
 
-def route_templates(route, templates):
-    """
+def route_templates(
+    synthesis_route: list[str],
+    reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
+) -> list[str]:
+    """Check if given synthesis route matches any templates.
     Given synthesis route, checks whether all reaction steps are in template list
 
     Args:
-        route (list): Contains reaction steps (str Reaction SMILES).
-        templates (dict): Maps RDKit reactions to template names.
+        synthesis_route (list): Contains reaction steps (str Reaction SMILES).
+        reaction_template_name_dict (dict): Maps RDKit reactions to template names.
 
     Returns:
         List of matching template names (as strings). If no templates matched,
             returns empty list.
     """
-    synth_route = []
-    tree_match = True
-    for rxn_step in route:
-        res = rxn_template(rxn_step, templates)
+    synth_route: list[str] = []
+    for rxn_step in synthesis_route:
+        res = rxn_template(rxn_step, reaction_template_name_dict)
         if not res:
-            tree_match = False
             synth_route = []
             break
         else:
@@ -117,6 +132,7 @@ def route_templates(route, templates):
 
 
 if __name__ == "__main__":
+    from rdkit import RDLogger
 
     disable_RDLogger = True  # disables RDKit warnings
     if disable_RDLogger:
@@ -127,9 +143,9 @@ if __name__ == "__main__":
     rxn_set = open(rxn_set_path, "r")
     templates = {}
 
-    for rxn in rxn_set:
-        rxn_name = rxn.split("|")[0]
-        template = rxn.split("|")[1].strip()
+    for reacton_string in rxn_set:
+        rxn_name = reacton_string.split("|")[0]
+        template = reacton_string.split("|")[1].strip()
         rdkit_rxn = AllChem.ReactionFromSmarts(template)
         rdChemReactions.ChemicalReaction.Initialize(rdkit_rxn)
         templates[rdkit_rxn] = rxn_name
@@ -138,10 +154,10 @@ if __name__ == "__main__":
     print(rxn_smiles)
     print(rxn_template(rxn_smiles, templates))
     print("------------------------------------------------------")
-    synthesis_route = [
+    synthetic_steps = [
         "C(CCc1ccccc1)N(Cc1ccccc1)CC(O)c1ccc(O)c(C(N)=O)c1>>CC(CCc1ccccc1)NCC(O)c1ccc(O)c(C(N)=O)c1",
         "CC(CCc1ccccc1)N(CC(=O)c1ccc(O)c(C(N)=O)c1)Cc1ccccc1>>CC(CCc1ccccc1)N(Cc1ccccc1)CC(O)c1ccc(O)c(C(N)=O)c1",
         "CC(CCc1ccccc1)NCc1ccccc1.NC(=O)c1cc(C(=O)CBr)ccc1O>>CC(CCc1ccccc1)N(CC(=O)c1ccc(O)c(C(N)=O)c1)Cc1ccccc1",
     ]
-    print(synthesis_route)
-    print(route_templates(synthesis_route, templates))
+    print(synthetic_steps)
+    print(route_templates(synthetic_steps, templates))

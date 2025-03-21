@@ -1,24 +1,28 @@
 """
 Multi-layer perceptron (MLP) class.
 """
-import logging
-from typing import Optional
 
+import logging
+from typing import Any, Optional
+
+import lightning
 import numpy as np
-import pytorch_lightning as pl
+import numpy.typing as npt
+import sklearn.neighbors as skl_nn
 import torch
-import torch.nn.functional as F
+import torch.nn.functional as torch_func
 from torch import nn
 
-from synnet.MolEmbedder import MolEmbedder
+from synnet.encoding.embedding import MolecularEmbeddingManager
 
 logger = logging.getLogger(__name__)
 
 
-class MLP(pl.LightningModule):
+class MLP(lightning.LightningModule):
     TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
-    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy faiss-knn".split()
+    VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
     OPTIMIZERS = "sgd adam".lower().split()
+    device: torch.device
 
     def __init__(
         self,
@@ -35,15 +39,15 @@ class MLP(pl.LightningModule):
         optimizer: str,
         learning_rate: float,
         val_freq: int,
-        molembedder: Optional[MolEmbedder] = None,  # for knn-accuracy
-        class_weights: Optional[np.ndarray] = None,
-        **kwargs,
-    ):
-        if not loss in self.TRAIN_LOSSES:
+        ncpu: Optional[int] = None,
+        molembedder: Optional[MolecularEmbeddingManager] = None,  # for knn-accuracy
+        class_weights: Optional[npt.NDArray[np.float64]] = None,
+    ) -> None:
+        if loss not in self.TRAIN_LOSSES:
             raise ValueError(f"Unsupported loss function {loss}")
-        if not valid_loss in self.VALID_LOSSES:
+        if valid_loss not in self.VALID_LOSSES:
             raise ValueError(f"Unsupported loss function {valid_loss}")
-        if not optimizer in self.OPTIMIZERS:
+        if optimizer not in self.OPTIMIZERS:
             raise ValueError(f"Unsupported optimizer {optimizer}")
         if num_dropout_layers > num_layers - 2:
             raise Warning("Requested more dropout layers than there are hidden layers.")
@@ -57,17 +61,20 @@ class MLP(pl.LightningModule):
         self.valid_loss = valid_loss
         self.optimizer = optimizer
         self.learning_rate = learning_rate
+        self.ncpu = ncpu  # unused
         self.val_freq = val_freq
         self.molembedder = molembedder
         self.class_weights = class_weights
+        self.task = task
 
         # Create modules
-        modules = nn.ModuleList()
+        modules: list[nn.Module] = [
+            nn.Linear(input_dim, hidden_dim),
+            nn.BatchNorm1d(hidden_dim),
+            nn.ReLU(),
+        ]
 
         # Input layer
-        modules.append(nn.Linear(input_dim, hidden_dim))
-        modules.append(nn.BatchNorm1d(hidden_dim))
-        modules.append(nn.ReLU())
 
         # Hidden layers
         for i in range(num_layers - 2):  # "-2" for first & last layer
@@ -82,19 +89,22 @@ class MLP(pl.LightningModule):
         modules.append(nn.Linear(hidden_dim, output_dim))
 
         self.layers = nn.Sequential(*modules)
-        return None
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward step for inference only."""
         y_hat = self.layers(x)
 
         # During training, `cross_entropy` loss expects raw logits.
         # We add the softmax here so that mlp.forward(X) can be used for inference.
         if self.hparams.task == "classification":
-            y_hat = F.softmax(y_hat, dim=-1)
+            y_hat = torch_func.softmax(y_hat, dim=-1)
         return y_hat
 
-    def training_step(self, batch, batch_idx):
+    def training_step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+        batch_idx: int,
+    ) -> torch.Tensor:
         """The complete training loop."""
         x, y = batch
         y_hat = self.layers(x)
@@ -104,20 +114,28 @@ class MLP(pl.LightningModule):
                 if self.class_weights is not None
                 else None
             )
-            loss = F.cross_entropy(y_hat, y.long(), weight=weights)
+            loss = torch_func.cross_entropy(y_hat, y.long(), weight=weights)
         elif self.loss == "mse":
-            loss = F.mse_loss(y_hat, y)
+            loss = torch_func.mse_loss(y_hat, y)
         elif self.loss == "l1":
-            loss = F.l1_loss(y_hat, y)
+            loss = torch_func.l1_loss(y_hat, y)
         elif self.loss == "huber":
-            loss = F.huber_loss(y_hat, y)
+            loss = torch_func.huber_loss(y_hat, y)
         elif self.loss == "cosine_distance":
-            loss = 1 - F.cosine_similarity(y, y_hat).mean()
+            loss = 1 - torch_func.cosine_similarity(y, y_hat).mean()
+        else:
+            raise NotImplementedError(f"Loss function '{self.loss}' is not available.")
 
-        self.log(f"train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(
+        self,
+        batch: tuple[torch.Tensor, torch.Tensor],
+        batch_idx: int,
+    ) -> None:
         """The complete validation loop."""
         x, y = batch
         y_hat = self.layers(x)
@@ -127,64 +145,58 @@ class MLP(pl.LightningModule):
                 if self.class_weights is not None
                 else None
             )
-            loss = F.cross_entropy(y_hat, y.long(), weight=weights)
+            loss = torch_func.cross_entropy(y_hat, y.long(), weight=weights)
         elif self.valid_loss == "accuracy":
-            y_hat = torch.argmax(y_hat, axis=1)
+            y_hat = torch.argmax(y_hat, dim=1)
             accuracy = (y_hat == y).sum() / len(y)
             loss = 1 - accuracy
         elif self.valid_loss == "nn_accuracy":
-            # NOTE: Deprecated, use `faiss-knn` instead.
             # NOTE: Very slow!
             # Performing the knn-search can easily take a couple of minutes,
             # even for small datasets.
-
+            if self.molembedder is None:
+                raise ValueError("No `molembedder` provided for knn-accuracy.")
             kdtree = self.molembedder.kdtree
-            y = nn_search_list(y.detach().cpu().numpy(), kdtree)
+            y_nn = nn_search_list(y.detach().cpu().numpy(), kdtree)
             y_hat = nn_search_list(y_hat.detach().cpu().numpy(), kdtree)
 
-            accuracy = (y_hat == y).sum() / len(y)
-            loss = 1 - accuracy
-        elif self.valid_loss == "faiss-knn":
-            index = self.molembedder.index
-            device = index.getDevice() if hasattr(index, "getDevice") else "cpu"
-            import faiss.contrib.torch_utils  # https://github.com/facebookresearch/faiss/issues/561
-
-            # Normalize query vectors
-            y_normalized = y / torch.linalg.norm(y, dim=1, keepdim=True)
-            ypred_normalized = y_hat / torch.linalg.norm(y_hat, dim=1, keepdim=True)
-            # kNN search
-            k = 1
-            _, ind_y = index.search(y_normalized.to(device), k)
-            _, ind_ypred = index.search(ypred_normalized.to(device), k)
-            accuracy = (ind_y == ind_ypred).sum() / len(y)
+            accuracy = (y_hat == y_nn).sum() / len(y_nn)
             loss = 1 - accuracy
         elif self.valid_loss == "mse":
-            loss = F.mse_loss(y_hat, y)
+            loss = torch_func.mse_loss(y_hat, y)
         elif self.valid_loss == "l1":
-            loss = F.l1_loss(y_hat, y)
+            loss = torch_func.l1_loss(y_hat, y)
         elif self.valid_loss == "huber":
-            loss = F.huber_loss(y_hat, y)
+            loss = torch_func.huber_loss(y_hat, y)
         elif self.valid_loss == "cosine_distance":
-            loss = 1 - F.cosine_similarity(y, y_hat).mean()
+            loss = 1 - torch_func.cosine_similarity(y, y_hat).mean()
+        else:
+            raise NotImplementedError(
+                f"Loss function '{self.valid_loss}' is not available."
+            )
 
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True)
+        self.log(
+            "val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, logger=True
+        )
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> dict[str, Any]:
         """Define Optimerzers and LR schedulers."""
-        out = dict()
+        optimizer: torch.optim.Optimizer
         if self.optimizer == "adam":
             optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         elif self.optimizer == "sgd":
             optimizer = torch.optim.SGD(self.parameters(), lr=self.learning_rate)
-        out["optimizer"] = optimizer
-
+        else:
+            raise NotImplementedError(f"Optimizer '{self.optimizer}' is not available.")
         # if (lr_scheduler := self.hparams.get("lr_scheduler_config",None)) is not None:
         # out["lr_scheduler"] = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1,verbose=True)
 
-        return out
+        return {"optimizer": optimizer}
 
 
-def nn_search_list(y, kdtree):
+def nn_search_list(
+    y: npt.NDArray[np.float64], kdtree: skl_nn.KDTree
+) -> npt.NDArray[np.int_]:
     y = np.atleast_2d(y)  # (n_samples, n_features)
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind

@@ -1,14 +1,23 @@
-"""parallel.py
-"""
-import logging
-from typing import Callable, Iterable, Optional
+"""parallel.py"""
 
+from typing import Any, Callable, Optional, TypeVar
+
+from loguru import logger
 from tqdm import tqdm
+
+try:
+    from pathos import multiprocessing as mp
+except ImportError as e:
+    logger.warning("Pathos not found, using multiprocessing instead")
+    import multiprocessing as mp
 
 from synnet.config import MAX_PROCESSES
 
+T = TypeVar("T")
+T2 = TypeVar("T2")
 
-def compute_chunksize(input_list: list, cpus: int) -> int:
+
+def compute_chunksize(input_list: list[Any], cpus: int) -> int:
     """Source: https://github.com/python/cpython/blob/816066f497ab89abcdb3c4f2d34462c750d23713/Lib/multiprocessing/pool.py#L477"""
     chunksize, extra = divmod(len(input_list), cpus * 4)
     if extra:
@@ -19,19 +28,17 @@ def compute_chunksize(input_list: list, cpus: int) -> int:
 
 
 def simple_parallel(
-    input_list: list,
-    function: Callable,
+    input_list: list[T],
+    function: Callable[[T], T2],
     max_cpu: int = MAX_PROCESSES,
     timeout: int = 4000,
     max_retries: int = 3,
     verbose: bool = False,
-):
+) -> list[T2]:
     """Use map async and retries in case we get odd stalling behavior"""
     # originally from: https://github.com/samgoldman97
-    from multiprocess.context import TimeoutError
-    from pathos import multiprocessing as mp
 
-    def setup_pool():
+    def setup_pool() -> tuple[mp.Pool, list[Any]]:
         pool = mp.Pool(processes=max_cpu)
         async_results = [pool.apply_async(function, args=(i,)) for i in input_list]
         # Note from the docs:
@@ -45,16 +52,17 @@ def simple_parallel(
     retries = 0
     while True:
         try:
-            if verbose:
-                async_results = tqdm(async_results, total=len(input_list))
-            list_outputs = [async_result.get(timeout) for async_result in async_results]
+            list_outputs = []
+            iterator = tqdm(async_results, total=len(input_list), disable=not verbose)
+            for async_r in iterator:
+                list_outputs.append(async_r.get(timeout))
             break
         except TimeoutError:
             retries += 1
-            logging.info(f"Timeout Error (s > {timeout})")
+            logger.info("Timeout Error (s > {})", timeout)
             if retries <= max_retries:
                 pool, async_results = setup_pool()
-                logging.info(f"Retry attempt: {retries}")
+                logger.info(f"Retry attempt: {retries}")
             else:
                 raise ValueError()
 
@@ -62,14 +70,14 @@ def simple_parallel(
 
 
 def chunked_parallel(
-    input_list: list,
-    function: Callable,
+    input_list: list[T],
+    function: Callable[[T], T2],
     chunks: Optional[int] = None,
     max_cpu: int = MAX_PROCESSES,
     timeout: int = 4000,
-    max_retries=3,
+    max_retries: int = 3,
     verbose: bool = False,
-):
+) -> list[T2]:
     """chunked_parallel.
     Args:
         input_list : list of objects to apply function
@@ -93,19 +101,19 @@ def chunked_parallel(
     # Run plain list comp when no mp is necessary.
     # Note: Keeping this here to have a single interface.
     if max_cpu == 1:
-        if verbose:
-            input_list = tqdm(input_list)
-        return [function(i) for i in input_list]
+        return [function(i) for i in tqdm(input_list, disable=not verbose)]
 
     # Adding it here fixes some setting disrupted elsewhere
-    def batch_func(list_inputs):
+    def batch_func(list_inputs: list[Any]) -> list[Any]:
         return [function(i) for i in list_inputs]
 
     num_chunks = compute_chunksize(input_list, max_cpu) if chunks is None else chunks
     step_size = len(input_list) // num_chunks
 
-    chunked_list = [input_list[i : i + step_size] for i in range(0, len(input_list), step_size)]
-    logging.debug(
+    chunked_list = [
+        input_list[i : i + step_size] for i in range(0, len(input_list), step_size)
+    ]
+    logger.debug(
         f"{max_cpu=}, {len(input_list)=}, {num_chunks=}, {step_size=}, {len(chunked_list)=}"
     )
 

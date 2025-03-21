@@ -1,69 +1,63 @@
-import logging
-import tempfile
+import uuid
+import warnings
 from pathlib import Path
 from typing import Optional, Union
 
-import rdkit.Chem as Chem
-from PIL import ImageOps
+try:
+    from typing import Self  # type: ignore[attr-defined]
+except ImportError:
+    from typing_extensions import Self
 
-logger = logging.getLogger(__file__)
+import rdkit.Chem as Chem
+from rdkit.Chem import Draw
 
 
 class MolDrawer:
     """Draws molecules as images."""
 
-    def __init__(self, filetype: str = "png", tmpdir: Optional[str] = None):
+    outfolder: Path
+    lookup: dict[str, str]
 
-        if filetype not in ["png"]:
-            raise NotImplementedError()  # TODO: Add svg, scaling is difficult with png
-        if tmpdir is None:
-            tmpdir = tempfile.mkdtemp()
-
+    def __init__(self, path: Optional[str], subfolder: str = "assets"):
         # Init outfolder
-        if not Path(tmpdir).exists():
-            Path(tmpdir).mkdir(parents=True)
-        logger.debug(f"Temporary directory set to: {tmpdir}")
+        if not (path is not None and Path(path).exists()):
+            raise NotADirectoryError(path)
+        self.outfolder = Path(path) / subfolder
+        self.outfolder.mkdir(exist_ok=True)
 
-        self.filetype = filetype
-        self.tmpdir = tmpdir
-        self._lookup: dict[str, str] = {}  # smiles -> filename
+        # Placeholder
+        self.lookup: dict[str, str] = {}
 
-    def _plot_png(self, mol: Chem.Mol, filename: str, crop: bool = True, **kwargs):
-        # Plot to PIL image
-        img = Chem.Draw.MolToImage(mol, kwargs.get("size", (300, 300)))
+    def _hash(self, smiles: list[str]) -> Self:
+        """Hashing for amateurs.
+        Goal: Get a short, valid, and hopefully unique filename for each molecule."""
+        self.lookup = {smile: str(uuid.uuid4())[:8] for smile in smiles}
+        return self
 
-        # Crop
-        if crop:
-            # https://stackoverflow.com/questions/9983263/how-to-crop-an-image-using-pil
-            gmi = ImageOps.invert(img)  # invert white[255,255,255]->black[0,0,0]
-            (left, upper, right, lower) = gmi.getbbox()  # calcutes non-zero bbox hence inverted
-            img = ImageOps.crop(img, (left, upper, img.width - right, img.height - lower))
+    def get_path(self) -> Path:
+        return self.outfolder
 
-        # Save
-        img.save(filename)
-        return img
+    def get_molecule_filesnames(self) -> dict[str, str]:
+        return self.lookup
 
-    def plot(self, smiles: Union[list[str], str], size=(300, 300)):
-        """Plot smiles as 2d molecules and save to file."""
-        if isinstance(smiles, str):
-            smiles = [smiles]
+    def plot(self, smiles_list: Union[list[str], str]) -> Self:
+        """Plot smiles as 2d molecules and save to `self.path/subfolder/*.svg`."""
+        if isinstance(smiles_list, str):
+            warnings.warn("Please use a list of smiles instead of a single string.")
+            smiles_list = [smiles_list]
+        self._hash(smiles_list)
 
-        for smi in smiles:
-            _, file = tempfile.mkstemp(dir=self.tmpdir, suffix="." + self.filetype)
-            logger.debug(f"Will create {file}..")
-
-            mol = Chem.MolFromSmiles(smi, sanitize=True)
-            if not mol:
-                logger.debug(f"Invalid smiles: {smi}")
-                self._lookup[smi] = None
-                continue
-
+        for k, v in self.lookup.items():
+            fname = self.outfolder / f"{v}.svg"
+            mol = Chem.MolFromSmiles(k)
             # Plot
-            if self.filetype == "png":
-                self._plot_png(mol, file, size=size)
+            drawer = Draw.rdMolDraw2D.MolDraw2DSVG(300, 150)
+            drawer.DrawMolecule(mol)
+            drawer.FinishDrawing()
+            p = drawer.GetDrawingText()
 
-            # Store reference smiles -> filename
-            self._lookup[smi] = file
+            with open(fname, "w") as f:
+                f.write(p)
 
         return self
 

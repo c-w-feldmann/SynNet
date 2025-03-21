@@ -1,29 +1,38 @@
+"""Script to decode molecules from a file."""
+
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name  # disable and enable to ignore the file name only.
+
+from __future__ import annotations
+
+import argparse
 import json
-import logging
 from functools import partial
 from pathlib import Path
 from time import time
-from typing import Union
+from typing import Any, Optional, Union
 
 import pandas as pd
+from loguru import logger
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
 from synnet.data_generation.preprocessing import BuildingBlockFileHandler
-from synnet.data_generation.syntrees import Encoder, MorganFingerprintEncoder
-from synnet.decoding.decoder import HelperDataloader, SynTreeDecoder, SynTreeDecoderGreedy
-from synnet.encoding.distances import cosine_distance, tanimoto_similarity
+from synnet.data_generation.syntrees import MorganFingerprintEncoder
+from synnet.decoding.decoder import (
+    HelperDataloader,
+    SynTreeDecoder,
+    SynTreeDecoderGreedy,
+)
+from synnet.encoding.distances import tanimoto_similarity
+from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
-from synnet.MolEmbedder import MolEmbedder
-from synnet.utils.datastructures import ReactionSet, SyntheticTree, SyntheticTreeSet
+from synnet.utils.custom_types import PathType
+from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
 
-logger = logging.getLogger(__file__)
 
-
-def get_args():
-    import argparse
-
+def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     # File I/O
     parser.add_argument(
@@ -42,18 +51,24 @@ def get_args():
         help="Input file for the pre-computed embeddings (*.npy).",
     )
     parser.add_argument(
-        "--ckpt-dir", type=str, help="Directory with checkpoints for {act,rt1,rxn,rt2}-model."
+        "--ckpt-dir",
+        type=str,
+        help="Directory with checkpoints for {act,rt1,rxn,rt2}-model.",
     )
     parser.add_argument("--output-dir", type=str, help="Directory to save output.")
     # Parameters
-    parser.add_argument("--num", type=int, default=-1, help="Number of molecules to predict.")
+    parser.add_argument(
+        "--num", type=int, default=-1, help="Number of molecules to predict."
+    )
     parser.add_argument(
         "--data",
         type=str,
         help="File with molecules to decode.",
     )
     # Processing
-    parser.add_argument("--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus")
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
     parser.add_argument("--verbose", default=False, action="store_true")
     parser.add_argument("--debug", default=False, action="store_true")
     return parser.parse_args()
@@ -63,9 +78,9 @@ def wrapper(
     target: str,
     *,
     syntree_decoder: Union[SynTreeDecoder, SynTreeDecoderGreedy],
-    mol_encoder: Encoder,
-    **kwargs,
-) -> dict[str, Union[float, SyntheticTree]]:
+    mol_encoder: MorganFingerprintEncoder,
+    **kwargs: Any,
+) -> tuple[SyntheticTree, Optional[float]]:
     """Wrapper function to decode targets into `SyntheticTree` & catch Exceptions.
 
     Info:
@@ -75,21 +90,23 @@ def wrapper(
     # Encode target
     try:
         z_target = mol_encoder.encode(target)
-    except Exception as e:
-        logger.error(f"Failed to encode {target}", exc_info=1)
-        return {"syntree": SyntheticTree()}
+
+    except Exception:
+        logger.error(f"Failed to encode {target}", exc_info=True)
+        return SyntheticTree(), None
 
     # Decode target
     try:
         res = syntree_decoder.decode(z_target, **kwargs)
 
-    except Exception as e:
-        logger.error(f"Failed to encode {target}", exc_info=1)
-        return {"syntree": SyntheticTree()}
+    except Exception:
+        logger.error(f"Failed to encode {target}", exc_info=True)
+        return SyntheticTree(), None
+
     return res
 
 
-def print_stats(df) -> None:
+def print_stats(df: pd.DataFrame) -> None:
     n_valid = df["is_valid"].sum()
     n_recovered = (df["max_similarity"] == 1.0).sum()
     recovery_rate = n_recovered / n_valid
@@ -105,17 +122,28 @@ def print_stats(df) -> None:
     return None
 
 
-def postprocess_results(results: dict) -> pd.DataFrame:
-    df = pd.DataFrame.from_dict(results)
+def postprocess_results(
+    tree_list: list[SyntheticTree],
+    similarity_array: Optional[list[Optional[float]]] = None,
+) -> pd.DataFrame:
+    df = pd.DataFrame()
+    df["syntree"] = tree_list
+    if similarity_array is not None:
+        df["similarity"] = similarity_array
+
     df["is_valid"] = df["syntree"].apply(lambda x: x.is_valid)
 
-    df["decoded_smiles"] = df["syntree"].apply(lambda st: st.root.smiles if st.is_valid else None)
-    df["decoded_depth"] = df["syntree"].apply(lambda st: st.depth if st.is_valid else None)
+    df["decoded_smiles"] = df["syntree"].apply(
+        lambda st: st.root.smiles if st.is_valid else None
+    )
+    df["decoded_depth"] = df["syntree"].apply(
+        lambda st: st.depth if st.is_valid else None
+    )
 
     return df
 
 
-def save_results(output_dir: str, df: pd.DataFrame):
+def save_results(output_dir: PathType, df: pd.DataFrame) -> None:
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
@@ -129,19 +157,14 @@ def save_results(output_dir: str, df: pd.DataFrame):
     logger.info(f"Saved results to {output_dir}.")
 
 
-def _setup_loggers():
+def _setup_loggers() -> None:
     if args.verbose:
-        Path(args.output_dir).mkdir(exist_ok=True, parents=True)
-        logger.addHandler(
-            logging.FileHandler(
-                filename=Path(args.output_dir) / ".log",
-                mode="w",
-            )
-        )
+        log_path = Path(args.output_dir) / "inference.log"
+        log_path.parent.mkdir(exist_ok=True, parents=True)
+        logger.add(log_path, level="INFO")
 
     if args.debug:
-        l = logging.getLogger("synnet.decoding.decoder")
-        l.setLevel("DEBUG")
+        logger.level("DEBUG")
     else:
         RDLogger.DisableLog("rdApp.*")
 
@@ -171,29 +194,31 @@ if __name__ == "__main__":
     reaction_collection = ReactionSet().load(args.rxns_collection_file)
 
     # Load and init building blocks embedder (kdtree)
-    bblocks_molembedder = (
-        MolEmbedder().load_precomputed(args.embeddings_knn_file).init_balltree(cosine_distance)
+    bblocks_molembedder = MolecularEmbeddingManager.from_folder(
+        args.bblocks_embedder_dir
     )
 
     # Load models
     logger.info("Start loading models from checkpoints...")
     ckpt_dir = Path(args.ckpt_dir)
 
-    ckpt_files = [find_best_model_ckpt(ckpt_dir / model) for model in "act rt1 rxn rt2".split()]
-    act_net, rt1_net, rxn_net, rt2_net = [load_mlp_from_ckpt(file) for file in ckpt_files]
+    ckpt_files = [
+        find_best_model_ckpt(ckpt_dir / model) for model in ["act", "rt1", "rxn", "rt2"]
+    ]
+    act_net, rt1_net, rxn_net, rt2_net = [
+        load_mlp_from_ckpt(file) for file in ckpt_files
+    ]
+
     logger.info("...loading models completed.")
     # endregion-dataloading
-
     # Simple Encoder
     stdecoder = SynTreeDecoder(
-        building_blocks=bblocks,
+        building_blocks_embedding_manager=bblocks_molembedder,
         reaction_collection=reaction_collection,
         action_net=act_net,
         reactant1_net=rt1_net,
         rxn_net=rxn_net,
         reactant2_net=rt2_net,
-        building_blocks_embeddings=bblocks_molembedder.get_embeddings(),
-        balltree=bblocks_molembedder.kdtree,
         similarity_fct=tanimoto_similarity,
     )
     # Greedy decoder
@@ -208,13 +233,19 @@ if __name__ == "__main__":
 
     logger.info(f"Start decoding {len(targets)} targets.")
 
-    results = chunked_parallel(targets, _wrapper, max_cpu=args.ncpu, verbose=args.verbose)
-
+    result_list = chunked_parallel(
+        targets, _wrapper, max_cpu=args.ncpu, verbose=args.verbose
+    )
+    syn_tree_list: list[SyntheticTree] = []
+    similarity_list: list[Optional[float]] = []
+    for syn_tree, similarity in result_list:
+        syn_tree_list.append(syn_tree)
+        similarity_list.append(similarity)
     logger.info("Completed decoding.")
     logger.info(f"Elapsed: {time()-t0:.0f}s")
 
     # Convert results to df
-    df = postprocess_results(results)
+    df = postprocess_results(syn_tree_list, similarity_list)
 
     # Print some stats
     print_stats(df)

@@ -1,52 +1,14 @@
 """
 This file contains various utils for data preparation and preprocessing.
 """
+
 import logging
-from pathlib import Path
-from typing import Iterator, Union
 
 import numpy as np
-from rdkit import Chem
 from scipy import sparse
 from sklearn.preprocessing import OneHotEncoder
 
 logger = logging.getLogger(__name__)
-
-
-def rdkit2d_embedding(smi):
-    """
-    Computes an embedding using RDKit 2D descriptors.
-
-    Args:
-        smi (str): SMILES string.
-
-    Returns:
-        np.ndarray: A molecular embedding corresponding to the input molecule.
-    """
-    from tdc.chem_utils import MolConvert
-
-    if smi is None:
-        return np.zeros(200).reshape((-1,))
-    else:
-        # define the RDKit 2D descriptor
-        rdkit2d = MolConvert(src="SMILES", dst="RDKit2D")
-        return rdkit2d(smi).reshape(
-            -1,
-        )
-
-
-import functools
-
-
-@functools.lru_cache(maxsize=1)
-def _fetch_gin_pretrained_model(model_name: str):
-    from dgllife.model import load_pretrained
-
-    """Get a GIN pretrained model to use for creating molecular embeddings"""
-    device = "cpu"
-    model = load_pretrained(model_name).to(device)
-    model.eval()
-    return model
 
 
 def split_data_into_Xy(

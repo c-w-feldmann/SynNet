@@ -1,78 +1,86 @@
 """data_inspection.py
 Collection of functions to inspect data.
 """
+
+from __future__ import annotations
+
 import functools
 from collections import Counter
 from itertools import chain
-from typing import Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from synnet.utils.datastructures import SyntheticTree, SyntheticTreeSet
+from synnet.utils.custom_types import PathType
+from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 
 @functools.lru_cache(maxsize=10)
-def load_syntree_collection_from_file(file):
+def load_syntree_collection_from_file(file: PathType) -> SyntheticTreeSet:
     return SyntheticTreeSet.load(file)
 
 
-def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]):
+def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter[str]:
     """Extract chemicals (reactants+product) in syntrees."""
     if isinstance(syntrees, SyntheticTree):
-        syntrees = [syntrees]
-    cnt = Counter()
-    [cnt.update(st.chemicals_as_smiles) for st in syntrees]
+        syntrees = SyntheticTreeSet([syntrees])
+    cnt: Counter[str] = Counter()
+    [
+        cnt.update([chemical.smiles for chemical in st.chemicals])
+        for st in syntrees.synthetic_tree_list
+    ]
     return cnt
 
 
-def count_building_blocks(syntrees: Union[SyntheticTree, SyntheticTreeSet]):
+def count_building_blocks(
+    syntrees: Union[SyntheticTree, SyntheticTreeSet],
+) -> Counter[str]:
     """Extract chemicals, which are leafes, in syntrees."""
     if isinstance(syntrees, SyntheticTree):
-        syntrees = [syntrees]
-    cnt = Counter()
-    [cnt.update(st.leafs_as_smiles) for st in syntrees]
+        syntrees = SyntheticTreeSet([syntrees])
+    cnt: Counter[str] = Counter()
+    [cnt.update(st.leafs_as_smiles) for st in syntrees.synthetic_tree_list]
     return cnt
 
 
-def count_depths(sts: SyntheticTreeSet, max_depth: int = 15) -> Counter:
+def count_depths(sts: SyntheticTreeSet, max_depth: int = 15) -> Counter[float]:
     """Count depths."""
     DEPTHS = range(1, max_depth + 1)
-    cnt = {k: 0 for k in DEPTHS}
-    depths = [st.depth for st in sts]
-    cnt = {k: 0 for k in DEPTHS}
-    cnt |= Counter(depths)
-    return Counter(cnt)
+    depth_list = [st.depth for st in sts.synthetic_tree_list]
+    cnt_dict = {float(k): 0 for k in DEPTHS}
+    cnt_dict |= Counter(depth_list)
+    return Counter(cnt_dict)
 
 
-def _extract_action_ids(sts: SyntheticTreeSet) -> Dict[int, List[int]]:
+def _extract_action_ids(sts: SyntheticTreeSet) -> dict[int, list[int]]:
     """Extract the list of reaction ids for each syntree."""
-    actions = {i: st.actions for i, st in enumerate(sts)}
+    actions = {i: st.actions for i, st in enumerate(sts.synthetic_tree_list)}
     return actions
 
 
-def count_actions(sts: SyntheticTreeSet) -> Counter:
+def count_actions(sts: SyntheticTreeSet) -> Counter[int]:
     """Count actions."""
     actions = _extract_action_ids(sts)
 
     action_ids = Counter(list(chain(*actions.values())))
 
-    cnt_action_ids = dict.fromkeys(range(4), 0)
-    cnt_action_ids.update(action_ids)
-    cnt_action_ids = Counter(cnt_action_ids)
-    return cnt_action_ids
+    cnt_action_dict = dict.fromkeys(range(4), 0)
+    cnt_action_dict.update(action_ids)
+    return Counter(cnt_action_dict)
 
 
-def count_num_actions(sts: SyntheticTreeSet) -> Counter:
+def count_num_actions(sts: SyntheticTreeSet) -> Counter[int]:
     """Count number of actions (better metric for "depth")"""
-    num_actions = Counter([st.num_actions for st in sts])
-    return num_actions
+    return Counter([st.num_actions for st in sts.synthetic_tree_list])
 
 
 def plot_num_actions(
-    sts: SyntheticTreeSet, ax: Optional[plt.Axes] = None, **plt_kwargs
+    sts: SyntheticTreeSet,
+    ax: Optional[plt.Axes] = None,
+    **plt_kwargs: Any,
 ) -> plt.Axes:
     actions = count_num_actions(sts)
     # Plot actions (type `Counter`) as barplot:
@@ -87,18 +95,18 @@ def plot_num_actions(
     return ax
 
 
-def _extract_reaction_ids(sts: SyntheticTreeSet) -> Dict[int, List[int]]:
+def _extract_reaction_ids(sts: SyntheticTreeSet) -> dict[int, list[int]]:
     """Extract the list of reaction ids for each syntree."""
     reactions = dict()
 
-    for i, st in enumerate(sts):
+    for i, st in enumerate(sts.synthetic_tree_list):
         ids = [node.rxn_id for node in st.reactions]
         reactions[i] = ids
 
     return reactions
 
 
-def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter:
+def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter[int]:
     """Count the reaction ids."""
     reactions = _extract_reaction_ids(sts)
 
@@ -110,49 +118,50 @@ def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter:
     return cnt_rxn_ids
 
 
-def summarize_syntree_collection(sts: SyntheticTreeSet) -> dict:
-    """Compute summary statistics for syntree collection."""
-    #  dict(sorted(count_num_actions(syntree_coll).items()))
+def summarize_syntree_collection(sts: SyntheticTreeSet) -> dict[str, Any]:
     res = {
-        "metadata": sts.metadata,
         "nTrees:": len(sts),
-        "avg_num_actions": np.mean([st.num_actions for st in sts]),
+        "avg_num_actions": np.mean([st.num_actions for st in sts.synthetic_tree_list]),
         "counters": {
-            "depths": dict(sorted(count_depths(sts).items())),
-            "reactions": dict(sorted(count_reactions(sts).items())),
-            "actions": dict(sorted(count_actions(sts).items())),
-            "num_actions": dict(sorted(count_num_actions(sts).items())),
+            "depths": count_depths(sts),
+            "reactions": count_reactions(sts),
+            "actions": count_actions(sts),
         },
     }
     return res
 
 
-def reactions_used_less_than(data: dict[int, int], n: int) -> List[int]:
+def reactions_used_less_than(data: dict[int, int], n: int) -> list[int]:
     return [i for i, count in data.items() if count < n]
 
 
 def plot_reaction_heatmap(
-    data: dict[int, int], nReactions: int = 91, relative: bool = False, **kwargs
-):
+    data: dict[int, int],
+    n_reactions: int = 91,
+    relative: bool = False,
+    **kwargs: Any,
+) -> plt.Axes:
     """Plot heatmap of reactions
 
     See:
       - https://stackoverflow.com/questions/63861760/add-text-on-plt-imshow
     """
-    assert len(data) == nReactions
+    assert len(data) == n_reactions
 
     if relative:
         total = sum(data.values())
-        data = {k: v / total * 100 for k, v in data.items()}
+        plot_data = {k: v / total * 100 for k, v in data.items()}
+    else:
+        plot_data = {k: float(v) for k, v in data.items()}
 
     m, n = 10, 10
-    assert len(data) <= m * n
+    assert len(plot_data) <= m * n
     mat = np.zeros((m * n), dtype=int)
     print(mat.shape)
-    mat[: len(data)] = list(data.values())
+    mat[: len(plot_data)] = list(plot_data.values())
     mat = mat.reshape((m, n))
 
-    labels = [str(i) if i < nReactions else "-" for i in range(m * n)]
+    labels = np.array([str(i) if i < n_reactions else "-" for i in range(m * n)])
     labels = np.reshape(labels, (m, n))
     ax = sns.heatmap(
         mat,
@@ -168,7 +177,9 @@ def plot_reaction_heatmap(
     return ax
 
 
-def cnt_to_dataframe(cnt: Counter, index_name: Optional[str] = None):
+def cnt_to_dataframe(
+    cnt: Counter[Any], index_name: Optional[str] = None
+) -> pd.DataFrame:
     df = pd.DataFrame().from_dict(cnt, columns=["count"], orient="index")
     df["count_rel"] = df["count"] / df["count"].sum()
     df["count_rel"] = df["count_rel"].round(4)
@@ -177,7 +188,11 @@ def cnt_to_dataframe(cnt: Counter, index_name: Optional[str] = None):
     return df
 
 
-def col_as_percentage(df: pd.DataFrame, cols: List[str] = None, replace: bool = False):
+def col_as_percentage(
+    df: pd.DataFrame,
+    cols: Optional[Union[list[str], str, pd.Index]] = None,
+    replace: bool = False,
+) -> pd.DataFrame:
     if not cols:
         cols = df.columns
     if isinstance(cols, str):
