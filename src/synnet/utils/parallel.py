@@ -5,6 +5,12 @@ from typing import Any, Callable, Optional, TypeVar
 from loguru import logger
 from tqdm import tqdm
 
+try:
+    from pathos import multiprocessing as mp
+except ImportError as e:
+    logger.warning("Pathos not found, using multiprocessing instead")
+    import multiprocessing as mp
+
 from synnet.config import MAX_PROCESSES
 
 T = TypeVar("T")
@@ -31,8 +37,6 @@ def simple_parallel(
 ) -> list[T2]:
     """Use map async and retries in case we get odd stalling behavior"""
     # originally from: https://github.com/samgoldman97
-    from multiprocess.context import TimeoutError
-    from pathos import multiprocessing as mp
 
     def setup_pool() -> tuple[mp.Pool, list[Any]]:
         pool = mp.Pool(processes=max_cpu)
