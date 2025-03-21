@@ -76,12 +76,13 @@ def get_args() -> argparse.Namespace:
 
 
 def train() -> None:
+    """Train the model."""
     logger.info("Start.")
 
     # Parse input args
     args = get_args()
     kwargs = args.__dict__
-    logger.info(f"Arguments: {json.dumps(kwargs,indent=2)}")
+    logger.info(f"Arguments: {json.dumps(kwargs, indent=2)}")
 
     result_dir = kwargs.get("result_dir", None)
     if result_dir is None:

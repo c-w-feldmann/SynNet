@@ -97,7 +97,7 @@ def main() -> None:
 
     # Parse input args
     args = get_args()
-    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+    logger.info(f"Arguments: {json.dumps(vars(args), indent=2)}")
 
     if args.debug:
         logger.level("DEBUG")

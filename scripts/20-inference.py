@@ -178,7 +178,7 @@ if __name__ == "__main__":
 
     _setup_loggers()
 
-    logger.info(f"Arguments: {json.dumps(args.__dict__,indent=2)}")
+    logger.info(f"Arguments: {json.dumps(args.__dict__, indent=2)}")
 
     # region-dataloading
     # Load molecules to decode

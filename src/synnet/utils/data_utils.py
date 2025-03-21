@@ -144,7 +144,8 @@ class Reaction:
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
 
-        Usage:
+        Examples
+        --------
             * In Jupyter:
 
                 >>> from IPython.display import Image
@@ -156,6 +157,15 @@ class Reaction:
                 >>> img = rxn.to_image()
                 >>> pathlib.Path("out.png").write_bytes(img)
 
+        Parameters
+        ----------
+        size: tuple[int, int]
+            Size of the image in pixels.
+
+        Returns
+        -------
+        bytes
+            PNG image of the reaction.
         """
         rxn = AllChem.ReactionFromSmarts(self.smirks)
         d2d = Draw.MolDraw2DCairo(*size)
@@ -538,7 +548,7 @@ class SyntheticTree:
         print("===============Stored Reactions===============")
         for reaction_node in self.reactions:
             print(
-                f"{reaction_node.rxn_id} ({'bi ' if reaction_node.rtype==2 else 'uni'})"
+                f"{reaction_node.rxn_id} ({'bi ' if reaction_node.rtype == 2 else 'uni'})"
             )
         print("===============Followed Actions===============")
         print(self.actions)
@@ -898,11 +908,22 @@ class SyntheticTreeSet:
         return self.synthetic_tree_list[index]
 
     @classmethod
-    def load(cls, file: PathType) -> SyntheticTreeSet:
-        """Load a collection of synthetic trees from a `*.json.gz` file."""
-        assert str(file).endswith(
-            ".json.gz"
-        ), f"Incompatible file extension for file {file}"
+    def load(cls, file: PathType) -> Self:
+        """Load a collection of synthetic trees from a `*.json.gz` file.
+
+        Parameters
+        ----------
+        file: PathType
+            Path to the file to load.
+
+        Returns
+        -------
+        Self
+            The loaded SyntheticTreeSet.
+        """
+        file = Path(file)
+        if file.suffixes != [".json", ".gz"]:
+            raise ValueError(f"Incompatible file extension for file {file}")
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
