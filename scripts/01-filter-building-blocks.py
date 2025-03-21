@@ -59,7 +59,8 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def filter_building_blocks() -> None:
+    """Filter building blocks that cannot react with any template."""
     logger.info("Start.")
 
     # Parse input args
@@ -91,3 +92,6 @@ if __name__ == "__main__":
     )
 
     logger.info("Completed.")
+
+if __name__ == "__main__":
+    filter_building_blocks()
