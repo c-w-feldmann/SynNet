@@ -8,21 +8,22 @@ Here we define the following classes for working with synthetic tree data:
 * `SyntheticTreeSet`
 """
 
-from __future__ import annotations
+import functools
+import gzip
+import json
+from dataclasses import dataclass
+from pathlib import Path
 
 try:
     from typing import Self  # type: ignore[attr-defined]
 except ImportError:
     from typing_extensions import Self
 
-import functools
-import gzip
-import json
-from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
+from loguru import logger
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw
+from rdkit.Chem import AllChem, Draw, rdChemReactions
 
 from synnet.utils.custom_types import PathType
 from synnet.utils.synnet_exceptions import FailedReconstructionError
@@ -95,7 +96,7 @@ class Reaction:
         return self.rxn.GetNumProductTemplates()
 
     @property
-    def rxn(self) -> Chem.rdChemReactions.ChemicalReaction:
+    def rxn(self) -> rdChemReactions.ChemicalReaction:
         return self._rxn
 
     @classmethod
@@ -310,14 +311,14 @@ class Reaction:
         # Ensure molecules are stored as `str`
         _avail_r1 = [self.get_smiles(mol) for mol in _available_reactants[0]]
         if len(_avail_r1) == 0:
-            logging.warning(f"No first reactants available for {self.smirks}")
+            logger.warning(f"No first reactants available for {self.smirks}")
         if self.num_reactant == 1:
             self.available_reactants = (_avail_r1,)
             return self
         if self.num_reactant == 2:
             _avail_r2 = [self.get_smiles(mol) for mol in _available_reactants[1]]
             if len(_avail_r2) == 0:
-                logging.warning(f"No second reactants available for {self.smirks}")
+                logger.warning(f"No second reactants available for {self.smirks}")
             self.available_reactants = (_avail_r1, _avail_r2)
             return self
 
