@@ -5,11 +5,9 @@
 
 import argparse
 import json
-import logging
+from loguru import logger
 
 from synnet.data_generation.preprocessing import parse_sdf_file
-
-logger = logging.getLogger(__name__)
 
 
 def extract_smiles(input_file: str, output_file: str) -> None:
@@ -22,14 +20,21 @@ def extract_smiles(input_file: str, output_file: str) -> None:
     output_file : str
         Output file name for the resulting `pandas.DataFrame`.
     """
-    assert not input_file == output_file, "Input and output files must be different."
+    if input_file == output_file:
+        raise ValueError("Input and output files must be different.")
     df = parse_sdf_file(input_file)
     print(df.shape)
     df.to_csv(output_file, index=False)
-    return None
 
 
 def get_args() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", type=str, help="An `*.sdf` file")
     parser.add_argument(
