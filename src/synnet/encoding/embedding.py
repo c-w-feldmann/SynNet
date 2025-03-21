@@ -125,7 +125,7 @@ class MolecularEmbeddingManager:
         with open(configuration_file, "r", encoding="UTF-8") as f:
             config = yaml.safe_load(f)
 
-        if precalculated_embedding_file is not None:
+        if precalculated_embedding_file:
             precalculated_embeddings = np.load(precalculated_embedding_file)
         else:
             precalculated_embeddings = None
