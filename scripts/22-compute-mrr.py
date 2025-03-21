@@ -10,6 +10,7 @@ from typing import Any, Callable
 
 import click
 import numpy as np
+import numpy.typing as npt
 from loguru import logger
 from tqdm import tqdm
 
@@ -100,7 +101,7 @@ def compute_mean_reciprocal_ranking(
     logger.info("Start.")
 
     # Init BallTree for kNN-search
-    metric: str | Callable[[Any], float]
+    metric: str | Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64]
     if distance == "cross_entropy":
         metric = ce_distance
     elif distance == "cosine":
