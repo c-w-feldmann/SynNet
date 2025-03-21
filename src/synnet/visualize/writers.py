@@ -193,6 +193,7 @@ def subgraph(
     Callable[[Callable[[Any], Any]], Callable[[Any], Any]]
         The decorator
     """
+
     def _subgraph(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
         """Put the decorated function in a subgraph.
 
@@ -206,6 +207,7 @@ def subgraph(
         Callable[[Any], Any]
             The decorated function.
         """
+
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> list[str]:
             """Wrap the function in a subgraph.
