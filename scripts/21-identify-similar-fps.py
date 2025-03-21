@@ -55,7 +55,7 @@ def _match_dataset_filename(path: str, dataset_type: str) -> Path:
 
 
 def find_similar_fp(
-    fp: npt.NDArray[Any], fps_reference: npt.NDArray[Any]
+    fp: npt.ArrayLike, fps_reference: npt.ArrayLike
 ) -> tuple[float, np.int_]:
     """Finds most similar fingerprint in a reference set for `fp`.
     Uses Tanimoto Similarity.
