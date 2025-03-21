@@ -15,14 +15,17 @@ import rdkit
 from loguru import logger
 from rdkit.Chem import AllChem as Chem
 from rdkit.Chem import PandasTools, rdMolDescriptors
-from tqdm import tqdm
+
+try:
+    from pathos import multiprocessing as mp
+except ImportError:
+    logger.warning(f"Failed to import pathos, using multiprocessing instead.")
+    import multiprocessing as mp
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.custom_types import PathType
 from synnet.utils.data_utils import Reaction
 from synnet.utils.parallel import chunked_parallel
-
-logger = logging.getLogger()
 
 
 def parse_sdf_file(file: str) -> pd.DataFrame:
