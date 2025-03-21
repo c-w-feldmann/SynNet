@@ -1,10 +1,12 @@
+"""Filter the synthetic trees."""
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
 import numpy as np
-from numpy import typing as npt
+import numpy.typing as npt
 from loguru import logger as logging
 from torch.utils.data.dataset import Dataset
 
