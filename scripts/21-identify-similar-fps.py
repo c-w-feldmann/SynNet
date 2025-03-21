@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     # Parse input args
     args = get_args()
-    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+    logger.info(f"Arguments: {json.dumps(vars(args), indent=2)}")
     # Load data
     smiles_train, fps_train = get_smiles_and_fps("train")
     smiles_valid, fps_valid = get_smiles_and_fps("valid")

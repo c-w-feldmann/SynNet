@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     # Parse input args
     args = get_args()
-    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+    logger.info(f"Arguments: {json.dumps(vars(args), indent=2)}")
 
     # Init BallTree for kNN-search
     if args.distance == "cross_entropy":

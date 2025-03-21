@@ -143,7 +143,7 @@ def main() -> None:
 
     # Parse input args
     args = get_args()
-    logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
+    logger.info(f"Arguments: {json.dumps(vars(args), indent=2)}")
 
     # Load previously generated synthetic trees
     syntree_collection = SyntheticTreeSet().load(args.input_file)

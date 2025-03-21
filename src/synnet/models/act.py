@@ -88,7 +88,7 @@ def train() -> None:
     # Parse input args
     args = get_args()
     kwargs = args.__dict__
-    logger.info(f"Arguments: {json.dumps(kwargs,indent=2)}")
+    logger.info(f"Arguments: {json.dumps(kwargs, indent=2)}")
 
     # Set up logging dir
     save_dir = init_save_dir(
