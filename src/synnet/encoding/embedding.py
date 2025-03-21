@@ -347,6 +347,8 @@ class MolecularEmbedder(abc.ABC):
 
 
 class MorganFingerprintEmbedding(MolecularEmbedder):
+    """Morgan fingerprint embedding."""
+
     def __init__(self, radius: int = 2, n_bits: int = 4096) -> None:
         self.radius = radius
         self._length = n_bits
