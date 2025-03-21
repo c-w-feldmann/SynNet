@@ -147,11 +147,6 @@ def main() -> None:
     summary_file = Path(args.output_file).parent / "results-summary.json"
     summary_file.parent.mkdir(parents=True, exist_ok=True)
     logger.info(f"Writing summary to {summary_file} .")
-    summary = {
-        "exit_codes": exit_codes,
-        "args": vars(args),
-        "stgen_kwargs": stgen_kwargs,
-    }
     summary_file.write_text(json.dumps(exit_codes, indent=2))
 
     # Save synthetic trees on disk
