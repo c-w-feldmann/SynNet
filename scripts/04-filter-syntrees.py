@@ -4,6 +4,7 @@
 # pylint: enable=invalid-name  # disable and enable to ignore the file name only.
 
 import abc
+import argparse
 import json
 from pathlib import Path
 from typing import Any, Union
@@ -12,6 +13,11 @@ import numpy as np
 from loguru import logger
 from rdkit import Chem, RDLogger
 
+try:
+    from tdc import Oracle
+except ImportError:
+    logger.warning("TDC not installed. Please install it to use the OracleFilter.")
+
 from synnet.config import MAX_PROCESSES
 from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
@@ -19,7 +25,9 @@ from synnet.utils.parallel import chunked_parallel
 RDLogger.DisableLog("rdApp.*")
 
 
-class Filter:
+class Filter(abc.ABC):
+    """Class to filter synthetic trees."""
+
     @abc.abstractmethod
     def filter(self, st: SyntheticTree, **kwargs: Any) -> bool:
         """Filter a synthetic tree and return True if it passes the filter, else False.
@@ -41,6 +49,8 @@ class Filter:
 
 
 class ValidRootMolFilter(Filter):
+    """Checks if the root molecule is a valid molecule."""
+
     def filter(self, st: SyntheticTree, **kwargs: Any) -> bool:
         """Filter for valid root molecules."""
         if not st.root or not st.root.smiles:
@@ -49,6 +59,7 @@ class ValidRootMolFilter(Filter):
 
 
 class OracleFilter(Filter):
+
     def __init__(
         self,
         name: str = "qed",
@@ -56,7 +67,6 @@ class OracleFilter(Filter):
         rng: np.random.Generator = np.random.default_rng(42),
     ) -> None:
         super().__init__()
-        from tdc import Oracle
 
         self.oracle_fct = Oracle(name=name)
         self.threshold = threshold
@@ -96,31 +106,37 @@ def filter_syntree(syntree: SyntheticTree) -> Union[SyntheticTree, int]:
     return syntree
 
 
-if __name__ == "__main__":
-    import argparse
+def get_args() -> argparse.Namespace:
+    """Parse command line arguments.
 
-    def get_args() -> argparse.Namespace:
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command line arguments.
+    """
+    parser = argparse.ArgumentParser()
+    # File I/O
+    parser.add_argument(
+        "--input-file",
+        type=str,
+        help="Input file for the filtered generated synthetic trees (*.json.gz)",
+    )
+    parser.add_argument(
+        "--output-file",
+        type=str,
+        help="Output file for the filtered generated synthetic trees (*.json.gz)",
+    )
 
-        parser = argparse.ArgumentParser()
-        # File I/O
-        parser.add_argument(
-            "--input-file",
-            type=str,
-            help="Input file for the filtered generated synthetic trees (*.json.gz)",
-        )
-        parser.add_argument(
-            "--output-file",
-            type=str,
-            help="Output file for the filtered generated synthetic trees (*.json.gz)",
-        )
+    # Processing
+    parser.add_argument(
+        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
+    )
+    parser.add_argument("--verbose", default=False, action="store_true")
+    return parser.parse_args()
 
-        # Processing
-        parser.add_argument(
-            "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
-        )
-        parser.add_argument("--verbose", default=False, action="store_true")
-        return parser.parse_args()
 
+def main() -> None:
+    """Main function to filter synthetic trees."""
     logger.info("Start.")
 
     # Parse input args
@@ -180,3 +196,7 @@ if __name__ == "__main__":
     summary_file.write_text(json.dumps(outcomes, indent=2))
 
     logger.info("Completed.")
+
+
+if __name__ == "__main__":
+    main()
