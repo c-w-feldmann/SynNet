@@ -38,7 +38,7 @@ def wrapper(
     mol_encoder: MorganFingerprintEncoder,
     **kwargs: Any,
 ) -> tuple[SyntheticTree, Optional[float]]:
-    """Wrapper function to decode targets into `SyntheticTree` & catch Exceptions.
+    """Wrap function to decode targets into `SyntheticTree` & catch Exceptions.
 
     Notes
     -----
