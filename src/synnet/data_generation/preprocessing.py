@@ -110,39 +110,19 @@ class BuildingBlockFilter:
 
 
 class BuildingBlockFileHandler:
-    def _load_csv(self, file: PathType) -> list[str]:
-        """Load building blocks as smiles from `*.csv` or `*.csv.gz`."""
-        return pd.read_csv(file)["SMILES"].to_list()
+    """Handler for building blocks files."""
 
     def load(self, file: PathType) -> list[str]:
         """Load building blocks from file."""
-        file = Path(file)
-        if ".csv" in file.suffixes:
-            return self._load_csv(file)
-        else:
-            raise NotImplementedError
-
-    def _save_csv(self, file: Path, building_blocks: list[str]) -> None:
-        """Save building blocks to `*.csv.gz`"""
-
-
-        # remove possible 1 or more extensions, i.e.
-        # <stem>.csv OR <stem>.csv.gz --> <stem>
-        file_no_ext = file.parent / file.stem.split(".")[0]
-        file = (file_no_ext).with_suffix(".csv.gz")
-        # Save
-        df = pd.DataFrame({"SMILES": building_blocks})
-        df.to_csv(file, compression="gzip", index=False)
+        return pd.read_csv(file)["SMILES"].to_list()
 
     def save(self, file: PathType, building_blocks: list[str]) -> None:
         """Save building blocks to file."""
         if not isinstance(file, Path):
             file = Path(file)
         file.parent.mkdir(parents=True, exist_ok=True)
-        if ".csv" in file.suffixes:
-            self._save_csv(file, building_blocks)
-        else:
-            raise NotImplementedError
+        df = pd.DataFrame({"SMILES": building_blocks})
+        df.to_csv(file, index=False)
 
 
 class ReactionTemplateFileHandler:
