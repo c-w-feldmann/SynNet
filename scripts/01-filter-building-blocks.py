@@ -72,9 +72,9 @@ if __name__ == "__main__":
 
     # 2. Filter
     #   building blocks on heuristics
-    filtered_bblocks = BuildingBlockFilterHeuristics(verbose=args.verbose).filter_to_list(
-        bblocks
-    )
+    filtered_bblocks = BuildingBlockFilterHeuristics(
+        verbose=args.verbose
+    ).filter_to_list(bblocks)
 
     #   building blocks that cannot react with any template
     filtered_bblocks_list, reactions = BuildingBlockFilterMatchRxn().filter(
