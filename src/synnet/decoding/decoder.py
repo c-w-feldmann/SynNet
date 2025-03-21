@@ -437,7 +437,7 @@ class SynTreeDecoder:
             rxn_id: int = int(np.argmax(p_rxn * reaction_mask))
             reaction: Reaction = self.rxn_collection.rxns[rxn_id]
             logger.debug(
-                f"  Selected {'bi' if reaction.num_reactant==2 else 'uni'} reaction {rxn_id=}"
+                f"  Selected {'bi' if reaction.num_reactant == 2 else 'uni'} reaction {rxn_id=}"
             )
             if reaction.available_reactants is None:
                 raise AssertionError(
