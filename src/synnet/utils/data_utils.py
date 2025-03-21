@@ -1,12 +1,4 @@
-"""
-Here we define the following classes for working with synthetic tree data:
-* `Reaction`
-* `ReactionSet`
-* `NodeChemical`
-* `NodeRxn`
-* `SyntheticTree`
-* `SyntheticTreeSet`
-"""
+"""Data classes for synthetic tree data."""
 
 import functools
 import gzip
@@ -41,28 +33,30 @@ class Reaction:
         tuple[list[str], ...]
     ]  # Cached list of available reactants for each template
     rxnname: str
-    reference: Any
     weight: float
 
     def __init__(
         self,
         template: str,
         name: Optional[str] = None,
-        reference: Optional[Any] = None,
         weight: float = 1.0,
         available_reactants: Optional[tuple[list[str], ...]] = None,
-        **kwargs: Any,
     ) -> None:
         """Initialize a `Reaction`.
 
-        Args:
-            template: SMARTS string representing a chemical reaction.
-            name: The name of the reaction for downstream analysis.
-            reference: (placeholder)
+        Parameters
+        ----------
+        template: str
+            SMARTS string representing a chemical reaction.
+        name: str, optional
+            Name of the reaction for downstream analysis.
+        weight: float
+            Weight of the reaction, by default 1.0.
+        available_reactants: Optional[tuple[list[str], ...]], optional
+            A tuple of lists of available reactants for each reactant template.
         """
         self.smirks = template.strip()
         self.name = name
-        self.reference = reference
         self.weight = weight
 
         # Initialize reaction
@@ -81,22 +75,32 @@ class Reaction:
         self.available_reactants = available_reactants
 
     def __repr__(self) -> str:
+        """Return a string representation of the `Reaction` object."""
         return f"Reaction(smarts='{self.smirks}')"
 
     @property
     def num_reactant(self) -> Literal[1, 2]:
-        return self.rxn.GetNumReactantTemplates()
+        """Return the number of reactant templates."""
+        n_reactants = self.rxn.GetNumReactantTemplates()
+        if n_reactants == 1:
+            return 1
+        if n_reactants == 2:
+            return 2
+        raise ValueError(f"Reaction has {n_reactants} reactants.")
 
     @property
     def num_agent(self) -> int:
+        """Return the number of agent templates."""
         return self.rxn.GetNumAgentTemplates()
 
     @property
     def num_product(self) -> int:
+        """Return the number of product templates."""
         return self.rxn.GetNumProductTemplates()
 
     @property
     def rxn(self) -> rdChemReactions.ChemicalReaction:
+        """Return the RDKit `ChemicalReaction` object."""
         return self._rxn
 
     @classmethod
@@ -107,12 +111,16 @@ class Reaction:
         return cls(**attrs)
 
     def to_dict(self) -> dict[str, Any]:
-        """Returns serializable fields as new dictionary mapping."""
+        """Return serializable fields as new dictionary mapping.
 
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary representation of this `Reaction`.
+        """
         out = {
             "template": self.smirks,
             "name": self.name,
-            "reference": self.reference,
             "weight": self.weight,
             "available_reactants": self.available_reactants,
         }
@@ -123,39 +131,37 @@ class Reaction:
         """Convert smiles to  `RDKit.Chem.rdchem.Mol`."""
         if isinstance(smi, str):
             return Chem.MolFromSmiles(smi)
-        elif isinstance(smi, Chem.rdchem.Mol):
+        if isinstance(smi, Chem.rdchem.Mol):
             return smi
-        else:
-            raise TypeError(
-                f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`"
-            )
+        raise TypeError(
+            f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`"
+        )
 
     def get_smiles(self, mol: Union[str, Chem.rdchem.Mol]) -> str:
         """Convert `Chem.rdchem.Mol` to SMILES `str`."""
         if isinstance(mol, str):
             return mol
-        elif isinstance(mol, Chem.rdchem.Mol):
+        if isinstance(mol, Chem.rdchem.Mol):
             return Chem.MolToSmiles(mol)
-        else:
-            raise TypeError(
-                f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`"
-            )
+        raise TypeError(
+            f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`"
+        )
 
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
         """Returns a png image of the visual represenation for this chemical reaction.
 
         Examples
         --------
-            * In Jupyter:
+        * In Jupyter:
 
-                >>> from IPython.display import Image
-                >>> img = rxn.to_image()
-                >>> Image(img)
+            >>> from IPython.display import Image
+            >>> img = rxn.to_image()
+            >>> Image(img)
 
-            * save as image:
+        * save as image:
 
-                >>> img = rxn.to_image()
-                >>> pathlib.Path("out.png").write_bytes(img)
+            >>> img = rxn.to_image()
+            >>> pathlib.Path("out.png").write_bytes(img)
 
         Parameters
         ----------
@@ -274,11 +280,11 @@ class Reaction:
             raise ValueError("Reaction cannot be run with given reactants.")
 
         # Convert all reactants to `Chem.rdchem.Mol`
-        reactant_list = [self.get_mol(first_reactant)]
         if second_reactant is not None:
-            reactant_list.append(self.get_mol(second_reactant))
-        r = reactant_list
-        if len(r) > 1 and not self._check_smarts_match(*r):
+            second_reactant_mol = self.get_mol(second_reactant)
+        else:
+            second_reactant_mol = None
+        if len(r) > 1 and not self._check_smarts_match(self.get_mol(first_reactant), second_reactant_mol):
             r = list(reversed(r))
         # Run reaction with rdkit
         reaction_result_list = self.rxn.RunReactants(tuple(r))
@@ -410,11 +416,13 @@ class ReactionSet:
 
     @property
     def num_unimolecular(self) -> int:
-        return sum([r.num_reactant == 1 for r in self.rxns])
+        """Return the number of uni-molecular reactions."""
+        return sum(r.num_reactant == 1 for r in self.rxns)
 
     @property
     def num_bimolecular(self) -> int:
-        return sum([r.num_reactant == 2 for r in self.rxns])
+        """Return the number of bi-molecular reactions."""
+        return sum(r.num_reactant == 2 for r in self.rxns)
 
 
 # the definition of classes for defining synthetic trees below
@@ -422,14 +430,22 @@ class ReactionSet:
 class NodeChemical:
     """Represents a chemical node in a synthetic tree.
 
-    Attributes:
-        smiles (str): Molecule represented as SMILES string.
-        parent (Optional[int]): Parent molecule represented as SMILES string (i.e. the result of a reaction)
-        child (Optional[int]): Index of the reaction this object participates in.
-        is_leaf (bool): Is this a leaf node in a synthetic tree?
-        is_root (bool): Is this a root node in a synthetic tree?
-        depth (float): Depth this node is in tree (+1 for an action, +.5 for a reaction)
-        index (int): Incremental index for all chemical nodes in the tree.
+    Attributes
+    ----------
+    smiles: str
+        Molecule represented as SMILES string.
+    parent: Optional[int]
+        Parent molecule represented as SMILES string (i.e. the result of a reaction)
+    child: Optional[int]
+        Index of the reaction this object participates in.
+    is_leaf: bool
+        Is this a leaf node in a synthetic tree?
+    is_root: bool
+        Is this a root node in a synthetic tree?
+    depth: float
+        Depth this node is in tree (+1 for an action, +.5 for a reaction)
+    index: int
+        Incremental index for all chemical nodes in the tree.
     """
 
     smiles: str
@@ -448,18 +464,18 @@ class NodeRxn:
 
     Attributes
     ---------
-        rxn_id:
-            Index to a reaction lookup table.
-        rtype:
-            Indicator for uni (1) or bi-molecular (2) reaction.
-        parent: str
-            Product of this reaction.
-        child: str
-            Reactants for this reaction.
-        depth:
-            Depth this node is in tree (+1 for an action, +.5 for a reaction)
-        index:
-            Order of this `NodeRxn` in a `SyntheticTree`.
+    rxn_id:
+        Index to a reaction lookup table.
+    rtype:
+        Indicator for uni (1) or bi-molecular (2) reaction.
+    parent: str
+        Product of this reaction.
+    child: str
+        Reactants for this reaction.
+    depth:
+        Depth this node is in tree (+1 for an action, +.5 for a reaction)
+    index:
+        Order of this `NodeRxn` in a `SyntheticTree`.
     """
 
     rxn_id: int
@@ -474,6 +490,7 @@ class SyntheticTree:
     """Representation of a synthetic tree (syntree).
 
     Attributes:
+    -----------
     chemicals: list[NodeChemical]
         A list of chemical nodes, in order of addition.
     reactions: list[NodeRxn]
@@ -516,7 +533,18 @@ class SyntheticTree:
 
     @classmethod
     def from_dict(cls, attrs: dict[str, Any]) -> Self:
-        """Initialize a `SyntheticTree` from a dictionary."""
+        """Initialize a `SyntheticTree` from a dictionary.
+
+        Parameters
+        ----------
+        attrs: dict[str, Any]
+            A dictionary representation of a `SyntheticTree`.
+
+        Returns
+        -------
+        SyntheticTree
+            A `SyntheticTree` object.
+        """
         syntree = cls()
         syntree.root = NodeChemical(**attrs["root"]) if attrs["root"] else None
         syntree.depth = attrs["depth"]
@@ -529,7 +557,13 @@ class SyntheticTree:
         return syntree
 
     def to_dict(self) -> dict[str, Any]:
-        """Export this `SyntheticTree` to a dictionary."""
+        """Export this `SyntheticTree` to a dictionary.
+
+        Returns
+        -------
+        dict[str, Any]
+            A dictionary representation of this `SyntheticTree`.
+        """
         return {
             "reactions": [r.__dict__ for r in self.reactions],
             "chemicals": [m.__dict__ for m in self.chemicals],
@@ -540,24 +574,34 @@ class SyntheticTree:
 
     def _print(self) -> None:
         """Print the contents of this `SyntheticTree`."""
-        print(f"============SynTree (depth={self.depth:>4.1f})==============")
-        print("===============Stored Molecules===============")
+        logger.info(f"============SynTree (depth={self.depth:>4.1f})==============")
+        logger.info("===============Stored Molecules===============")
         for compound_node in self.chemicals:
             suffix = " (root mol)" if compound_node.is_root else ""
-            print(compound_node.smiles, suffix)
-        print("===============Stored Reactions===============")
+            logger.info(compound_node.smiles, suffix)
+        logger.info("===============Stored Reactions===============")
         for reaction_node in self.reactions:
-            print(
+            logger.info(
                 f"{reaction_node.rxn_id} ({'bi ' if reaction_node.rtype == 2 else 'uni'})"
             )
-        print("===============Followed Actions===============")
-        print(self.actions)
-        print("==============================================")
+        logger.info("===============Followed Actions===============")
+        logger.info(self.actions)
+        logger.info("==============================================")
 
     def get_node_index(self, smi: str) -> Optional[int]:
         """Return the index of the node matching the input SMILES.
 
         If the query molecule is not in the tree, return None.
+
+        Parameters
+        ----------
+        smi: str
+            SMILES string of the molecule to search for.
+
+        Returns
+        -------
+        int | None
+            Index of the molecule in the tree.
         """
         # Info: reversed() is a prelim fix for a bug that caused three mols in the state!
         for node in reversed(self.chemicals):
@@ -571,8 +615,10 @@ class SyntheticTree:
 
         Returns
         -------
-        state: list[str]
-            A list contains all root node molecules.
+        str | None
+            The most recent root node.
+        str | None
+            The second most recent root
         """
         root_state_list = [node.smiles for node in self.chemicals if node.is_root][::-1]
         if len(root_state_list) == 0:
@@ -586,6 +632,19 @@ class SyntheticTree:
     def merge(
         self, mol1: str, mol2: Optional[str], rxn_id: int, mol_product: str
     ) -> None:
+        """Merge two molecules into a new molecule.
+
+        Parameters
+        ----------
+        mol1: str
+            First molecule as SMILES-string
+        mol2: str
+            Second molecule as SMILES-string
+        rxn_id: int
+            id of the reaction
+        mol_product: str
+            Product of the reaction as SMILES-string
+        """
         if mol1 is None or mol2 is None:
             raise AssertionError("Merging requires two molecules.")
         mol1_idx = self.get_node_index(mol1)
@@ -633,6 +692,19 @@ class SyntheticTree:
     def extend(
         self, mol1: Optional[str], mol2: Optional[str], rxn_id: int, mol_product: str
     ) -> None:
+        """Extend this synthetic tree with a reaction step.
+
+        Parameters
+        ----------
+        mol1: Optional[str]
+            First reactant as SMILES-string
+        mol2: Optional[str]
+            Second reactant as SMILES-string
+        rxn_id: int
+            id of the reaction
+        mol_product: str
+            Product of the reaction as SMILES-string
+        """
         if mol1 is None:
             raise AssertionError("Molecule cannot be None.")
         mol1_idx = self.get_node_index(mol1)
@@ -719,18 +791,19 @@ class SyntheticTree:
     ) -> None:
         """Update this synthetic tree by adding a reaction step.
 
-        Info:
-            Recall that actions "add", "expand", "merge" have a reaction, "end" does not.
-            Hence, the following 6 updates are possible:
-                - Action: End
-                - Action: Add
-                    - with unimolecular reaction
-                    - with bimolecular reaction
-                - Action: Expand
-                    - with unimolecular reaction
-                    - with bimolecular reaction
-                - Action: Merge
-                    - with bimolecular reaction
+        Notes
+        -----
+        Recall that actions "add", "expand", "merge" have a reaction, "end" does not.
+        Hence, the following 6 updates are possible:
+            - Action: End
+            - Action: Add
+                - with unimolecular reaction
+                - with bimolecular reaction
+            - Action: Expand
+                - with unimolecular reaction
+                - with bimolecular reaction
+            - Action: Merge
+                - with bimolecular reaction
 
         Parameters
         ----------
