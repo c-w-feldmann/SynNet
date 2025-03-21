@@ -10,7 +10,6 @@ except ImportError:
     from typing_extensions import Self
 
 import abc
-import multiprocessing as mp
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +19,12 @@ from loguru import logger
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from sklearn.neighbors import BallTree
+
+try:
+    from pathos import multiprocessing as mp
+except ImportError:
+    logger.warning(f"Could not import pathos, using multiprocessing instead.")
+    import multiprocessing as mp
 
 from synnet.config import MAX_PROCESSES
 from synnet.utils.custom_types import MetricType, PathType
@@ -170,7 +175,6 @@ class MolecularEmbeddingManager:
         return self.embeddings[positions]
 
     def _compute_mp(self, data: list[str]) -> list[npt.NDArray[Any]]:
-        from pathos import multiprocessing as mp
 
         with mp.Pool(processes=self.n_jobs) as pool:
             embeddings = pool.map(self.embedding_method.transform_smiles, data)
