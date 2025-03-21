@@ -92,9 +92,9 @@ if __name__ == "__main__":
     logger.info(f"Arguments: {json.dumps(vars(args),indent=2)}")
 
     if args.debug:
-        st_logger = logging.getLogger("synnet.data_generation.syntrees")
-        st_logger.setLevel("DEBUG")
+        logger.level("DEBUG")
         RDLogger.EnableLog("rdApp.*")
+        logger.info("Debug mode enabled.")
 
     # Load assets
     bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
