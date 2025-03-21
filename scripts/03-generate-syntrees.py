@@ -1,5 +1,4 @@
-"""Generate synthetic trees.
-"""
+"""Generate synthetic trees."""
 
 from __future__ import annotations
 

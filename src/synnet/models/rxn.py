@@ -1,5 +1,4 @@
-"""Reaction network.
-"""
+"""Reaction network."""
 
 import argparse
 import json

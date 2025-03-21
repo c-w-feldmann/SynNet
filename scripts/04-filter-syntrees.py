@@ -1,5 +1,4 @@
-"""Filter Synthetic Trees.
-"""
+"""Filter Synthetic Trees."""
 
 import abc
 import json

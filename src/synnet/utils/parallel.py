@@ -1,5 +1,4 @@
-"""parallel.py
-"""
+"""parallel.py"""
 
 import logging
 from typing import Any, Callable, Optional, TypeVar

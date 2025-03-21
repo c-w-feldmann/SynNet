@@ -1,5 +1,4 @@
-"""Common methods and params shared by all models.
-"""
+"""Common methods and params shared by all models."""
 
 import logging
 from datetime import datetime

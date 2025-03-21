@@ -1,5 +1,4 @@
-"""Extract chemicals as SMILES from a downloaded `*.sdf*` file.
-"""
+"""Extract chemicals as SMILES from a downloaded `*.sdf*` file."""
 
 import argparse
 import json

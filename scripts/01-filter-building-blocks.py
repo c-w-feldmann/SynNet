@@ -1,5 +1,4 @@
-"""Filter out building blocks that cannot react with any template.
-"""
+"""Filter out building blocks that cannot react with any template."""
 
 import argparse
 import json

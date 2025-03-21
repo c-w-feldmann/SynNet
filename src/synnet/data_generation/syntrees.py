@@ -1,5 +1,4 @@
-"""syntrees
-"""
+"""syntrees"""
 
 from __future__ import annotations
 
@@ -456,7 +455,7 @@ class SynTreeGeneratorPostProc:
 
     @staticmethod
     def parse_generate_safe(
-        results: List[Tuple[Union[SyntheticTree, None], Union[Exception, None]]]
+        results: List[Tuple[Union[SyntheticTree, None], Union[Exception, None]]],
     ) -> tuple[SyntheticTreeSet, dict[str, int]]:
         """Parses the result from `SynTreeGenerator.generate_safe`.
         In particular:

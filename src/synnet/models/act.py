@@ -1,5 +1,4 @@
-"""Action network.
-"""
+"""Action network."""
 
 from __future__ import annotations
 

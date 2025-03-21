@@ -36,7 +36,7 @@ def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter
 
 
 def count_building_blocks(
-    syntrees: Union[SyntheticTree, SyntheticTreeSet]
+    syntrees: Union[SyntheticTree, SyntheticTreeSet],
 ) -> Counter[str]:
     """Extract chemicals, which are leafes, in syntrees."""
     if isinstance(syntrees, SyntheticTree):

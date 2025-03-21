@@ -1,5 +1,4 @@
-"""Reactant2 network (for predicting 2nd reactant).
-"""
+"""Reactant2 network (for predicting 2nd reactant)."""
 
 import argparse
 import json

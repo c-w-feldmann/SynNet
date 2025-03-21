@@ -1,5 +1,4 @@
-"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set.
-"""  # TODO: clean up, un-nest a couple of fcts
+"""Computes the fingerprint similarity of molecules in {valid,test}-set to molecules in the training set."""  # TODO: clean up, un-nest a couple of fcts
 
 from __future__ import annotations
 
