@@ -72,8 +72,8 @@ if __name__ == "__main__":
 
     # 2. Filter
     #   building blocks on heuristics
-    filtered_bblocks = BuildingBlockFilterHeuristics.filter(
-        bblocks, verbose=args.verbose
+    filtered_bblocks = BuildingBlockFilterHeuristics(verbose=args.verbose).filter(
+        bblocks
     )
 
     #   building blocks that cannot react with any template
