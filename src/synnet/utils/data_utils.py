@@ -909,10 +909,21 @@ class SyntheticTreeSet:
 
     @classmethod
     def load(cls, file: PathType) -> Self:
-        """Load a collection of synthetic trees from a `*.json.gz` file."""
-        assert str(file).endswith(
-            ".json.gz"
-        ), f"Incompatible file extension for file {file}"
+        """Load a collection of synthetic trees from a `*.json.gz` file.
+
+        Parameters
+        ----------
+        file: PathType
+            Path to the file to load.
+
+        Returns
+        -------
+        Self
+            The loaded SyntheticTreeSet.
+        """
+        file = Path(file)
+        if file.suffixes != [".json", ".gz"]:
+            raise ValueError(f"Incompatible file extension for file {file}")
 
         with gzip.open(file, "rt") as f:
             data = json.loads(f.read())
