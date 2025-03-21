@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     # 2. Filter
     #   building blocks on heuristics
-    filtered_bblocks = BuildingBlockFilterHeuristics(verbose=args.verbose).filter(
+    filtered_bblocks = BuildingBlockFilterHeuristics(verbose=args.verbose).filter_to_list(
         bblocks
     )
 
