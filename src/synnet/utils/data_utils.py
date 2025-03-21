@@ -744,16 +744,12 @@ class SyntheticTree:
             Second reactant as SMILES-string
         mol_product: str
             Product of the reaction as SMILES-string
-
-        Returns
-        -------
-        None
         """
         self.actions.append(int(action))
 
         if action == 3:  # End
             self.end()
-            self.depth = max([node.depth for node in self.reactions]) + 0.5
+            self.depth = max(node.depth for node in self.reactions) + 0.5
             return None
 
         if mol1 is None:
@@ -857,30 +853,63 @@ class SyntheticTree:
 
     @property
     def nodes_as_smiles(self) -> list[str]:
-        """Returns all (leaf, inner, root) molecules in this tree as smiles"""
+        """Return all (leaf, inner, root) molecules in this tree as smiles.
+
+        Returns
+        -------
+        list[str]
+            All molecules in this tree as smiles.
+        """
         return [node.smiles for node in self.chemicals]
 
     @property
     def leafs_as_smiles(self) -> list[str]:
-        """Returns all leaf molecules in this tree as smiles"""
+        """Return all leaf molecules in this tree as smiles.
+
+        Returns
+        -------
+        list[str]
+            All leaf molecules in this tree as smiles.
+        """
         return [node.smiles for node in self.chemicals if node.is_leaf]
 
     @property
     def nonleafs_as_smiles(self) -> list[str]:
-        """Returns all non-leaf (inner + root) molecules in this tree as smiles"""
+        """Return all non-leaf (inner + root) molecules in this tree as smiles.
+
+        Returns
+        -------
+        list[str]
+            All non-leaf molecules in this tree as smiles.
+        """
         return [node.smiles for node in self.chemicals if not node.is_leaf]
 
     @property
     def is_valid(self) -> bool:
-        """Valid if it has "actions" and has been ended properly with "end"-action"""
+        """Return if this tree is valid.
+
+        A Tree is valid if it has "actions" and has been ended properly with "end"-action.
+
+        Returns
+        -------
+        bool
+            Whether this tree is valid.
+        """
         return self.num_actions > 0 and self.actions[-1] == 3
 
     @property
     def num_actions(self) -> int:
-        """Number of actions
-        Info:
-            The depth of a tree is not a perfect metric for complexity,
-            as a 2nd subtree that gets merged only increases depth by 1.
+        """Returns the number of actions in this tree.
+
+        Notes
+        -----
+        The depth of a tree is not a perfect metric for complexity,
+        as a 2nd subtree that gets merged only increases depth by 1.
+
+        Returns
+        -------
+        int
+            The number of actions in this tree.
         """
         return len(self.actions)
 
@@ -891,18 +920,39 @@ class SyntheticTreeSet:
     synthetic_tree_list: list[SyntheticTree]
 
     def __init__(self, sts: Optional[list[SyntheticTree]] = None):
+        """Initialize the SyntheticTreeSet.
+
+        Parameters
+        ----------
+        sts: Optional[list[SyntheticTree]]
+            List of synthetic trees to initialize the set with.
+        """
         if sts is not None:
             self.synthetic_tree_list = sts
         else:
             self.synthetic_tree_list = []
 
     def __repr__(self) -> str:
+        """Return a string representation of this SyntheticTreeSet."""
         return f"SyntheticTreeSet ({len(self.synthetic_tree_list)} syntrees.)"
 
     def __len__(self) -> int:
+        """Return the number of synthetic trees in this set."""
         return len(self.synthetic_tree_list)
 
     def __getitem__(self, index: int) -> SyntheticTree:
+        """Get a synthetic tree by index.
+
+        Parameters
+        ----------
+        index: int
+            Index of the synthetic tree to retrieve.
+
+        Returns
+        -------
+        SyntheticTree
+            The synthetic tree at the given index.
+        """
         if self.synthetic_tree_list is None:
             raise IndexError("No Synthetic Trees.")
         return self.synthetic_tree_list[index]
@@ -933,7 +983,13 @@ class SyntheticTreeSet:
         return cls(syntrees)
 
     def save(self, file: PathType) -> None:
-        """Save a collection of synthetic trees to a `*.json.gz` file."""
+        """Save a collection of synthetic trees to a `*.json.gz` file.
+
+        Parameters
+        ----------
+        file: PathType
+            Path to the file to save.
+        """
         file = Path(file)
         if file.suffixes != [".json", ".gz"]:
             raise ValueError(f"Incompatible file extension for file {file}")
@@ -945,7 +1001,13 @@ class SyntheticTreeSet:
             f.write(json.dumps(syntrees_as_json))
 
     def split_by_depth(self) -> dict[int, list[SyntheticTree]]:
-        """Splits syntrees by depths and returns a copy."""
+        """Splits syntrees by depths and returns a copy.
+
+        Returns
+        -------
+        dict[int, list[SyntheticTree]]
+            A dictionary mapping depths to lists of syntrees.
+        """
         trees_by_depth_dict: dict[int, list[SyntheticTree]] = {}
         for st in self.synthetic_tree_list:
             depth = int(st.depth)
