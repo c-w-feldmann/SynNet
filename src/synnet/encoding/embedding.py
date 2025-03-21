@@ -1,4 +1,4 @@
-from __future__ import annotations
+"""Module for molecular embeddings."""
 
 from typing import Any, Callable, Iterable, Optional, Union
 
