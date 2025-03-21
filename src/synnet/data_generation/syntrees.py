@@ -620,6 +620,13 @@ class SynTreeFeaturizer:
         self.action_embedder = action_embedder
 
     def __repr__(self) -> str:
+        """Return a string representation of the object.
+
+        Returns
+        -------
+        str
+            String representation of the object
+        """
         return f"{self.__dict__}"
 
     def featurize(
