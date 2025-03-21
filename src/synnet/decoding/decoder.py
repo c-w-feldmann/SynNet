@@ -4,7 +4,6 @@
 # * Imports
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Tuple, Union
 
@@ -18,6 +17,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import torch
+from loguru import logger
 from sklearn.metrics.pairwise import cosine_distances
 
 from synnet.data_generation.preprocessing import Reaction
@@ -26,9 +26,6 @@ from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.utils.custom_types import PathType
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.synnet_exceptions import NoSuitableReactantError, StateEmbeddingError
-
-# * Logging
-logger = logging.getLogger(__name__)
 
 # Class definitions
 
