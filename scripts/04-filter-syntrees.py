@@ -7,7 +7,7 @@ import abc
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 
 import numpy as np
 from loguru import logger
@@ -25,11 +25,11 @@ from synnet.utils.parallel import chunked_parallel
 RDLogger.DisableLog("rdApp.*")
 
 
-class Filter(abc.ABC):
+class Filter(abc.ABC):  # pylint: disable=too-few-public-methods
     """Class to filter synthetic trees."""
 
     @abc.abstractmethod
-    def filter(self, st: SyntheticTree, **kwargs: Any) -> bool:
+    def filter(self, st: SyntheticTree) -> bool:
         """Filter a synthetic tree and return True if it passes the filter, else False.
 
         Abstract method. Must be implemented in the subclass.
@@ -38,8 +38,6 @@ class Filter(abc.ABC):
         ----------
         st : SyntheticTree
             The synthetic tree to filter.
-        **kwargs : Any
-            Keyword arguments.
 
         Returns
         -------
@@ -48,17 +46,31 @@ class Filter(abc.ABC):
         """
 
 
-class ValidRootMolFilter(Filter):
+class ValidRootMolFilter(Filter):  # pylint: disable=too-few-public-methods
     """Checks if the root molecule is a valid molecule."""
 
-    def filter(self, st: SyntheticTree, **kwargs: Any) -> bool:
-        """Filter for valid root molecules."""
+    def filter(self, st: SyntheticTree) -> bool:
+        """Filter for valid root molecules.
+
+        Synthetic trees without a root molecule are always filtered out.
+
+        Parameters
+        ----------
+        st : SyntheticTree
+            The synthetic tree to filter.
+
+        Returns
+        -------
+        bool
+            True if the synthetic tree passes the filter, else False
+        """
         if not st.root or not st.root.smiles:
             return False
         return Chem.MolFromSmiles(st.root.smiles) is not None
 
 
-class OracleFilter(Filter):
+class OracleFilter(Filter):  # pylint: disable=too-few-public-methods
+    """Filter for molecules based on an oracle function."""
 
     def __init__(
         self,
@@ -66,6 +78,17 @@ class OracleFilter(Filter):
         threshold: float = 0.5,
         rng: np.random.Generator = np.random.default_rng(42),
     ) -> None:
+        """Initialize the OracleFilter.
+
+        Parameters
+        ----------
+        name : str, optional
+            The name of the oracle function, by default "qed".
+        threshold : float, optional
+            The threshold for the oracle function, by default 0.5.
+        rng : np.random.Generator, optional
+            The random number generator, by default np.random.default_rng(42).
+        """
         super().__init__()
 
         self.oracle_fct = Oracle(name=name)
@@ -73,25 +96,70 @@ class OracleFilter(Filter):
         self.rng = rng
 
     def _qed(self, st: SyntheticTree) -> bool:
-        """Filter for molecules with a high qed."""
+        """Filter for molecules with a high qed.
+
+        Parameters
+        ----------
+        st : SyntheticTree
+            The synthetic tree to filter.
+
+        Returns
+        -------
+        bool
+            True if the synthetic tree passes the filter, else False
+        """
         if not st.root or not st.root.smiles:
             return False
         return self.oracle_fct(st.root.smiles) > self.threshold
 
     def _random(self, st: SyntheticTree) -> bool:
-        """Filter molecules that fail the `_qed` filter; i.e. randomly select low qed molecules."""
+        """Filter for molecules based on a random threshold.
+
+        Synthetic trees without a root molecule are always filtered out.
+
+        Parameters
+        ----------
+        st : SyntheticTree
+            The synthetic tree to filter.
+
+        Returns
+        -------
+        bool
+            True if the synthetic tree passes the filter, else False
+        """
         if not st.root or not st.root.smiles:
             return False
         return self.rng.random() < (self.oracle_fct(st.root.smiles) / self.threshold)
 
-    def filter(self, st: SyntheticTree, **kwargs: Any) -> bool:
-        if kwargs:
-            raise ValueError(f"Unknown keyword arguments: {kwargs}")
+    def filter(self, st: SyntheticTree) -> bool:
+        """Filter a synthetic tree based on the oracle function and randomness.
+
+        Parameters
+        ----------
+        st : SyntheticTree
+            The synthetic tree to filter.
+
+        Returns
+        -------
+        bool
+            True if the synthetic tree passes the filter, else False
+        """
         return self._qed(st) or self._random(st)
 
 
 def filter_syntree(syntree: SyntheticTree) -> Union[SyntheticTree, int]:
-    """Apply filters to `syntree` and return it, if all filters are passed. Else, return error code."""
+    """Apply filters to `syntree` and return it, if all filters are passed. Else, return error code.
+
+    Parameters
+    ----------
+    syntree : SyntheticTree
+        The synthetic tree to filter.
+
+    Returns
+    -------
+    Union[SyntheticTree, int]
+        The filtered synthetic tree if all filters are passed, else an error code.
+    """
     # Filter 1: Is root molecule valid?
     valid_root_mol_filter = ValidRootMolFilter()
     interesting_mol_filter = OracleFilter(threshold=0.5, rng=np.random.default_rng(42))
@@ -137,8 +205,8 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    """Main function to filter synthetic trees."""
+def filter_syn_trees() -> None:
+    """Filter synthetic trees."""
     logger.info("Start.")
 
     # Parse input args
@@ -198,4 +266,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    filter_syn_trees()
