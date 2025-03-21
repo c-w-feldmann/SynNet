@@ -908,7 +908,7 @@ class SyntheticTreeSet:
         return self.synthetic_tree_list[index]
 
     @classmethod
-    def load(cls, file: PathType) -> SyntheticTreeSet:
+    def load(cls, file: PathType) -> Self:
         """Load a collection of synthetic trees from a `*.json.gz` file."""
         assert str(file).endswith(
             ".json.gz"
