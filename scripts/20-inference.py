@@ -229,7 +229,7 @@ def _setup_loggers(verbose: bool, debug: bool, output_dir: PathType) -> None:
 def inference(
     rxns_collection_file: str,
     embeddings_knn_file: str,
-    ckpt_dir: str,
+    ckpt_dir: PathType,
     output_dir: str,
     num: int,
     data: str,
@@ -282,10 +282,9 @@ def inference(
 
     # Load models
     logger.info("Start loading models from checkpoints...")
-    ckpt_dir = Path(ckpt_dir)
 
     ckpt_files = [
-        find_best_model_ckpt(ckpt_dir / model) for model in ["act", "rt1", "rxn", "rt2"]
+        find_best_model_ckpt(Path(ckpt_dir) / model) for model in ["act", "rt1", "rxn", "rt2"]
     ]
     act_net, rt1_net, rxn_net, rt2_net = [
         load_mlp_from_ckpt(file) for file in ckpt_files
