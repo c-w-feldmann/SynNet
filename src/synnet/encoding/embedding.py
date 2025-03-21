@@ -28,6 +28,108 @@ from synnet.config import MAX_PROCESSES
 from synnet.utils.custom_types import MetricType, PathType
 
 
+class MolecularEmbedder(abc.ABC):
+    """Base class for molecular embedding."""
+
+    _length: int
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Self:
+        """Creates a new instance from a dictionary.
+
+        Parameters
+        ----------
+        data : dict[str, Any]
+            Dictionary with the class name and module name as keys.
+
+        Returns
+        -------
+        Self
+            New instance of the class.
+        """
+        module_name = data.pop("module")
+        class_name = data.pop("class")
+        if module_name != cls.__module__:
+            raise ValueError(
+                f"Cannot create {cls.__name__} from {module_name}.{class_name}"
+            )
+        mod = __import__(module_name, fromlist=[class_name])
+        klass = getattr(mod, class_name)
+
+        return klass(**data)
+
+    @property
+    def length(self) -> int:
+        """Returns the length of the embedding."""
+        return self._length
+
+    def to_dict(self) -> dict[str, Any]:
+        """Returns a dictionary representation of the embedding."""
+        return {
+            "class": self.__class__.__name__,
+            "module": self.__class__.__module__,
+        }
+
+    @abc.abstractmethod
+    def transform(self, mol: Chem.Mol) -> npt.NDArray[Any]:
+        """Returns a molecular embedding.
+
+        Parameters
+        ----------
+        mol : Chem.Mol
+            RDKit molecule.
+
+        Returns
+        -------
+        npt.NDArray[Any]
+            Molecular embedding.
+        """
+
+    def transform_smiles(self, smiles: str) -> npt.NDArray[Any]:
+        """Returns a molecular embedding.
+
+        Parameters
+        ----------
+        smiles : str
+            SMILES string of molecule.
+
+        Returns
+        -------
+        npt.NDArray[Any]
+            Molecular embedding.
+        """
+        mol = Chem.MolFromSmiles(smiles)
+        return self.transform(mol)
+
+
+class MorganFingerprintEmbedding(MolecularEmbedder):
+    """Morgan fingerprint embedding."""
+
+    def __init__(self, radius: int = 2, n_bits: int = 4096) -> None:
+        self.radius = radius
+        self._length = n_bits
+
+    def transform(self, mol: Chem.Mol) -> npt.NDArray[np.bool_]:
+        """Transform a RDKit molecule into a Morgan fingerprint."""
+        fingerprint = AllChem.GetMorganGenerator(
+            radius=self.radius, fpSize=self.length
+        )
+        return fingerprint.GetFingerprintAsNumPy(mol).astype(bool)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Returns a dictionary representation of the embedding.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary representation of the embedding.
+        """
+        data = super().to_dict()
+        data.update({"radius": self.radius, "n_bits": self.length})
+        return data
+
+
+
 class MolecularEmbeddingManager:
     """Class for computing and storing molecular embeddings."""
 
@@ -271,103 +373,3 @@ class MolecularEmbeddingManager:
             precalculated_embedding_file=folder / "embeddings.npy",
         )
 
-
-class MolecularEmbedder(abc.ABC):
-    """Base class for molecular embedding."""
-
-    _length: int
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Self:
-        """Creates a new instance from a dictionary.
-
-        Parameters
-        ----------
-        data : dict[str, Any]
-            Dictionary with the class name and module name as keys.
-
-        Returns
-        -------
-        Self
-            New instance of the class.
-        """
-        module_name = data.pop("module")
-        class_name = data.pop("class")
-        if module_name != cls.__module__:
-            raise ValueError(
-                f"Cannot create {cls.__name__} from {module_name}.{class_name}"
-            )
-        mod = __import__(module_name, fromlist=[class_name])
-        klass = getattr(mod, class_name)
-
-        return klass(**data)
-
-    @property
-    def length(self) -> int:
-        """Returns the length of the embedding."""
-        return self._length
-
-    def to_dict(self) -> dict[str, Any]:
-        """Returns a dictionary representation of the embedding."""
-        return {
-            "class": self.__class__.__name__,
-            "module": self.__class__.__module__,
-        }
-
-    @abc.abstractmethod
-    def transform(self, mol: Chem.Mol) -> npt.NDArray[Any]:
-        """Returns a molecular embedding.
-
-        Parameters
-        ----------
-        mol : Chem.Mol
-            RDKit molecule.
-
-        Returns
-        -------
-        npt.NDArray[Any]
-            Molecular embedding.
-        """
-
-    def transform_smiles(self, smiles: str) -> npt.NDArray[Any]:
-        """Returns a molecular embedding.
-
-        Parameters
-        ----------
-        smiles : str
-            SMILES string of molecule.
-
-        Returns
-        -------
-        npt.NDArray[Any]
-            Molecular embedding.
-        """
-        mol = Chem.MolFromSmiles(smiles)
-        return self.transform(mol)
-
-
-class MorganFingerprintEmbedding(MolecularEmbedder):
-    """Morgan fingerprint embedding."""
-
-    def __init__(self, radius: int = 2, n_bits: int = 4096) -> None:
-        self.radius = radius
-        self._length = n_bits
-
-    def transform(self, mol: Chem.Mol) -> npt.NDArray[np.bool_]:
-        """Transform a RDKit molecule into a Morgan fingerprint."""
-        fingerprint = AllChem.GetMorganGenerator(
-            radius=self.radius, fpSize=self.length
-        )
-        return fingerprint.GetFingerprintAsNumPy(mol).astype(bool)
-
-    def to_dict(self) -> dict[str, Any]:
-        """Returns a dictionary representation of the embedding.
-
-        Returns
-        -------
-        dict[str, Any]
-            Dictionary representation of the embedding.
-        """
-        data = super().to_dict()
-        data.update({"radius": self.radius, "n_bits": self.length})
-        return data
