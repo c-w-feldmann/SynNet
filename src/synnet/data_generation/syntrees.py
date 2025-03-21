@@ -588,23 +588,42 @@ class IdentityIntEncoder:
 
     @property
     def args(self) -> dict[str, Any]:
+        """Return the arguments.
+
+        Returns
+        -------
+        dict[str, Any]
+            Arguments of the object as a dictionary.
+        """
         return {**self.__dict__, **{"name": self.__class__.__name__}}
 
     def __repr__(self) -> str:
+        """Return a string representation of the object."""
         return f"'{self.__class__.__name__}': {self.__dict__}"
 
     @property
     def nbits(self) -> int:
+        """Return the number of bits."""
         return self.get_nbits()
 
     def encode(self, number: int) -> npt.NDArray[np.int_]:
+        """Returns a (1,1)-array with the number."""
         return np.atleast_2d(number)
 
     def get_nbits(self) -> int:
+        """Return the number of bits.
+
+        Returns
+        -------
+        int
+            Number of bits
+        """
         return 1
 
 
 class SynTreeFeaturizer:
+    """Featurizer for synthetic trees."""
+
     def __init__(
         self,
         *,
@@ -613,6 +632,19 @@ class SynTreeFeaturizer:
         rxn_embedder: IdentityIntEncoder,
         action_embedder: IdentityIntEncoder,
     ) -> None:
+        """Initializes a `SynTreeFeaturizer`.
+
+        Parameters
+        ----------
+        reactant_embedder : MorganFingerprintEncoder
+            Encoder for reactants.
+        mol_embedder : MorganFingerprintEncoder
+            Encoder for molecules.
+        rxn_embedder : IdentityIntEncoder
+            Encoder for reactions.
+        action_embedder : IdentityIntEncoder
+            Encoder for actions.
+        """
         # Embedders
         self.reactant_embedder = reactant_embedder
         self.mol_embedder = mol_embedder
