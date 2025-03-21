@@ -5,8 +5,8 @@
 
 import argparse
 import json
-import logging
 
+from loguru import logger
 from rdkit import RDLogger
 
 from synnet.config import MAX_PROCESSES
@@ -19,7 +19,6 @@ from synnet.data_generation.preprocessing import (
 from synnet.utils.data_utils import ReactionSet
 
 RDLogger.DisableLog("rdApp.*")
-logger = logging.getLogger(__file__)
 
 
 def get_args() -> argparse.Namespace:
