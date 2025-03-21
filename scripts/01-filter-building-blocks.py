@@ -22,6 +22,13 @@ RDLogger.DisableLog("rdApp.*")
 
 
 def get_args() -> argparse.Namespace:
+    """Parse input arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     # File I/O
     parser.add_argument(
