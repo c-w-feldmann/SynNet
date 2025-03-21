@@ -107,14 +107,13 @@ def wrapper(
     return res
 
 
-def print_stats(df: pd.DataFrame) -> None:
+def print_stats(df: pd.DataFrame, data: str) -> None:
     n_valid = df["is_valid"].sum()
     n_recovered = (df["max_similarity"] == 1.0).sum()
     recovery_rate = n_recovered / n_valid
     avg_similarity = df["max_similarity"][df["is_valid"]].mean()
 
-    # logger.info(f"For {args.data}:")
-    logger.info(f"For {args.data}:")
+    logger.info(f"For {data}:")
     logger.info(f"  Total number of targets: {len(df)}")
     logger.info(f"  Total number of valid reconstructions: {n_valid}")
     logger.info(f"  Total number of successful reconstructions: {n_recovered}")
@@ -331,7 +330,7 @@ def inference(
     df = postprocess_results(syn_tree_list, similarity_list)
 
     # Print some stats
-    print_stats(df)
+    print_stats(df, data)
 
     # Save results
     save_results(output_dir, df)
