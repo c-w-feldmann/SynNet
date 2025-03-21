@@ -29,6 +29,13 @@ RDLogger.DisableLog("rdApp.*")
 
 
 def get_args() -> argparse.Namespace:
+    """Parse input arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments.
+    """
     parser = argparse.ArgumentParser()
     # File I/O
     parser.add_argument(
@@ -84,7 +91,8 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Generate synthetic trees."""
     logger.info("Start.")
 
     # Parse input args
@@ -151,3 +159,8 @@ if __name__ == "__main__":
 
     logger.info(f"Generated syntrees: {len(syntrees)}")
     logger.info("Completed.")
+
+
+
+if __name__ == "__main__":
+    main()
