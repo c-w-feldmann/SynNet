@@ -17,8 +17,8 @@ class TestModels(unittest.TestCase):
     )
     def test_can_load_iclr_checkpoints(self) -> None:
         """Test if we can load all ICLR checkpoints."""
-        for model in "act rt1 rxn rt2".split():
-            ckpt_file = find_best_model_ckpt(Path(CHECKPOINT_ICLR_DIR) / model)
-
-            model = load_mlp_from_ckpt(ckpt_file)
+        model_list = ["act", "rt1", "rxn", "rt2"]
+        for model_name in model_list:
+            model_path = find_best_model_ckpt(Path(CHECKPOINT_ICLR_DIR) / model_name)
+            model = load_mlp_from_ckpt(model_path)
             self.assertIsInstance(model, MLP)
