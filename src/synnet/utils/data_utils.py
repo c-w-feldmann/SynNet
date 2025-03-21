@@ -10,8 +10,6 @@ Here we define the following classes for working with synthetic tree data:
 
 from __future__ import annotations
 
-import logging
-
 try:
     from typing import Self  # type: ignore[attr-defined]
 except ImportError:
@@ -19,14 +17,12 @@ except ImportError:
 
 import functools
 import gzip
-import itertools
 import json
 from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw
-from tqdm import tqdm
 
 from synnet.utils.custom_types import PathType
 from synnet.utils.synnet_exceptions import FailedReconstructionError
