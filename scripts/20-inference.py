@@ -12,6 +12,7 @@ from pathlib import Path
 from time import time
 from typing import Any, Optional, Union
 
+import click
 import pandas as pd
 from loguru import logger
 from rdkit import RDLogger
@@ -30,6 +31,7 @@ from synnet.models.common import find_best_model_ckpt, load_mlp_from_ckpt
 from synnet.utils.custom_types import PathType
 from synnet.utils.data_utils import ReactionSet, SyntheticTree, SyntheticTreeSet
 from synnet.utils.parallel import chunked_parallel
+from synnet.utils.synnet_exceptions import FailedReconstructionError
 
 
 def get_args() -> argparse.Namespace:
@@ -91,16 +93,15 @@ def wrapper(
     try:
         z_target = mol_encoder.encode(target)
 
-    except Exception:
-        logger.error(f"Failed to encode {target}", exc_info=True)
+    except ValueError as e:
+        logger.error(f"Failed to encode {target}: {e}")
         return SyntheticTree(), None
 
     # Decode target
     try:
         res = syntree_decoder.decode(z_target, **kwargs)
-
-    except Exception:
-        logger.error(f"Failed to encode {target}", exc_info=True)
+    except FailedReconstructionError as e:
+        logger.error(f"Failed to encode {target}: {e}")
         return SyntheticTree(), None
 
     return res
@@ -157,50 +158,134 @@ def save_results(output_dir: PathType, df: pd.DataFrame) -> None:
     logger.info(f"Saved results to {output_dir}.")
 
 
-def _setup_loggers() -> None:
-    if args.verbose:
-        log_path = Path(args.output_dir) / "inference.log"
+def _setup_loggers(verbose: bool, debug: bool, output_dir: PathType) -> None:
+    """Setup loggers.
+
+    Parameters
+    ----------
+    verbose: bool
+        Make logger verbose.
+    debug: bool
+        Enable debug mode for logger.
+    output_dir:
+        Path to save logs.
+    """
+    if verbose:
+        log_path = Path(output_dir) / "inference.log"
         log_path.parent.mkdir(exist_ok=True, parents=True)
         logger.add(log_path, level="INFO")
 
-    if args.debug:
+    if debug:
         logger.level("DEBUG")
     else:
         RDLogger.DisableLog("rdApp.*")
 
 
-if __name__ == "__main__":
+@click.command()
+@click.argument(
+    "rxns_collection_file",
+    type=click.Path(exists=True),
+    help="Input file for the collection of reactions matched with building-blocks.",
+)
+@click.argument(
+    "embeddings_knn_file",
+    type=click.Path(exists=True),
+    help="Input file for the pre-computed embeddings (*.npy).",
+)
+@click.argument(
+    "ckpt_dir",
+    type=click.Path(exists=True),
+    help="Directory with checkpoints for {act,rt1,rxn,rt2}-model.",
+)
+@click.argument(
+    "output_dir",
+    type=click.Path(),
+    help="Directory to save output.",
+)
+@click.option(
+    "--num",
+    type=int,
+    default=-1,
+    help="Number of molecules to predict.",
+)
+@click.option(
+    "--data",
+    type=str,
+    help="File with molecules to decode.",
+)
+@click.option(
+    "--ncpu",
+    type=int,
+    default=MAX_PROCESSES,
+    help="Number of cpus",
+)
+@click.option(
+    "--verbose",
+    default=False,
+    is_flag=True,
+)
+@click.option(
+    "--debug",
+    default=False,
+    is_flag=True,
+)
+def inference(
+    rxns_collection_file: str,
+    embeddings_knn_file: str,
+    ckpt_dir: str,
+    output_dir: str,
+    num: int,
+    data: str,
+    ncpu: int,
+    verbose: bool,
+    debug: bool,
+) -> None:
+    """Decode molecules from a file.
+
+    Parameters
+    ----------
+    rxns_collection_file : str
+        Input file for the collection of reactions matched with building-blocks.
+    embeddings_knn_file : str
+        Input file for the pre-computed embeddings (*.npy).
+    ckpt_dir : str
+        Directory with checkpoints for {act,rt1,rxn,rt2}-model.
+    output_dir : str
+        Directory to save output.
+    num : int
+        Number of molecules to predict.
+    data : str
+        File with molecules to decode.
+    ncpu : int
+        Number of cpus.
+    verbose : bool
+        Make logger verbose.
+    debug : bool
+        Enable debug mode for logger.
+    """
     logger.info("Start.")
     t0 = time()
 
-    # Parse input args
-    args = get_args()
-
-    _setup_loggers()
-
-    logger.info(f"Arguments: {json.dumps(args.__dict__, indent=2)}")
+    _setup_loggers(verbose, debug, output_dir)
 
     # region-dataloading
     # Load molecules to decode
-    targets_all = HelperDataloader().fetch_data(args.data)
-    if args.num > 0:  # Select only n queries
-        targets = targets_all[: args.num]
+    targets_all = HelperDataloader().fetch_data(data)
+    if num > 0:  # Select only n queries
+        targets = targets_all[:num]
     else:
         targets = targets_all
     logger.info(f"Number of targets, i.e. mols to decode, : {len(targets)}")
 
     # Load assets
-    bblocks = BuildingBlockFileHandler().load(args.building_blocks_file)
-    reaction_collection = ReactionSet().load(args.rxns_collection_file)
+    reaction_collection = ReactionSet().load(rxns_collection_file)
 
     # Load and init building blocks embedder (kdtree)
-    bblocks_molembedder = MolecularEmbeddingManager.from_folder(
-        args.bblocks_embedder_dir
-    )
+    bblocks_molembedder = MolecularEmbeddingManager.from_folder(embeddings_knn_file)
 
     # Load models
     logger.info("Start loading models from checkpoints...")
-    ckpt_dir = Path(args.ckpt_dir)
+    ckpt_dir = Path(ckpt_dir)
 
     ckpt_files = [
         find_best_model_ckpt(ckpt_dir / model) for model in ["act", "rt1", "rxn", "rt2"]
@@ -233,9 +318,7 @@ if __name__ == "__main__":
 
     logger.info(f"Start decoding {len(targets)} targets.")
 
-    result_list = chunked_parallel(
-        targets, _wrapper, max_cpu=args.ncpu, verbose=args.verbose
-    )
+    result_list = chunked_parallel(targets, _wrapper, max_cpu=ncpu, verbose=verbose)
     syn_tree_list: list[SyntheticTree] = []
     similarity_list: list[Optional[float]] = []
     for syn_tree, similarity in result_list:
@@ -251,5 +334,9 @@ if __name__ == "__main__":
     print_stats(df)
 
     # Save results
-    save_results(args.output_dir, df)
+    save_results(output_dir, df)
     logger.info("Completed.")
+
+
+if __name__ == "__main__":
+    inference()
