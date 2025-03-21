@@ -1,6 +1,5 @@
-from __future__ import annotations
+"""Functions for preprocessing building blocks and reaction templates."""
 
-import logging
 from functools import partial
 from pathlib import Path
 from typing import Iterable, List, Union
@@ -13,7 +12,8 @@ except ImportError:
 import pandas as pd
 import rdkit
 from loguru import logger
-from rdkit.Chem import AllChem as Chem
+from rdkit import Chem
+from rdkit.Chem import AllChem
 from rdkit.Chem import PandasTools, rdMolDescriptors
 
 try:
@@ -30,7 +30,7 @@ from synnet.utils.parallel import chunked_parallel
 
 def parse_sdf_file(file: str) -> pd.DataFrame:
     """Parse `*.sdf` file and return a pandas dataframe."""
-    df = rdkit.Chem.PandasTools.LoadSDF(
+    df = PandasTools.LoadSDF(
         file,
         idName="ID",
         molColName=None,
@@ -65,7 +65,7 @@ class BuildingBlockFilter:
     def __init__(
         self,
         *,
-        building_blocks: list[Union[str, Chem.rdchem.Mol]],
+        building_blocks: list[Union[str, AllChem.rdchem.Mol]],
         rxn_templates: list[str],
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
@@ -126,7 +126,7 @@ class BuildingBlockFileHandler:
 
     def _save_csv(self, file: Path, building_blocks: list[str]) -> None:
         """Save building blocks to `*.csv.gz`"""
-        import pandas as pd
+
 
         # remove possible 1 or more extensions, i.e.
         # <stem>.csv OR <stem>.csv.gz --> <stem>
@@ -255,7 +255,7 @@ class BuildingBlockFilterMatchRxn:
         # Match building blocks to reactions
         logger.info("Converting SMILES to `rdkit.Mol` objects...")
         bblocks = chunked_parallel(
-            list(bblocks), lambda x: Chem.MolFromSmiles(x), verbose=verbose
+            list(bblocks), lambda x: AllChem.MolFromSmiles(x), verbose=verbose
         )
 
         logger.info("Converting reaction templates to `rdkit.Reaction` objects...")
@@ -288,6 +288,6 @@ class BuildingBlockFilterMatchRxn:
     def match_bblocks(
         reaction: Reaction,
         *,
-        building_blocks: list[Union[str, Chem.rdchem.Mol]],
+        building_blocks: list[Union[str, AllChem.rdchem.Mol]],
     ) -> Reaction:
         return reaction.set_available_reactants(building_blocks)
