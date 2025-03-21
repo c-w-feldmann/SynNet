@@ -18,7 +18,7 @@ class TestMorganFingerprintEmbedding(unittest.TestCase):
         "CN(C)C(=O)N1CCCNCC1.C",
     ]
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up the test."""
         self.fp_embedding = MorganFingerprintEmbedding()
 
