@@ -46,7 +46,8 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Run the main function."""
     logger.info("Start.")
 
     # Parse input args
@@ -57,3 +58,8 @@ if __name__ == "__main__":
     extract_smiles(args.input_file, args.output_file)
 
     logger.info("Complete.")
+
+
+
+if __name__ == "__main__":
+    main()
