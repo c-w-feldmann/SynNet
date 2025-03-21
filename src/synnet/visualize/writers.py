@@ -16,6 +16,13 @@ class PrefixWriter:  # pylint: disable=too-few-public-methods
     prefix: list[str]
 
     def __init__(self, file: Optional[str] = None):
+        """Initialize the writer.
+
+        Parameters
+        ----------
+        file : Optional[str], optional
+            The file to load the prefix from, by default None.
+        """
         self.prefix = self._default_prefix() if file is None else self._load(file)
 
     def _default_prefix(self) -> list[str]:
@@ -68,6 +75,11 @@ class PrefixWriter:  # pylint: disable=too-few-public-methods
         ----------
         file : PathType
             The file to load the prefix from.
+
+        Returns
+        -------
+        list[str]
+            The prefix.
         """
         with open(file, "rt", encoding="UTF-8") as f:
             out = [line.removesuffix("\n") for line in f]
@@ -204,6 +216,11 @@ def subgraph(
                 The arguments to the function.
             kwargs : Any
                 The keyword arguments to the function.
+
+            Returns
+            -------
+            list[str]
+                The output of the function in a subgraph.
             """
             out = f"subgraph {argument}"
             inner = func(*args, **kwargs)
