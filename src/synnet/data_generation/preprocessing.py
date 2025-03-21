@@ -10,16 +10,14 @@ except ImportError:
     from typing_extensions import Self
 
 import pandas as pd
-import rdkit
 from loguru import logger
 from rdkit import Chem
-from rdkit.Chem import AllChem
-from rdkit.Chem import PandasTools, rdMolDescriptors
+from rdkit.Chem import AllChem, PandasTools, rdMolDescriptors
 
 try:
     from pathos import multiprocessing as mp
 except ImportError:
-    logger.warning(f"Failed to import pathos, using multiprocessing instead.")
+    logger.warning("Failed to import pathos, using multiprocessing instead.")
     import multiprocessing as mp
 
 from synnet.config import MAX_PROCESSES
