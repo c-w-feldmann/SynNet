@@ -96,7 +96,6 @@ def compute_mean_reciprocal_ranking(
     debug : bool, optional
         Flag to run in debug mode, by default False
     """
-
     logger.info("Start.")
 
     # Init BallTree for kNN-search
