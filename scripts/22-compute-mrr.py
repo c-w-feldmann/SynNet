@@ -6,9 +6,7 @@ selection using the different distance metrics in the k-NN search.
 # pylint: disable=invalid-name
 # pylint: enable=invalid-name  # disable and enable to ignore the file name only.
 
-import argparse
-import json
-
+import click
 import numpy as np
 from loguru import logger
 from tqdm import tqdm
@@ -17,82 +15,120 @@ from synnet.config import MAX_PROCESSES
 from synnet.encoding.distances import ce_distance, cosine_distance
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.common import load_mlp_from_ckpt, xy_to_dataloader
+from synnet.utils.custom_types import PathType
 
 
-def get_args() -> argparse.Namespace:
+@click.command(name="compute-mrr")
+@click.argument(
+    "ckpt_file", type=click.Path(exists=True, dir_okay=False, file_okay=False)
+)
+@click.argument(
+    "embeddings_file", type=click.Path(exists=True, dir_okay=True, file_okay=False)
+)
+@click.argument(
+    "feature_matrix_file", type=click.Path(exists=True, dir_okay=False, file_okay=True)
+)
+@click.argument(
+    "target_matrix_file", type=click.Path(exists=True, dir_okay=False, file_okay=True)
+)
+@click.option(
+    "--ncpu",
+    type=int,
+    default=MAX_PROCESSES,
+    help="Number of cpus",
+)
+@click.option(
+    "--batch_size",
+    type=int,
+    default=64,
+    help="Batch size",
+)
+@click.option(
+    "--device",
+    type=str,
+    default="cuda:0",
+    help="Device to use for computation",
+)
+@click.option(
+    "--distance",
+    type=str,
+    default="euclidean",
+    help="Distance function for `BallTree`.",
+)
+@click.option(
+    "--debug",
+    default=False,
+    is_flag=True,
+    help="Flag to run in debug mode",
+)
+def compute_mean_reciprocal_ranking(
+    ckpt_file: PathType,
+    embeddings_file: PathType,
+    feature_matrix_file: PathType,
+    target_matrix_file: PathType,
+    ncpu: int = MAX_PROCESSES,
+    batch_size: int = 64,
+    device: str = "cuda:0",
+    distance: str = "euclidean",
+    debug: bool = False,
+) -> None:
+    """Compute the mean reciprocal ranking for reactant 1 selection using the different distance metrics in the k-NN search.
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--ckpt-file", type=str, help="Checkpoint to load trained reactant 1 network."
-    )
-    parser.add_argument(
-        "--embeddings-file",
-        type=str,
-        help="Pre-computed molecular embeddings for kNN search.",
-    )
-    parser.add_argument(
-        "--X-data-file", type=str, help="Featurized X data for network."
-    )
-    parser.add_argument(
-        "--y-data-file", type=str, help="Featurized y data for network."
-    )
-    parser.add_argument(
-        "--nbits", type=int, default=4096, help="Number of Bits for Morgan fingerprint."
-    )
-    parser.add_argument(
-        "--ncpu", type=int, default=MAX_PROCESSES, help="Number of cpus"
-    )
-    parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
-    parser.add_argument("--device", type=str, default="cuda:0", help="")
-    parser.add_argument(
-        "--distance",
-        type=str,
-        default="euclidean",
-        choices=["euclidean", "manhattan", "chebyshev", "cross_entropy", "cosine"],
-        help="Distance function for `BallTree`.",
-    )
-    parser.add_argument("--debug", default=False, action="store_true")
-    return parser.parse_args()
+    Parameters
+    ----------
+    ckpt_file : PathType
+        Path to the checkpoint file.
+    embeddings_file : PathType
+        Path to the embeddings file.
+    feature_matrix_file : PathType
+        Path to the feature matrix file.
+    target_matrix_file : PathType
+        Path to the target matrix file.
+    ncpu : int, optional
+        Number of cpus, by default MAX_PROCESSES
+    batch_size : int, optional
+        Batch size, by default 64
+    device : str, optional
+        Device to use for computation, by default "cuda:0"
+    distance : str, optional
+        Distance function for `BallTree`, by default "euclidean"
+    debug : bool, optional
+        Flag to run in debug mode, by default False
+    """
 
-
-if __name__ == "__main__":
     logger.info("Start.")
 
-    # Parse input args
-    args = get_args()
-    logger.info(f"Arguments: {json.dumps(vars(args), indent=2)}")
-
     # Init BallTree for kNN-search
-    if args.distance == "cross_entropy":
+    if distance == "cross_entropy":
         metric = ce_distance
-    elif args.distance == "cosine":
+    elif distance == "cosine":
         metric = cosine_distance
     else:
-        metric = args.distance
+        metric = distance
 
     # Recall default: Morgan fingerprint with radius=2, nbits=256
-    mol_embedder = MolecularEmbeddingManager.from_folder(args.embeddings_file)
+    mol_embedder = MolecularEmbeddingManager.from_folder(embeddings_file)
     mol_embedder.init_balltree(metric=metric)
     n, d = mol_embedder.embeddings.shape
 
     # Load data
     dataloader = xy_to_dataloader(
-        X_file=args.X_data_file,
-        y_file=args.y_data_file,
+        X_file=feature_matrix_file,
+        y_file=target_matrix_file,
         task="classification",
-        n=None if not args.debug else 128,
-        batch_size=args.batch_size,
-        num_workers=args.ncpu,
+        n=None if not debug else 128,
+        batch_size=batch_size,
+        num_workers=ncpu,
         shuffle=False,
     )
 
     # Load MLP
-    rt1_net = load_mlp_from_ckpt(args.ckpt_file)
-    rt1_net.to(args.device)
+    rt1_net = load_mlp_from_ckpt(ckpt_file)
+    rt1_net.to(device)
 
     rank_list = []
     for X, y in tqdm(dataloader):
-        X, y = X.to(args.device), y.to(args.device)
+        X, y = X.to(device), y.to(device)
         y_hat = rt1_net(X)  # (batch_size,nbits)
 
         ind_true = mol_embedder.kdtree.query(
@@ -119,3 +155,7 @@ if __name__ == "__main__":
         logger.info(
             f"The Top-{i:<2d} recovery rate is: {n_recovered/n:.3f} ({n_recovered}/{n})"
         )
+
+
+if __name__ == "__main__":
+    compute_mean_reciprocal_ranking()
