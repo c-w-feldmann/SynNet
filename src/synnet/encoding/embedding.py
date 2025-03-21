@@ -353,12 +353,12 @@ class MorganFingerprintEmbedding(MolecularEmbedder):
         self.radius = radius
         self._length = n_bits
 
-    def transform(self, mol: Chem.Mol) -> npt.NDArray[np.int_]:
+    def transform(self, mol: Chem.Mol) -> npt.NDArray[np.bool_]:
         """Transform a RDKit molecule into a Morgan fingerprint."""
-        return np.array(
-            AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, nBits=self.length),
-            dtype=bool,
+        fingerprint = AllChem.GetMorganGenerator(
+            radius=self.radius, fpSize=self.length
         )
+        return fingerprint.GetFingerprintAsNumPy(mol).astype(bool)
 
     def to_dict(self) -> dict[str, Any]:
         """Returns a dictionary representation of the embedding.
