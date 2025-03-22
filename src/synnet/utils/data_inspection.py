@@ -146,7 +146,10 @@ def plot_reaction_heatmap(
     See:
       - https://stackoverflow.com/questions/63861760/add-text-on-plt-imshow
     """
-    assert len(data) == n_reactions
+    if not len(data) == n_reactions:
+        raise ValueError(
+            f"Expected {n_reactions} reactions, but got {len(data)} reactions."
+        )
 
     if relative:
         total = sum(data.values())
@@ -155,7 +158,10 @@ def plot_reaction_heatmap(
         plot_data = {k: float(v) for k, v in data.items()}
 
     m, n = 10, 10
-    assert len(plot_data) <= m * n
+    if len(plot_data) > m * n:
+        raise ValueError(
+            f"Expected at most {m * n} reactions, but got {len(plot_data)} reactions."
+        )
     mat = np.zeros((m * n), dtype=int)
     print(mat.shape)
     mat[: len(plot_data)] = list(plot_data.values())

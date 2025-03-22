@@ -497,10 +497,8 @@ class ReactionSet:
 
     def save(self, file: str, skip_without_building_block: bool = True) -> None:
         """Save a collection of reactions to a `*.json.gz` file."""
-
-        assert str(file).endswith(
-            ".json.gz"
-        ), f"Incompatible file extension for file {file}"
+        if not str(file).endswith(".json.gz"):
+            raise ValueError(f"Incompatible file extension for file {file}")
         if skip_without_building_block:
             reaction_list_to_save = [
                 r for r in self.rxns if r.has_available_reactants()

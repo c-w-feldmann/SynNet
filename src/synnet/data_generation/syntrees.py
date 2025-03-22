@@ -362,10 +362,12 @@ class SynTreeGenerator:
 
     def generate(self, max_depth: int = 8, min_actions: int = 1) -> SyntheticTree:
         """Generate a syntree by random sampling."""
-        assert min_actions < max_depth, "min_actions must be smaller than max_depth."
-        assert (
-            max_depth > 1
-        ), "max_actions must be larger than 1. (smallest treee is [`add`,`end`]"
+        if min_actions < max_depth:
+            raise AssertionError("min_actions must be smaller than max_depth.")
+        if max_depth > 1:
+            raise AssertionError(
+                "max_actions must be larger than 1. (Smallest tree is [`add`,`end`])"
+            )
 
         logger.debug(
             "Starting synthetic tree generation with min_actions={} and max_depth={} ",
