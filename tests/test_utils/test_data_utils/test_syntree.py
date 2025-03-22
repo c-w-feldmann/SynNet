@@ -8,7 +8,7 @@ from loguru import logger
 
 from synnet.utils.data_utils import NodeChemical, SyntheticTree
 
-BASE_PATH = Path(__file__).parent.absolute()
+BASE_PATH = Path(__file__).parents[2].absolute()
 SYNTREE_FILE = BASE_PATH / "assets/syntree-small.json"
 
 
