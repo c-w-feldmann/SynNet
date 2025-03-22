@@ -105,7 +105,18 @@ class Reaction:
 
     @classmethod
     def from_dict(cls, attrs: dict[str, Any]) -> Self:
-        """Populate all attributes of the `Reaction` object from a dictionary."""
+        """Populate all attributes of the `Reaction` object from a dictionary.
+
+        Parameters
+        ----------
+        attrs : dict[str, Any]
+            A dictionary representation of a `Reaction`.
+
+        Returns
+        -------
+        Reaction
+            A `Reaction object.
+        """
         if "smirks" in attrs:
             attrs["template"] = attrs.pop("smirks")
         return cls(**attrs)
@@ -128,7 +139,18 @@ class Reaction:
 
     @functools.lru_cache(maxsize=20_000)
     def get_mol(self, smi: Union[str, Chem.rdchem.Mol]) -> Chem.rdchem.Mol:
-        """Convert smiles to  `RDKit.Chem.rdchem.Mol`."""
+        """Convert smiles to  `RDKit.Chem.rdchem.Mol`.
+
+        Parameters
+        ----------
+        smi : Union[str, Chem.rdchem.Mol]
+            The molecule to convert.
+
+        Returns
+        -------
+        Chem.rdchem.Mol
+            The molecule.
+        """
         if isinstance(smi, str):
             return Chem.MolFromSmiles(smi)
         if isinstance(smi, Chem.rdchem.Mol):
@@ -136,7 +158,18 @@ class Reaction:
         raise TypeError(f"{type(smi)} not supported, only `str` or `Chem.rdchem.Mol`")
 
     def get_smiles(self, mol: Union[str, Chem.rdchem.Mol]) -> str:
-        """Convert `Chem.rdchem.Mol` to SMILES `str`."""
+        """Convert `Chem.rdchem.Mol` to SMILES `str`.
+
+        Parameters
+        ----------
+        mol : Union[str, Chem.rdchem.Mol]
+            The molecule to convert.
+
+        Returns
+        -------
+        str
+            The SMILES representation of the molecule.
+        """
         if isinstance(mol, str):
             return mol
         if isinstance(mol, Chem.rdchem.Mol):
@@ -144,7 +177,7 @@ class Reaction:
         raise TypeError(f"{type(mol)} not supported, only `str` or `Chem.rdchem.Mol`")
 
     def to_image(self, size: tuple[int, int] = (800, 300)) -> bytes:
-        """Returns a png image of the visual represenation for this chemical reaction.
+        """Return a png image of the visual represenation for this chemical reaction.
 
         Examples
         --------
@@ -176,28 +209,83 @@ class Reaction:
         return image
 
     def is_reactant(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
-        """Checks if `smi` is a reactant of this reaction."""
+        """Check if `smi` is a reactant of this reaction.
+
+        Parameters
+        ----------
+        smi : Union[str, Chem.rdchem.Mol]
+            The molecule to check.
+
+        Returns
+        -------
+        bool
+            True if `smi` is a reactant, False otherwise.
+        """
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeReactant(mol)
 
     def is_agent(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
-        """Checks if `smi` is an agent of this reaction."""
+        """Check if `smi` is an agent of this reaction.
+
+        Parameters
+        ----------
+        smi : Union[str, Chem.rdchem.Mol]
+            The molecule to check.
+
+        Returns
+        -------
+        bool
+            True if `smi` is an agent, False otherwise.
+        """
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeAgent(mol)
 
     def is_product(self, smi: str) -> bool:
-        """Checks if `smi` is a product of this reaction."""
+        """Check if `smi` is a product of this reaction.
+
+        Parameters
+        ----------
+        smi : str
+            The molecule to check.
+
+        Returns
+        -------
+        bool
+            True if `smi` is a product, False otherwise.
+        """
         mol = self.get_mol(smi)
         return self.rxn.IsMoleculeProduct(mol)
 
     def is_reactant_first(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
-        """Check if `smi` is the first reactant in this reaction"""
+        """Check if `smi` is the first reactant in this reaction.
+
+        Parameters
+        ----------
+        smi : Union[str, Chem.rdchem.Mol]
+            The molecule to check.
+
+        Returns
+        -------
+        bool
+            True if `smi` is the first reactant, False otherwise.
+        """
         mol = self.get_mol(smi)
         pattern = Chem.MolFromSmarts(self.reactant_template[0])
         return mol.HasSubstructMatch(pattern)
 
     def is_reactant_second(self, smi: Union[str, Chem.rdchem.Mol]) -> bool:
-        """Check if `smi` the second reactant in this reaction"""
+        """Check if `smi` the second reactant in this reaction.
+
+        Parameters
+        ----------
+        smi : Union[str, Chem.rdchem.Mol]
+            The molecule to check.
+
+        Returns
+        -------
+        bool
+            True if `smi` is the second reactant, False otherwise.
+        """
         mol = self.get_mol(smi)
         pattern = Chem.MolFromSmarts(self.reactant_template[1])
         return mol.HasSubstructMatch(pattern)
@@ -207,7 +295,20 @@ class Reaction:
         first_mol: Chem.Mol,
         second_mol: Chem.Mol,
     ) -> bool:
-        """Check if the reactants match the reaction template."""
+        """Check if the reactants match the reaction template.
+
+        Parameters
+        ----------
+        first_mol : Chem.Mol
+            The first reactant for this reaction.
+        second_mol : Chem.Mol
+            The second reactant for this reaction.
+
+        Returns
+        -------
+        bool
+            True if the reaction can be run with the given reactants, False otherwise.
+        """
         reactand_smarts_1 = Chem.MolFromSmarts(self.reactant_template[0])
         reactand_smarts_2 = Chem.MolFromSmarts(self.reactant_template[1])
         if not first_mol.HasSubstructMatch(reactand_smarts_1):
@@ -266,11 +367,17 @@ class Reaction:
     ) -> Union[str, None]:
         """Run this reactions with reactants and return corresponding product.
 
-        Par
-            reactants (tuple): Contains SMILES strings for the reactants.
+        Parameters
+        ----------
+        first_reactant : str
+            The first reactant for this reaction.
+        second_reactant : Optional[str]
+            The second reactant for this reaction.
 
-        Returns:
-            uniqps: SMILES string representing the product or `None` if not reaction possible
+        Returns
+        -------
+        Union[str, None]
+            SMILES string representing the product or `None` if not reaction possible
         """
         if not self.can_run_reaction(first_reactant, second_reactant):
             raise ValueError("Reaction cannot be run with given reactants.")
@@ -278,7 +385,9 @@ class Reaction:
         # If a second reactant is given also check if the other order might work
         if second_reactant:
             second_reactant_mol = self.get_mol(second_reactant)
-            if not self._check_smarts_match(self.get_mol(first_reactant), second_reactant_mol):
+            if not self._check_smarts_match(
+                self.get_mol(first_reactant), second_reactant_mol
+            ):
                 first_reactant, second_reactant = second_reactant, first_reactant
 
         # Run reaction with rdkit
