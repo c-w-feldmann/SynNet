@@ -35,7 +35,7 @@ class MolecularEmbedder(abc.ABC):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Self:
-        """Creates a new instance from a dictionary.
+        """Create a new instance from a dictionary.
 
         Parameters
         ----------
@@ -60,11 +60,11 @@ class MolecularEmbedder(abc.ABC):
 
     @property
     def length(self) -> int:
-        """Returns the length of the embedding."""
+        """Return the length of the embedding."""
         return self._length
 
     def to_dict(self) -> dict[str, Any]:
-        """Returns a dictionary representation of the embedding.
+        """Return a dictionary representation of the embedding.
 
         Returns
         -------
@@ -78,7 +78,7 @@ class MolecularEmbedder(abc.ABC):
 
     @abc.abstractmethod
     def transform(self, mol: Chem.Mol) -> npt.NDArray[Any]:
-        """Returns a molecular embedding.
+        """Return a molecular embedding.
 
         Parameters
         ----------
@@ -92,7 +92,7 @@ class MolecularEmbedder(abc.ABC):
         """
 
     def transform_smiles(self, smiles: str) -> npt.NDArray[Any]:
-        """Returns a molecular embedding.
+        """Return a molecular embedding.
 
         Parameters
         ----------
@@ -143,7 +143,7 @@ class MorganFingerprintEmbedding(MolecularEmbedder):
         return fingerprint.GetFingerprintAsNumPy(mol).astype(bool)
 
     def to_dict(self) -> dict[str, Any]:
-        """Returns a dictionary representation of the embedding.
+        """Return a dictionary representation of the embedding.
 
         Returns
         -------
@@ -312,7 +312,7 @@ class MolecularEmbeddingManager:
         return self._smiles_idx_df.index.values
 
     def get_embeddings(self) -> npt.NDArray[np.int_]:
-        """Returns `self.embeddings` as 2d-array.
+        """Return `self.embeddings` as 2d-array.
 
         Returns
         -------
@@ -322,7 +322,7 @@ class MolecularEmbeddingManager:
         return np.atleast_2d(self.embeddings)
 
     def get_embedding_for(self, smiles_list: list[str]) -> npt.NDArray[np.int_]:
-        """Returns the embeddings for the given SMILES strings.
+        """Return the embeddings for the given SMILES strings.
 
         Parameters
         ----------
@@ -407,7 +407,7 @@ class MolecularEmbeddingManager:
         self,
         metric: Union[Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64], str],
     ) -> Self:
-        """Initializes a `BallTree`.
+        """Initialize the BallTree.
 
         Notes
         -----
