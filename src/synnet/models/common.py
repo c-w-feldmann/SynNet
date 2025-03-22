@@ -31,11 +31,22 @@ def init_save_dir(path: PathType, suffix: str = "") -> Path:
 
 
 def load_config_file(file: PathType) -> dict[str, Union[str, int]]:
-    """Load a `*.yaml`-config file."""
+    """Load a `*.yaml`-config file.
+
+    Parameters
+    ----------
+    file : PathType
+        Path to the config file.
+
+    Returns
+    -------
+    dict[str, Union[str, int]]
+        The config as a dictionary.
+    """
     file = Path(file)
-    if not file.suffix == ".yaml":
+    if file.suffix != ".yaml":
         raise NotImplementedError(f"Can only read config from yaml file, not {file}.")
-    with open(file, "r") as f:
+    with open(file, "r", encoding="UTF-8") as f:
         config = yaml.safe_load(f)
     return config
 
