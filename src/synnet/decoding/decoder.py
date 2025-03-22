@@ -560,9 +560,7 @@ class SynTreeDecoder:
         npt.NDArray[np.float64]
             Similarity of the target molecule and the final molecule.
         """
-        return np.array(
-            similarity_fct(z_target, syntree.nodes_as_smiles)
-        )
+        return np.array(similarity_fct(z_target, syntree.nodes_as_smiles))
 
 
 class SynTreeDecoderGreedy:
