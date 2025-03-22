@@ -6,11 +6,13 @@ from typing import Any, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
+import requests
 import torch
 import torch.utils.data as torch_data
 import yaml
 from loguru import logger
 from scipy import sparse
+from tqdm import tqdm
 
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.mlp import MLP
@@ -207,11 +209,9 @@ def asdict(obj: Any) -> dict[str, Any]:
 
 
 def _download_to_file(url: str, filename: str) -> None:
-    import requests
-    from tqdm import tqdm
 
     # Adapted  from: https://stackoverflow.com/a/62113293 & https://stackoverflow.com/a/16696317
-    with requests.get(url, stream=True) as r:
+    with requests.get(url, stream=True, timeout=3600) as r:
         r.raise_for_status()
         total_size = int(r.headers.get("content-length", 0))
 
