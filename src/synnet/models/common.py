@@ -14,8 +14,9 @@ import torch.utils.data as torch_data
 import yaml
 from loguru import logger
 from scipy import sparse
-from tqdm import tqdm
 from sklearn.utils.class_weight import compute_class_weight
+from tqdm import tqdm
+
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.mlp import MLP
 from synnet.utils.custom_types import PathType
@@ -97,7 +98,6 @@ def xy_to_dataloader(
 def _compute_class_weights_from_dataloader(
     dataloader: torch_data.DataLoader, as_tensor: bool = False  # type: ignore[type-arg]
 ) -> npt.NDArray[np.float64]:
-
 
     if not hasattr(dataloader.dataset, "tensors"):
         raise AssertionError(
