@@ -1,5 +1,7 @@
 """Common methods and params shared by all models."""
 
+import shutil
+import tarfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -13,7 +15,7 @@ import yaml
 from loguru import logger
 from scipy import sparse
 from tqdm import tqdm
-
+from sklearn.utils.class_weight import compute_class_weight
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.mlp import MLP
 from synnet.utils.custom_types import PathType
@@ -84,7 +86,7 @@ def xy_to_dataloader(
 def _compute_class_weights_from_dataloader(
     dataloader: torch_data.DataLoader, as_tensor: bool = False  # type: ignore[type-arg]
 ) -> npt.NDArray[np.float64]:
-    from sklearn.utils.class_weight import compute_class_weight
+
 
     if not hasattr(dataloader.dataset, "tensors"):
         raise AssertionError(
@@ -226,37 +228,32 @@ def _download_to_file(url: str, filename: str) -> None:
 
 def download_iclr_checkpoint() -> None:
     """Download checkpoints as described in ICLR submission."""
-    import shutil
-    import tarfile
-
-    from tqdm import tqdm
-
-    CHECKPOINT_URL = "https://figshare.com/ndownloader/files/31067692"
-    CHECKPOINT_FILE = "hb_fp_2_4096_256.tar.gz"
-    CHECKPOINTS_DIR = Path("checkpoints/iclr/")
+    checkpoint_url = "https://figshare.com/ndownloader/files/31067692"
+    checkpoint_file = "hb_fp_2_4096_256.tar.gz"
+    checkpoints_dir = Path("checkpoints/iclr/")
     # Download
-    if not Path(CHECKPOINT_FILE).exists():
-        _download_to_file(CHECKPOINT_URL, CHECKPOINT_FILE)
+    if not Path(checkpoint_file).exists():
+        _download_to_file(checkpoint_url, checkpoint_file)
 
     # Extract downloaded file
-    CHECKPOINTS_DIR.mkdir(exist_ok=True, parents=True)
-    with tarfile.open(CHECKPOINT_FILE) as tar:
-        for member in tqdm(tar.getmembers(), desc=f"Extracting {CHECKPOINT_FILE}"):
-            tar.extract(member, path=CHECKPOINTS_DIR)
+    checkpoints_dir.mkdir(exist_ok=True, parents=True)
+    with tarfile.open(checkpoint_file) as tar:
+        for member in tqdm(tar.getmembers(), desc=f"Extracting {checkpoint_file}"):
+            tar.extract(member, path=checkpoints_dir)
 
     # Rename files to match new scripts
-    for file in CHECKPOINTS_DIR.rglob("hb_fp_2_4096_256/*.ckpt"):
+    for file in checkpoints_dir.rglob("hb_fp_2_4096_256/*.ckpt"):
         model = file.stem
 
-        new_file = CHECKPOINTS_DIR / f"{model}/{model}-dummy-val_loss=0.03.ckpt"
+        new_file = checkpoints_dir / f"{model}/{model}-dummy-val_loss=0.03.ckpt"
         new_file.parent.mkdir(exist_ok=True, parents=True)
 
         shutil.copy(file, new_file)
 
     # Clenup
-    shutil.rmtree(CHECKPOINTS_DIR / "hb_fp_2_4096_256")
+    shutil.rmtree(checkpoints_dir / "hb_fp_2_4096_256")
 
-    print(f"Successfully downloaded files to {CHECKPOINTS_DIR}")
+    logger.success(f"Successfully downloaded files to {checkpoints_dir}")
 
 
 if __name__ == "__main__":
