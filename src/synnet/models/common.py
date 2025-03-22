@@ -23,7 +23,22 @@ from synnet.utils.custom_types import PathType
 
 
 def init_save_dir(path: PathType, suffix: str = "") -> Path:
-    """Creates folder with timestamp: `$path/<timestamp>$suffix`."""
+    """Create folder with timestamp.
+
+    `$path/<timestamp>$suffix`.
+
+    Parameters
+    ----------
+    path : PathType
+        Path where to create the folder.
+    suffix : str, optional
+        Suffix to append to the timestamp, by default "".
+
+    Returns
+    -------
+    Path
+        The created folder.
+    """
     now = datetime.now().strftime("%Y_%m_%d-%H%M%S")
     save_dir = Path(path) / (now + suffix)
 
