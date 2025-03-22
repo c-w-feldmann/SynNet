@@ -29,10 +29,9 @@ class SmilesDuplicateElimination(ElementwiseDuplicateElimination):
     def _get_smiles(self, individual: Individual) -> Optional[str]:
         if individual.has("smiles"):
             return individual.get("smiles")
-        else:
-            smiles = self.decoder(individual.X)
-            individual.set("smiles", smiles)
-            return smiles
+        smiles = self.decoder(individual.X)
+        individual.set("smiles", smiles)
+        return smiles
 
     def is_equal(self, a: Individual, b: Individual) -> bool:
         smiles_a = self._get_smiles(a)
@@ -51,10 +50,9 @@ class SimilarityDuplicateElimination(ElementwiseDuplicateElimination):
     def _get_smiles(self, individual: Individual) -> Optional[str]:
         if individual.has("smiles"):
             return individual.get("smiles")
-        else:
-            smiles = self.decoder(individual.X)
-            individual.set("smiles", smiles)
-            return smiles
+        smiles = self.decoder(individual.X)
+        individual.set("smiles", smiles)
+        return smiles
 
     def is_equal(self, a: Individual, b: Individual) -> bool:
         mol_a = Chem.MolFromSmiles(self._get_smiles(a))
