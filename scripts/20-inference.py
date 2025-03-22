@@ -93,7 +93,6 @@ def print_stats(df: pd.DataFrame, data: str) -> None:
     logger.info(f"  Total number of successful reconstructions: {n_recovered}")
     logger.info(f"  {recovery_rate=}  ({recovery_rate :.4%})")
     logger.info(f"  {avg_similarity=} ({avg_similarity:.4%})")
-    return None
 
 
 def postprocess_results(
