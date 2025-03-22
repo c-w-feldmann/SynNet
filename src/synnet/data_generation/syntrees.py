@@ -479,21 +479,6 @@ class SynTreeGeneratorPostProc:
         return SyntheticTreeSet(valied_syntrees), dict(Counter(exit_codes))
 
 
-def load_syntreegenerator(file: str) -> SynTreeGenerator:
-    import pickle
-
-    with open(file, "rb") as f:
-        syntreegenerator = pickle.load(f)
-    return syntreegenerator
-
-
-def save_syntreegenerator(syntreegenerator: SynTreeGenerator, file: str) -> None:
-    import pickle
-
-    with open(file, "wb") as f:
-        pickle.dump(syntreegenerator, f)
-
-
 # TODO: Move all these encoders to "from syn_net.encoding/"
 # TODO: Evaluate if One-Hot-Encoder can be replaced with encoder from sklearn
 
