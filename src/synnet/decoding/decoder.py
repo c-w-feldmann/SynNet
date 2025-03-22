@@ -289,8 +289,7 @@ class SynTreeDecoder:
         """
         if isinstance(reactants, str):
             return self._find_valid_unimolecular_rxns(reactants)
-        else:
-            return self._find_valid_bimolecular_rxns(reactants)
+        return self._find_valid_bimolecular_rxns(reactants)
 
     def decode(
         self,
@@ -542,17 +541,41 @@ class SynTreeDecoder:
         ],
         z_target: npt.NDArray[np.float64],
         syntree: SyntheticTree,
-    ) -> npt.NDArray[np.float64]:  # TODO: move to its own class?
-        """Computes the similarity to a `z_target` for all nodes, as
-        we can in theory truncate the tree to our liking.
+    ) -> npt.NDArray[np.float64]:
+        """Compute the similarity to a `z_target` for all nodes.
+
+        In theory the tree can be truncated to our liking.
+
+        Parameters
+        ----------
+        similarity_fct: Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]]
+            Similarity function for the reactants.
+        z_target: npt.NDArray[np.float64]
+            Target molecule embedding.
+        syntree: SyntheticTree
+            Synthetic tree to evaluate.
+
+        Returns
+        -------
+        npt.NDArray[np.float64]
+            Similarity of the target molecule and the final molecule.
         """
         return np.array(
-            similarity_fct(z_target, [smi for smi in syntree.nodes_as_smiles])
+            similarity_fct(z_target, syntree.nodes_as_smiles)
         )
 
 
 class SynTreeDecoderGreedy:
+    """Greedy search for decoding a molecular embedding."""
+
     def __init__(self, decoder: SynTreeDecoder) -> None:
+        """Initialize the SynTreeDecoderGreedy.
+
+        Parameters
+        ----------
+        decoder : SynTreeDecoder
+            Decoder for a molecular embedding.
+        """
         self.decoder = decoder  # composition over inheritance
 
     def decode(
@@ -563,8 +586,19 @@ class SynTreeDecoderGreedy:
         objective: Optional[str] = "best",  # "best", "best+shortest"
         debug: bool = False,
     ) -> tuple[SyntheticTree, Optional[float]]:
-        """Decode `z_target` at most `attempts`-times and return the most-similar one."""
+        """Decode `z_target` at most `attempts`-times and return the most-similar one.
 
+        Parameters
+        ----------
+        z_target : npt.NDArray[np.float64]
+            Target molecule embedding.
+        attempts : int, optional
+            Number of decoding attempts, by default 3
+        objective : Optional[str], optional
+            Method used to determine the most similar molecule, by default "best"
+        debug : bool, optional
+            Activate debug mode, by default False
+        """
         best_similarity = -np.inf
         best_syntree = SyntheticTree()
         i = 0
