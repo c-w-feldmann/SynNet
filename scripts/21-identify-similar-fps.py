@@ -212,4 +212,4 @@ def identify_similar_fps(input_file: str, output_file: str, ncpu: int) -> None:
 
 
 if __name__ == "__main__":
-    identify_similar_fps()
+    identify_similar_fps()  # pylint: disable=no-value-for-parameter

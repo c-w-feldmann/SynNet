@@ -161,4 +161,4 @@ def compute_mean_reciprocal_ranking(
 
 
 if __name__ == "__main__":
-    compute_mean_reciprocal_ranking()
+    compute_mean_reciprocal_ranking()  # pylint: disable=no-value-for-parameter

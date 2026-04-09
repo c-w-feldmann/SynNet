@@ -232,7 +232,7 @@ def _setup_loggers(verbose: bool, debug: bool, output_dir: PathType) -> None:
     default=False,
     is_flag=True,
 )
-def inference(
+def inference(  # pylint: disable=too-many-locals
     rxns_collection_file: str,
     embeddings_knn_file: str,
     ckpt_dir: PathType,
@@ -342,4 +342,4 @@ def inference(
 
 
 if __name__ == "__main__":
-    inference()
+    inference()  # pylint: disable=no-value-for-parameter
