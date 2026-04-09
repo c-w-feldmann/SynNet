@@ -36,3 +36,6 @@ dev = [
     "pylint>=3.3.9",
     "ruff>=0.15.9",
 ]
+example = [
+    "tdc>=0.1",
+]
