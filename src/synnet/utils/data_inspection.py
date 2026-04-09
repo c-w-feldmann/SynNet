@@ -20,11 +20,36 @@ from synnet.utils.data_utils import SyntheticTree, SyntheticTreeSet
 
 @functools.lru_cache(maxsize=10)
 def load_syntree_collection_from_file(file: PathType) -> SyntheticTreeSet:
+    """Load a synthetic-tree collection from disk with caching.
+
+    Parameters
+    ----------
+    file : PathType
+        File path to a serialized synthetic-tree set.
+
+    Returns
+    -------
+    SyntheticTreeSet
+        Loaded synthetic-tree set.
+
+    """
     return SyntheticTreeSet.load(file)
 
 
-def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter[str]:
-    """Extract chemicals (reactants+product) in syntrees."""
+def count_chemicals(syntrees: SyntheticTree | SyntheticTreeSet) -> Counter[str]:
+    """Extract chemicals (reactants and products) in synthetic trees.
+
+    Parameters
+    ----------
+    syntrees : SyntheticTree | SyntheticTreeSet
+        One tree or a collection of trees.
+
+    Returns
+    -------
+    Counter[str]
+        Frequency of SMILES across all chemicals.
+
+    """
     if isinstance(syntrees, SyntheticTree):
         syntrees = SyntheticTreeSet([syntrees])
     cnt: Counter[str] = Counter()
@@ -36,9 +61,21 @@ def count_chemicals(syntrees: Union[SyntheticTree, SyntheticTreeSet]) -> Counter
 
 
 def count_building_blocks(
-    syntrees: Union[SyntheticTree, SyntheticTreeSet],
+    syntrees: SyntheticTree | SyntheticTreeSet,
 ) -> Counter[str]:
-    """Extract chemicals, which are leafes, in syntrees."""
+    """Count building blocks (leaf nodes) in synthetic trees.
+
+    Parameters
+    ----------
+    syntrees : SyntheticTree | SyntheticTreeSet
+        One tree or a collection of trees.
+
+    Returns
+    -------
+    Counter[str]
+        Frequency of leaf-node SMILES.
+
+    """
     if isinstance(syntrees, SyntheticTree):
         syntrees = SyntheticTreeSet([syntrees])
     cnt: Counter[str] = Counter()
@@ -47,7 +84,21 @@ def count_building_blocks(
 
 
 def count_depths(sts: SyntheticTreeSet, max_depth: int = 15) -> Counter[float]:
-    """Count depths."""
+    """Count synthetic trees by depth up to ``max_depth``.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+    max_depth : int, default=15
+        Maximum depth to include in output counter.
+
+    Returns
+    -------
+    Counter[float]
+        Counter of depths.
+
+    """
     DEPTHS = range(1, max_depth + 1)
     depth_list = [st.depth for st in sts.synthetic_tree_list]
     cnt_dict = {float(k): 0 for k in DEPTHS}
@@ -56,13 +107,37 @@ def count_depths(sts: SyntheticTreeSet, max_depth: int = 15) -> Counter[float]:
 
 
 def _extract_action_ids(sts: SyntheticTreeSet) -> dict[int, list[int]]:
-    """Extract the list of reaction ids for each syntree."""
+    """Extract action IDs for each synthetic tree.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+
+    Returns
+    -------
+    dict[int, list[int]]
+        Mapping from tree index to action ID sequence.
+
+    """
     actions = {i: st.actions for i, st in enumerate(sts.synthetic_tree_list)}
     return actions
 
 
 def count_actions(sts: SyntheticTreeSet) -> Counter[int]:
-    """Count actions."""
+    """Count action frequencies across synthetic trees.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+
+    Returns
+    -------
+    Counter[int]
+        Counter for action IDs ``0..3``.
+
+    """
     actions = _extract_action_ids(sts)
 
     action_ids = Counter(list(chain(*actions.values())))
@@ -73,7 +148,19 @@ def count_actions(sts: SyntheticTreeSet) -> Counter[int]:
 
 
 def count_num_actions(sts: SyntheticTreeSet) -> Counter[int]:
-    """Count number of actions (better metric for "depth")"""
+    """Count number of actions per synthetic tree.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+
+    Returns
+    -------
+    Counter[int]
+        Counter keyed by number of actions.
+
+    """
     return Counter([st.num_actions for st in sts.synthetic_tree_list])
 
 
@@ -82,6 +169,23 @@ def plot_num_actions(
     ax: Optional[plt.Axes] = None,
     **plt_kwargs: Any,
 ) -> plt.Axes:
+    """Plot histogram-style bars for number of actions.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+    ax : Optional[plt.Axes], optional
+        Existing axes to draw into.
+    **plt_kwargs : Any
+        Additional keyword arguments passed to ``ax.bar``.
+
+    Returns
+    -------
+    plt.Axes
+        Axes containing the plot.
+
+    """
     actions = count_num_actions(sts)
     # Plot actions (type `Counter`) as barplot:
     if ax is None:
@@ -96,7 +200,19 @@ def plot_num_actions(
 
 
 def _extract_reaction_ids(sts: SyntheticTreeSet) -> dict[int, list[int]]:
-    """Extract the list of reaction ids for each syntree."""
+    """Extract reaction IDs for each synthetic tree.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+
+    Returns
+    -------
+    dict[int, list[int]]
+        Mapping from tree index to reaction ID sequence.
+
+    """
     reactions = dict()
 
     for i, st in enumerate(sts.synthetic_tree_list):
@@ -107,7 +223,21 @@ def _extract_reaction_ids(sts: SyntheticTreeSet) -> dict[int, list[int]]:
 
 
 def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter[int]:
-    """Count the reaction ids."""
+    """Count reaction-ID frequencies across synthetic trees.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+    nReactions : int, optional
+        Number of reaction IDs to include in output range.
+
+    Returns
+    -------
+    Counter[int]
+        Counter for reaction IDs.
+
+    """
     reactions = _extract_reaction_ids(sts)
 
     reaction_ids = Counter(list(chain(*reactions.values())))
@@ -119,6 +249,19 @@ def count_reactions(sts: SyntheticTreeSet, nReactions: int = 91) -> Counter[int]
 
 
 def summarize_syntree_collection(sts: SyntheticTreeSet) -> dict[str, Any]:
+    """Summarize a synthetic-tree collection with aggregate statistics.
+
+    Parameters
+    ----------
+    sts : SyntheticTreeSet
+        Collection of synthetic trees.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary containing high-level summary and counters.
+
+    """
     res = {
         "nTrees:": len(sts),
         "avg_num_actions": np.mean([st.num_actions for st in sts.synthetic_tree_list]),
@@ -132,6 +275,21 @@ def summarize_syntree_collection(sts: SyntheticTreeSet) -> dict[str, Any]:
 
 
 def reactions_used_less_than(data: dict[int, int], n: int) -> list[int]:
+    """Return reaction IDs used fewer than ``n`` times.
+
+    Parameters
+    ----------
+    data : dict[int, int]
+        Mapping from reaction ID to count.
+    n : int
+        Threshold count.
+
+    Returns
+    -------
+    list[int]
+        Reaction IDs with frequency below ``n``.
+
+    """
     return [i for i, count in data.items() if count < n]
 
 
@@ -141,10 +299,28 @@ def plot_reaction_heatmap(
     relative: bool = False,
     **kwargs: Any,
 ) -> plt.Axes:
-    """Plot heatmap of reactions
+    """Plot heatmap of reaction frequencies.
 
-    See:
-      - https://stackoverflow.com/questions/63861760/add-text-on-plt-imshow
+    Parameters
+    ----------
+    data : dict[int, int]
+        Reaction frequency mapping.
+    n_reactions : int, optional
+        Number of reactions expected in ``data``.
+    relative : bool, optional
+        If ``True``, plot percentages instead of absolute counts.
+    **kwargs : Any
+        Additional keyword arguments forwarded to ``sns.heatmap``.
+
+    Returns
+    -------
+    plt.Axes
+        Axes containing the heatmap.
+
+    References
+    ----------
+    [1] https://stackoverflow.com/questions/63861760/add-text-on-plt-imshow
+
     """
     if not len(data) == n_reactions:
         raise ValueError(
@@ -184,8 +360,23 @@ def plot_reaction_heatmap(
 
 
 def cnt_to_dataframe(
-    cnt: Counter[Any], index_name: Optional[str] = None
+    cnt: Counter[Any], index_name: str | None = None
 ) -> pd.DataFrame:
+    """Convert a counter to a dataframe with relative frequencies.
+
+    Parameters
+    ----------
+    cnt : Counter[Any]
+        Counter to convert.
+    index_name : str | None, optional
+        Optional dataframe index name.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with ``count`` and ``count_rel`` columns.
+
+    """
     df = pd.DataFrame().from_dict(cnt, columns=["count"], orient="index")
     df["count_rel"] = df["count"] / df["count"].sum()
     df["count_rel"] = df["count_rel"].round(4)
@@ -196,9 +387,26 @@ def cnt_to_dataframe(
 
 def col_as_percentage(
     df: pd.DataFrame,
-    cols: Optional[Union[list[str], str, pd.Index]] = None,
+    cols: list[str] | str | pd.Index | None = None,
     replace: bool = False,
 ) -> pd.DataFrame:
+    """Normalize dataframe columns to percentages.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe.
+    cols : list[str] | str | pd.Index | None, optional
+        Column name(s) to normalize. If omitted, all columns are used.
+    replace : bool, default=False
+        If ``True``, overwrite source columns; otherwise create ``*_rel`` columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with normalized columns.
+
+    """
     if not cols:
         cols = df.columns
     if isinstance(cols, str):

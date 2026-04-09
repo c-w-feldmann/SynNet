@@ -74,7 +74,27 @@ def xy_to_dataloader(
     n: Optional[Union[int, float]] = 1.0,
     **kwargs: Any,
 ) -> torch_data.DataLoader:  # type: ignore[type-arg]
-    """Loads featurized X,y `*.npz`-data into a `DataLoader`"""
+    """Load featurized ``X`` and ``y`` arrays into a ``DataLoader``.
+
+    Parameters
+    ----------
+    X_file : PathType
+        Path to sparse feature matrix file.
+    y_file : PathType
+        Path to sparse target matrix file.
+    task : str
+        Task type, either ``regression`` or classification.
+    n : Optional[Union[int, float]], optional
+        Number or fraction of samples to keep.
+    **kwargs : Any
+        Additional keyword arguments forwarded to ``torch_data.DataLoader``.
+
+    Returns
+    -------
+    torch_data.DataLoader
+        Data loader yielding tensors for model training or evaluation.
+
+    """
     X = sparse.load_npz(X_file)
     y = sparse.load_npz(y_file)
     # Filer?
@@ -113,6 +133,21 @@ def xy_to_dataloader(
 def _compute_class_weights_from_dataloader(
     dataloader: torch_data.DataLoader, as_tensor: bool = False  # type: ignore[type-arg]
 ) -> npt.NDArray[np.float64]:
+    """Compute balanced class weights from a dataloader.
+
+    Parameters
+    ----------
+    dataloader : torch_data.DataLoader
+        Data loader whose dataset exposes target tensor in ``dataset.tensors``.
+    as_tensor : bool, optional
+        If ``True``, return weights as a tensor-like object.
+
+    Returns
+    -------
+    npt.NDArray[np.float64]
+        Balanced class weights.
+
+    """
 
     if not hasattr(dataloader.dataset, "tensors"):
         raise AssertionError(
@@ -128,6 +163,19 @@ def _compute_class_weights_from_dataloader(
 
 
 def _fetch_molembedder(folder: PathType) -> MolecularEmbeddingManager:
+    """Load a precomputed molecular embedding manager.
+
+    Parameters
+    ----------
+    folder : PathType
+        Folder containing serialized embedding manager assets.
+
+    Returns
+    -------
+    MolecularEmbeddingManager
+        Loaded embedding manager.
+
+    """
     logger.info(f"Try to load precomputed MolEmbedder from {folder}.")
     molembedder = MolecularEmbeddingManager.from_folder(folder)
     logger.info(f"Loaded MolEmbedder from {folder}.")
@@ -163,6 +211,17 @@ def find_best_model_ckpt(path: PathType) -> Path:
     Poor man's regex:
     somepath/act/ckpts.epoch=70-val_loss=0.03.ckpt
                                          ^^^^--extract this as float
+
+    Parameters
+    ----------
+    path : PathType
+        Root directory to search recursively for ``*.ckpt`` files.
+
+    Returns
+    -------
+    Path
+        Path to checkpoint with the smallest validation loss in filename.
+
     """
     ckpts = Path(path).rglob("*.ckpt")
     best_model_ckpt = None
@@ -283,6 +342,16 @@ def asdict(obj: Any) -> dict[str, Any]:
 
 
 def _download_to_file(url: str, filename: str) -> None:
+    """Download a URL to a local file with a progress bar.
+
+    Parameters
+    ----------
+    url : str
+        Source URL to download.
+    filename : str
+        Output filename for the downloaded content.
+
+    """
 
     # Adapted  from: https://stackoverflow.com/a/62113293 & https://stackoverflow.com/a/16696317
     with requests.get(url, stream=True, timeout=3600) as r:

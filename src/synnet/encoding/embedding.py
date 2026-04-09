@@ -476,7 +476,7 @@ class MolecularEmbeddingManager:
         Parameters
         ----------
         folder : PathType
-            Folder to save the files
+            Folder to save the files.
 
         Returns
         -------

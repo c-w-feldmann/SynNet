@@ -52,8 +52,8 @@ class SynTreeGenerator:
         *,
         building_blocks: list[str],
         rxn_templates: list[str],
-        rxn_collection: Optional[ReactionSet] = None,
-        rng: np.random.Generator = np.random.default_rng(),
+        rxn_collection: ReactionSet | None = None,
+        rng: np.random.Generator | None = None,
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
         debug: bool = False,
@@ -66,24 +66,25 @@ class SynTreeGenerator:
             List of building blocks.
         rxn_templates : list[str]
             List of reaction templates.
-        rxn_collection : Optional[ReactionSet], optional
-            Pre-initialised reaction collection, by default None
+        rxn_collection : ReactionSet | None, optional
+            Pre-initialised reaction collection.
         rng : np.random.Generator, optional
-            Random number generator, by default np.random.default_rng()
-            Note: When generating syntrees with mp provide a fresh seed!
-        processes : int, optional
-            Number of processes to use, by default MAX_PROCESSES
-        verbose : bool, optional
-            Whether to show progress bars, by default False
-        debug : bool, optional
-            Whether to show debug messages, by default False
+            Random number generator. None defaults to np.random.default_rng().
+            Note: When generating syntrees with mp provide a fresh seed.
+        processes : int, default=MAX_PROCESSES
+            Number of processes to use.
+        verbose : bool, default=False
+            Whether to show progress bars.
+        debug : bool, default=False
+            Whether to show debug messages, by default False.
+
         """
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
         self.reaction_set = ReactionSet(
             [Reaction(template=tmplt) for tmplt in rxn_templates]
         )
-        self.rng = rng
+        self.rng = rng or np.random.default_rng()
         self.reaction_indices = np.arange(len(self.reaction_set))
         self.processes = processes
         self.verbose = verbose
@@ -102,6 +103,14 @@ class SynTreeGenerator:
             self.rxns_initialised = True
 
     def __match_mp(self) -> Self:
+        """Initialize reaction reactants in parallel.
+
+        Returns
+        -------
+        Self
+            Updated generator instance.
+
+        """
         # TODO: refactor / merge with `BuildingBlockFilter`
         # TODO: Rename `ReactionSet` -> `ReactionCollection` (same for `SyntheticTreeSet`)
         from functools import partial
@@ -109,6 +118,21 @@ class SynTreeGenerator:
         from pathos import multiprocessing as mp
 
         def __match(_rxn: Reaction, bblocks: list[str]) -> Reaction:
+            """Set available reactants for one reaction.
+
+            Parameters
+            ----------
+            _rxn : Reaction
+                Reaction to initialize.
+            bblocks : list[str]
+                Candidate building blocks.
+
+            Returns
+            -------
+            Reaction
+                Reaction with initialized available reactants.
+
+            """
             return _rxn.set_available_reactants(bblocks)
 
         func = partial(__match, bblocks=self.building_blocks)
@@ -121,7 +145,14 @@ class SynTreeGenerator:
     def _init_rxns_with_reactants(self) -> Self:
         """Initializes a `Reaction` with a list of possible reactants.
 
-        Info: This can take a while for lots of possible reactants."""
+        Info: This can take a while for lots of possible reactants.
+
+        Returns
+        -------
+        Self
+            Updated generator instance.
+
+        """
         if self.processes == 1:
             self.reaction_set = ReactionSet(
                 [
@@ -136,7 +167,14 @@ class SynTreeGenerator:
         return self
 
     def _sample_molecule(self) -> str:
-        """Sample a molecule."""
+        """Sample a random building block.
+
+        Returns
+        -------
+        str
+            Sampled building block SMILES.
+
+        """
         idx = self.rng.choice(len(self.building_blocks))
         smiles = self.building_blocks[idx]
 
@@ -146,7 +184,21 @@ class SynTreeGenerator:
     def _find_rxn_candidates(
         self, smiles: str, raise_exc: bool = True
     ) -> npt.NDArray[np.bool_]:
-        """Find reactions which reactions have `smiles` as reactant."""
+        """Find candidate reactions that accept ``smiles`` as a reactant.
+
+        Parameters
+        ----------
+        smiles : str
+            Reactant SMILES.
+        raise_exc : bool, optional
+            Whether to raise when no candidate reaction exists.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Boolean mask of candidate reactions.
+
+        """
         rxn_mask = [rxn.is_reactant(smiles) for rxn in self.reaction_set.rxns]
 
         if raise_exc and not any(
@@ -158,9 +210,23 @@ class SynTreeGenerator:
         return np.asarray(rxn_mask)
 
     def _sample_rxn(
-        self, mask: Optional[npt.NDArray[np.bool_]] = None
+        self, mask: npt.NDArray[np.bool_] | None = None
     ) -> Tuple[Reaction, int]:
-        """Sample a reaction by index."""
+        """Sample a reaction by index.
+
+        Parameters
+        ----------
+        mask : npt.NDArray[np.bool_] | None, optional
+            Optional mask restricting candidate reactions.
+
+        Returns
+        -------
+        Reaction
+            The sampled reaction.
+        int
+            Index of sampled reaction.
+
+        """
         if mask is None:
             irxn_mask = self.reaction_indices  # all reactions are possible
         else:
@@ -178,9 +244,29 @@ class SynTreeGenerator:
 
     def _expand(
         self, reactant_1: str, raise_exc: bool = True
-    ) -> tuple[str, Optional[str], Optional[str], int]:
+    ) -> tuple[str, str | None, str | None, int]:
         """Expand a sub-tree from one molecule.
-        This can result in uni- or bimolecular reaction."""
+        This can result in uni- or bimolecular reaction.
+
+        Parameters
+        ----------
+        reactant_1 : str
+            First reactant SMILES.
+        raise_exc : bool, optional
+            Whether to raise when a valid reaction product cannot be formed.
+
+        Returns
+        -------
+        str
+            The first reactant.
+        str | None
+            The second reactant, if used, else None.
+        str | None
+            The product, if reaction is possible, else None.
+        int
+            The index of the reaction used for expansion.
+
+        """
 
         # Identify applicable reactions
         rxn_mask = self._find_rxn_candidates(reactant_1)
@@ -223,7 +309,25 @@ class SynTreeGenerator:
         return reactant_1, reactant_2, product, idx_rxn
 
     def _merge(self, syntree: SyntheticTree) -> Tuple[str, Optional[str], str, int]:
-        """Merge the two root mols in the `SyntheticTree`"""
+        """Merge the two root molecules in the synthetic tree.
+
+        Parameters
+        ----------
+        syntree : SyntheticTree
+            Synthetic tree with two root molecules.
+
+        Returns
+        -------
+        str
+            The first reactant.
+        str | None
+            The second reactant, if present.
+        str
+            The merged product.
+        int
+            The index of the sampled reaction.
+
+        """
         # Identify suitable rxn
         r1: Optional[str]
         r2: Optional[str]
@@ -242,7 +346,19 @@ class SynTreeGenerator:
         return r1, r2, p, idx_rxn
 
     def _get_action_mask(self, syntree: SyntheticTree) -> npt.NDArray[np.bool_]:
-        """Get a mask of possible action for a SyntheticTree"""
+        """Get a mask of valid actions for a synthetic tree.
+
+        Parameters
+        ----------
+        syntree : SyntheticTree
+            Current synthetic tree.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Boolean mask for actions ``(add, expand, merge, end)``.
+
+        """
         # Recall: (Add, Expand, Merge, and End)
         can_add = False
         can_merge = False
@@ -306,7 +422,21 @@ class SynTreeGenerator:
     def _get_rxn_mask(
         self, reactants: tuple[Optional[str], Optional[str]], raise_exc: bool = True
     ) -> npt.NDArray[np.bool_]:
-        """Get a mask of possible reactions for the two reactants."""
+        """Get a mask of possible reactions for two reactants.
+
+        Parameters
+        ----------
+        reactants : tuple[Optional[str], Optional[str]]
+            Pair of reactant SMILES.
+        raise_exc : bool, optional
+            Whether to raise when no bimolecular reaction is available.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Boolean mask of valid reactions.
+
+        """
         # First: Identify bi-molecular reactions
         masks_bimol = [
             rxn.num_reactant == 2 for rxn in self.reaction_set.rxns
@@ -352,7 +482,19 @@ class SynTreeGenerator:
         return np.asarray(mask)
 
     def _sample_action(self, syntree: SyntheticTree) -> int:
-        """Samples an action conditioned on the state of the `SyntheticTree`"""
+        """Sample an action conditioned on synthetic-tree state.
+
+        Parameters
+        ----------
+        syntree : SyntheticTree
+            Current synthetic tree.
+
+        Returns
+        -------
+        int
+            Action index.
+
+        """
         p_action = self.rng.random((1, 4))  # (1,4)
         action_mask = self._get_action_mask(syntree)  # (1,4)
         act = int(np.argmax(p_action * action_mask))  # (1,)
@@ -361,7 +503,21 @@ class SynTreeGenerator:
         return act
 
     def generate(self, max_depth: int = 8, min_actions: int = 1) -> SyntheticTree:
-        """Generate a syntree by random sampling."""
+        """Generate a synthetic tree by random sampling.
+
+        Parameters
+        ----------
+        max_depth : int, optional
+            Maximum number of generation steps.
+        min_actions : int, optional
+            Minimum number of actions before ``end`` is allowed.
+
+        Returns
+        -------
+        SyntheticTree
+            Generated synthetic tree.
+
+        """
         if min_actions < max_depth:
             raise AssertionError("min_actions must be smaller than max_depth.")
         if max_depth > 1:
@@ -432,8 +588,24 @@ class SynTreeGenerator:
 
     def generate_safe(
         self, max_depth: int = 8, min_actions: int = 1
-    ) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
-        """Wrapper for `self.generate()` to catch all errors."""
+    ) -> tuple[SyntheticTree | None, Exception  | None]:
+        """Wrap ``generate`` and return caught exceptions instead of raising.
+
+        Parameters
+        ----------
+        max_depth : int, optional
+            Maximum number of generation steps.
+        min_actions : int, optional
+            Minimum number of actions before ``end`` is allowed.
+
+        Returns
+        -------
+        SyntheticTree | None
+            The generated tree, or None if generation failed.
+        Exception | None
+            The caught exception, or None if generation succeeded.
+
+        """
         try:
             st = self.generate(max_depth=max_depth, min_actions=min_actions)
         except (
@@ -454,17 +626,32 @@ class SynTreeGenerator:
 
 
 class SynTreeGeneratorPostProc:
+    """Utilities for post-processing synthetic tree generation outputs."""
+
     def __init__(self) -> None:
-        pass
+        """Initialize post-processing utilities."""
 
     @staticmethod
     def parse_generate_safe(
-        results: List[Tuple[Union[SyntheticTree, None], Union[Exception, None]]],
+        results: list[tuple[SyntheticTree | None, Exception |None]],
     ) -> tuple[SyntheticTreeSet, dict[str, int]]:
         """Parses the result from `SynTreeGenerator.generate_safe`.
         In particular:
             - parses valid SynTrees and returns a `SyntheticTreeSet`
             - counts error messages and returns a `dict`
+
+        Parameters
+        ----------
+        results : list[tuple[SyntheticTree | None, Exception | None]]
+            Outputs from ``SynTreeGenerator.generate_safe``.
+
+        Returns
+        -------
+        SyntheticTreeSet
+            Synthetic trees generated successfully.
+        dict[str, int]
+            Counts grouped by exit code.
+
         """
         from collections import Counter
 
@@ -487,46 +674,109 @@ ItemType = TypeVar("ItemType", bound=np.generic)
 
 
 class OneHotEncoder:
+    """Simple one-hot encoder for integer indices."""
+
     def __init__(self, d: int) -> None:
+        """Initialize encoder.
+
+        Parameters
+        ----------
+        d : int
+            Output dimensionality.
+
+        """
         self.d = d
 
     def __repr__(self) -> str:
+        """Return a compact representation of the encoder.
+
+        Returns
+        -------
+        str
+            Representation string.
+
+        """
         return f"'{self.__class__.__name__}': {self.__dict__}"
 
     @property
     def args(self) -> dict[str, Any]:
+        """Return encoder arguments as a dictionary."""
         return {**self.__dict__, **{"name": self.__class__.__name__}}
 
     @property
     def nbits(self) -> int:
+        """Return output dimensionality."""
         return self.get_nbits()
 
     def encode(self, ind: int, datatype: type = np.float64) -> npt.NDArray[ItemType]:
-        """Returns a (1,d)-array with zeros and a 1 at index `ind`."""
+        """Encode an index as one-hot vector.
+
+        Parameters
+        ----------
+        ind : int
+            Active index.
+        datatype : type, optional
+            Data type of output array.
+
+        Returns
+        -------
+        npt.NDArray[ItemType]
+            One-hot row vector.
+
+        """
         onehot: npt.NDArray[Any]
         onehot = np.zeros((1, self.d), dtype=datatype)  # (1,d)
         onehot[0, ind] = 1.0
         return onehot  # (1,d)
 
     def get_nbits(self) -> int:
-        """Return the dimensionality as nbits."""
+        """Return the dimensionality as nbits.
+
+        Returns
+        -------
+        int
+            Number of output bits.
+
+        """
         return self.d
 
 
 class MorganFingerprintEncoder:
+    """Encode SMILES as Morgan fingerprint bit vectors."""
+
     def __init__(self, radius: int, nbits: int) -> None:
+        """Initialize encoder.
+
+        Parameters
+        ----------
+        radius : int
+            Fingerprint radius.
+        nbits : int
+            Fingerprint dimensionality.
+
+        """
         self.radius = radius
         self._nbits = nbits
 
     def __repr__(self) -> str:
+        """Return a compact representation of the encoder.
+
+        Returns
+        -------
+        str
+            Representation string.
+
+        """
         return f"'{self.__class__.__name__}': {self.__dict__}"
 
     @property
     def args(self) -> dict[str, Any]:
+        """Return encoder arguments as a dictionary."""
         return {**self.__dict__, **{"name": self.__class__.__name__}}
 
     @property
     def nbits(self) -> int:
+        """Return output dimensionality."""
         return self.get_nbits()
 
     def get_nbits(self) -> int:
@@ -534,12 +784,33 @@ class MorganFingerprintEncoder:
 
         Properties and inheritance is not trivial and hence the property nbits maps to this function
         which is used for inheritance.
+
+        Returns
+        -------
+        int
+            Number of output bits.
+
         """
         return self._nbits
 
     def encode(
         self, smi: Optional[str], allow_none: bool = True
     ) -> npt.NDArray[np.float64]:
+        """Encode one SMILES string.
+
+        Parameters
+        ----------
+        smi : Optional[str]
+            Input SMILES string.
+        allow_none : bool, optional
+            If ``True``, invalid/``None`` inputs map to zero vectors.
+
+        Returns
+        -------
+        npt.NDArray[np.float64]
+            Fingerprint row vector.
+
+        """
         mol: Optional[Chem.Mol] = None
         if smi is not None:
             mol = Chem.MolFromSmiles(smi)
@@ -565,6 +836,19 @@ class MorganFingerprintEncoder:
         """Encode a batch.
 
         Info: Added for convenience for datasets to encode a state (target,root1,root2) in one go
+
+        Parameters
+        ----------
+        smis : Iterable[Optional[str]]
+            Iterable of SMILES values.
+        allow_none : bool, optional
+            If ``True``, invalid/``None`` inputs map to zero vectors.
+
+        Returns
+        -------
+        npt.NDArray[np.float64]
+            Matrix of encoded fingerprints.
+
         """
         return np.asarray(
             [self.encode(smi, allow_none) for smi in smis]
@@ -572,22 +856,25 @@ class MorganFingerprintEncoder:
 
 
 class IdentityIntEncoder:
+    """Encoder that wraps integers as single-element arrays."""
+
     def __init__(self) -> None:
-        pass
+        """Initialize encoder."""
 
     @property
     def args(self) -> dict[str, Any]:
-        """Return the arguments.
-
-        Returns
-        -------
-        dict[str, Any]
-            Arguments of the object as a dictionary.
-        """
+        """Return the arguments as a dictionary."""
         return {**self.__dict__, **{"name": self.__class__.__name__}}
 
     def __repr__(self) -> str:
-        """Return a string representation of the object."""
+        """Return a string representation of the object.
+
+        Returns
+        -------
+        str
+            Representation string.
+
+        """
         return f"'{self.__class__.__name__}': {self.__dict__}"
 
     @property
@@ -596,7 +883,19 @@ class IdentityIntEncoder:
         return self.get_nbits()
 
     def encode(self, number: int) -> npt.NDArray[np.int_]:
-        """Returns a (1,1)-array with the number."""
+        """Encode an integer as a ``(1, 1)`` array.
+
+        Parameters
+        ----------
+        number : int
+            Integer value to encode.
+
+        Returns
+        -------
+        npt.NDArray[np.int_]
+            Encoded integer.
+
+        """
         return np.atleast_2d(number)
 
     def get_nbits(self) -> int:
@@ -605,7 +904,8 @@ class IdentityIntEncoder:
         Returns
         -------
         int
-            Number of bits
+            Number of bits.
+
         """
         return 1
 
@@ -662,6 +962,19 @@ class SynTreeFeaturizer:
             - a "state"
             - a "step", a vector that encompasses all info we need for training the neural nets.
               This step is: [action, z_rt1, reaction_id, z_rt2, z_root_mol_1]
+
+        Parameters
+        ----------
+        syntree : SyntheticTree
+            Synthetic tree to featurize.
+
+        Returns
+        -------
+        sparse.csc_matrix
+            The sparse representation of the synthetic tree.
+        sparse.csc_matrix
+            The step feature matices.
+
         """
 
         states: list[npt.NDArray[np.float64]] = []

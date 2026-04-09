@@ -5,8 +5,6 @@ templates. Originally written by Jake. Wenhao edited.
 
 from __future__ import annotations
 
-from typing import Optional
-
 import rdkit.Chem as Chem
 from rdkit.Chem import AllChem, rdChemReactions
 

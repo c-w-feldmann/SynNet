@@ -90,11 +90,25 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         *,
-        building_blocks: list[Union[str, AllChem.rdchem.Mol]],
+        building_blocks: list[str | AllChem.rdchem.Mol],
         rxn_templates: list[str],
         processes: int = MAX_PROCESSES,
         verbose: bool = False,
     ) -> None:
+        """Initialize the reaction-based building block filter.
+
+        Parameters
+        ----------
+        building_blocks : list[str | AllChem.rdchem.Mol]
+            Building blocks to evaluate.
+        rxn_templates : list[str]
+            Reaction template SMARTS strings.
+        processes : int, optional
+            Number of processes for parallel matching.
+        verbose : bool, optional
+            Whether to print verbose logging.
+
+        """
         self.building_blocks = building_blocks
         self.rxn_templates = rxn_templates
 
@@ -105,8 +119,31 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
         self.verbose = verbose
 
     def _match_mp(self) -> Self:
-        """Set available reactants for reactions using multiprocessing."""
+        """Set available reactants for reactions using multiprocessing.
+
+        Returns
+        -------
+        Self
+            Updated instance with initialized reaction reactants.
+
+        """
+
         def __match(_rxn: Reaction, *, bblocks: list[str]) -> Reaction:
+            """Set available reactants for one reaction.
+
+            Parameters
+            ----------
+            _rxn : Reaction
+                Reaction to initialize.
+            bblocks : list[str]
+                Candidate building blocks.
+
+            Returns
+            -------
+            Reaction
+                Reaction with available reactants set.
+
+            """
             return _rxn.set_available_reactants(bblocks)
 
         func = partial(__match, bblocks=self.building_blocks)
@@ -300,6 +337,17 @@ class BuildingBlockFilterHeuristics:
         """Filter building blocks based on heuristics.
 
         See: https://doi.org/10.1021/acs.jcim.2c00785, SI Figure 12)
+
+        Parameters
+        ----------
+        bblocks : Iterable[str]
+            Candidate building block SMILES.
+
+        Returns
+        -------
+        pd.DataFrame
+            Filtered building blocks and computed descriptor columns.
+
         """
         # Convert bblocks to DataFrame for convenience
         df = pd.DataFrame(bblocks, columns=["SMILES"])
@@ -329,12 +377,12 @@ class BuildingBlockFilterHeuristics:
         Parameters
         ----------
         bblocks : Iterable[str]
-            Iterable of building blocks
+            Iterable of building blocks.
 
         Returns
         -------
         list[str]
-            List of filtered building blocks
+            List of filtered building blocks.
         """
         return self.filter(bblocks)["SMILES"].tolist()
 
@@ -353,9 +401,24 @@ class BuildingBlockFilterMatchRxn:
         """Filter building blocks based on a match to a reaction template.
         If a building block matches a reaction template, it is retained.
 
-        Return:
-            matched_bblocks: List[str] - list of building blocks that matched a reaction template
-            reactions: List[Reaction] - initialized reactions
+        Parameters
+        ----------
+        bblocks : Iterable[str]
+            Building block SMILES to filter.
+        rxn_templates : Iterable[str]
+            Reaction template SMARTS strings.
+        ncpu : int, default=MAX_PROCESSES
+            Number of CPUs used for parallel matching.
+        verbose : bool, default=False
+            Whether to emit verbose logs.
+
+        Returns
+        -------
+        list[str]
+            Matched building blocks.
+        list[Reaction]
+            List of reaction templates.
+
         """
         # Match building blocks to reactions
         logger.info("Converting SMILES to `rdkit.Mol` objects...")
@@ -400,13 +463,14 @@ class BuildingBlockFilterMatchRxn:
         Parameters
         ----------
         reaction : Reaction
-            Reaction object
+            Reaction object.
         building_blocks : list[Union[str, AllChem.rdchem.Mol]]
-            List of building blocks
+            List of building blocks.
 
         Returns
         -------
         Reaction
-            Reaction object with available reactants set
+            Reaction object with available reactants set.
+
         """
         return reaction.set_available_reactants(building_blocks)

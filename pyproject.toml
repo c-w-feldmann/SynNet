@@ -32,4 +32,5 @@ dependencies = {file = "requirements.txt"}
 [dependency-groups]
 dev = [
     "docsig>=0.71.0",
+    "ruff>=0.15.9",
 ]
