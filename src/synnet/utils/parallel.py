@@ -1,4 +1,4 @@
-"""parallel.py"""
+"""Utility functions for parallel processing."""
 
 from typing import Any, Callable, TypeVar
 
@@ -79,7 +79,7 @@ def simple_parallel(
     # originally from: https://github.com/samgoldman97
 
     def setup_pool() -> tuple[mp.Pool, list[Any]]:
-        """Setup the pool and async results.
+        """Set up the pool and async results.
 
         Returns
         -------

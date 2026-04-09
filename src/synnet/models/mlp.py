@@ -1,6 +1,4 @@
-"""
-Multi-layer perceptron (MLP) class.
-"""
+"""Multi-layer perceptron (MLP) class."""
 
 import logging
 from typing import Any
@@ -19,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class MLP(lightning.LightningModule):
+    """Multi-layer perceptron (MLP) class."""
+
     TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
     VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
     OPTIMIZERS = "sgd adam".lower().split()

@@ -1,4 +1,4 @@
-"""Definition of custom types for type hinting"""
+"""Definition of custom types for type hinting."""
 
 from pathlib import Path
 from typing import Any, Callable

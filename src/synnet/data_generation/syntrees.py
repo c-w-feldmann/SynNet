@@ -1,4 +1,4 @@
-"""syntrees"""
+"""Classes to represent synthetic trees."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ class SynTreeGenerator:
         verbose: bool = False,
         debug: bool = False,
     ) -> None:
-        """Initializes a `SynTreeGenerator`.
+        """Initialize a `SynTreeGenerator`.
 
         Parameters
         ----------
@@ -143,9 +143,11 @@ class SynTreeGenerator:
         return self
 
     def _init_rxns_with_reactants(self) -> Self:
-        """Initializes a `Reaction` with a list of possible reactants.
+        """Initialize a `Reaction` with a list of possible reactants.
 
-        Info: This can take a while for lots of possible reactants.
+        Notes
+        -----
+        This can take a while for lots of possible reactants.
 
         Returns
         -------
@@ -246,6 +248,7 @@ class SynTreeGenerator:
         self, reactant_1: str, raise_exc: bool = True
     ) -> tuple[str, str | None, str | None, int]:
         """Expand a sub-tree from one molecule.
+
         This can result in uni- or bimolecular reaction.
 
         Parameters
@@ -267,7 +270,6 @@ class SynTreeGenerator:
             The index of the reaction used for expansion.
 
         """
-
         # Identify applicable reactions
         rxn_mask = self._find_rxn_candidates(reactant_1)
 
@@ -635,7 +637,8 @@ class SynTreeGeneratorPostProc:
     def parse_generate_safe(
         results: list[tuple[SyntheticTree | None, Exception | None]],
     ) -> tuple[SyntheticTreeSet, dict[str, int]]:
-        """Parses the result from `SynTreeGenerator.generate_safe`.
+        """Parse the result from `SynTreeGenerator.generate_safe`.
+
         In particular:
             - parses valid SynTrees and returns a `SyntheticTreeSet`
             - counts error messages and returns a `dict`
@@ -921,7 +924,7 @@ class SynTreeFeaturizer:
         rxn_embedder: IdentityIntEncoder,
         action_embedder: IdentityIntEncoder,
     ) -> None:
-        """Initializes a `SynTreeFeaturizer`.
+        """Initialize a `SynTreeFeaturizer`.
 
         Parameters
         ----------
@@ -955,8 +958,9 @@ class SynTreeFeaturizer:
     ) -> tuple[sparse.csc_matrix, sparse.csc_matrix]:
         """Featurize a synthetic tree at every state.
 
-        Note:
-          - At each iteration of the syntree growth, an action is chosen
+        Notes
+        -----
+          - At each iteration of the syntree growth, an action is chosen.
           - Every action (except "end") comes with a reaction.
           - For every action, we compute:
             - a "state"
@@ -976,7 +980,6 @@ class SynTreeFeaturizer:
             The step feature matices.
 
         """
-
         states: list[npt.NDArray[np.float64]] = []
         steps: list[npt.NDArray[np.float64]] = []
         if syntree.root is None:

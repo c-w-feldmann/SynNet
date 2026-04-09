@@ -433,7 +433,6 @@ class Reaction:
             A list of the second reactants.
 
         """
-
         if self.num_reactant == 1:  # uni-molecular reaction
             reactants_1 = [smi for smi in smiles_list if self.is_reactant_first(smi)]
             return reactants_1, []
@@ -579,7 +578,6 @@ class ReactionSet:
         ValueError
             If the file extension is not `.json.gz`.
         """
-
         if not str(file).endswith(".json.gz"):
             raise ValueError(f"Incompatible file extension for file {file}")
 
@@ -679,7 +677,6 @@ class NodeChemical:
 class NodeRxn:
     """Represents a chemical reaction in a synthetic tree.
 
-
     Attributes
     ---------
     rxn_id:
@@ -694,6 +691,7 @@ class NodeRxn:
         Depth this node is in tree (+1 for an action, +.5 for a reaction)
     index:
         Order of this `NodeRxn` in a `SyntheticTree`.
+
     """
 
     rxn_id: int
@@ -837,6 +835,7 @@ class SyntheticTree:
 
     def get_state(self) -> tuple[str | None, str | None]:
         """Get the state of this synthetic tree.
+
         The most recent root node has 0 as its index.
 
         Returns
@@ -1286,7 +1285,7 @@ class SyntheticTreeSet:
             f.write(json.dumps(syntrees_as_json))
 
     def split_by_depth(self) -> dict[int, list[SyntheticTree]]:
-        """Splits syntrees by depths and returns a copy.
+        """Split syntrees by depths and returns a copy.
 
         Returns
         -------
@@ -1302,7 +1301,7 @@ class SyntheticTreeSet:
         return trees_by_depth_dict
 
     def _print(self, x: int = 3) -> None:
-        """Helper function for debugging.
+        """Log trees for debugging purposes.
 
         Parameters
         ----------

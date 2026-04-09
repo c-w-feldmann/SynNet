@@ -22,7 +22,7 @@ from synnet.utils.data_utils import ReactionSet
 
 @click.group()
 def synnet() -> None:
-    """Main command for the synnet package. Requires subcommands."""
+    """Execute main command for the synnet package. Requires subcommands."""
 
 
 @synnet.command()

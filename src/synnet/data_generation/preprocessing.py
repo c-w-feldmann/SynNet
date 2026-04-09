@@ -160,7 +160,6 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
             Returns self for method chaining.
 
         """
-
         if self.processes == 1:
             self.rxns = [
                 rxn.set_available_reactants(self.building_blocks) for rxn in self.rxns
@@ -327,7 +326,6 @@ class BuildingBlockFilterHeuristics:
         verbose : bool
             Print verbose output.
         """
-
         self.descriptor_range_dict = (
             descriptor_range_dict or BuildingBlockFilterHeuristics.descriptor_range_dict
         )
@@ -399,6 +397,7 @@ class BuildingBlockFilterMatchRxn:
         verbose: bool = False,
     ) -> tuple[List[str], List[Reaction]]:
         """Filter building blocks based on a match to a reaction template.
+
         If a building block matches a reaction template, it is retained.
 
         Parameters

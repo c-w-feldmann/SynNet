@@ -1,6 +1,4 @@
-"""data_inspection.py
-Collection of functions to inspect data.
-"""
+"""Collection of functions to inspect data."""
 
 from __future__ import annotations
 

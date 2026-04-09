@@ -1,6 +1,4 @@
-"""
-This file contains various utils for data preparation and preprocessing.
-"""
+"""This file contains various utils for data preparation and preprocessing."""
 
 import logging
 

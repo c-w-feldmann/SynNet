@@ -41,7 +41,7 @@ class MolDrawer:
         self.lookup: dict[str, str] = {}
 
     def _hash(self, smiles: list[str]) -> Self:
-        """Hash the smiles to get a unique filename
+        """Hash the smiles to get a unique filename.
 
         Goal: Get a short, valid, and hopefully unique filename for each molecule.
 

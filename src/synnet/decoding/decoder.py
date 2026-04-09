@@ -31,6 +31,8 @@ from synnet.utils.synnet_exceptions import NoSuitableReactantError, StateEmbeddi
 
 
 class HelperDataloader:
+    """Class to load data for the decoder from supported input formats."""
+
     @classmethod
     def _fetch_data_chembl(cls, file: PathType) -> list[str]:
         """Load query SMILES from a ChEMBL TSV file.
@@ -230,7 +232,7 @@ class SynTreeDecoder:
         state: tuple[str | None, str | None],
         z_target: npt.NDArray[np.float64],
     ) -> npt.NDArray[np.float64]:
-        """Computes embeddings for all molecules in the input space.
+        """Compute embeddings for all molecules in the input space.
 
         Embedding = [z_mol1, z_mol2, z_target]
 
@@ -245,6 +247,7 @@ class SynTreeDecoder:
         -------
         npt.NDArray[np.float64]
             Embedding of the state.
+
         """
         if state[0] is None and state[1] is not None:
             raise StateEmbeddingError(

@@ -11,7 +11,7 @@ import multiprocessing as mp
 import os
 from functools import partial
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 from loguru import logger
@@ -129,7 +129,7 @@ def main() -> None:
     def stgen_with_fresh_seed(
         dummy: None, **stgen_kwargs: Any
     ) -> tuple[SyntheticTree | None, Exception | None]:
-        """Wrapper for to ensure a fresh random seed for each process.
+        """Wrap to ensure a fresh random seed for each process.
 
         Parameters
         ----------

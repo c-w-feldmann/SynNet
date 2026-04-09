@@ -176,7 +176,7 @@ class SynTreeWriter:
 def subgraph(
     argument: str = "",
 ) -> Callable[[Callable[[Any], Any]], Callable[[Any], Any]]:
-    """Decorator that writes a named mermaid subparagraph.
+    """Write as a named mermaid subparagraph.
 
     Example
     -------

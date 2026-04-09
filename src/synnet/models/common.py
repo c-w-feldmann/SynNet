@@ -148,7 +148,6 @@ def _compute_class_weights_from_dataloader(
         Balanced class weights.
 
     """
-
     if not hasattr(dataloader.dataset, "tensors"):
         raise AssertionError(
             "Dataloader must have a dataset with a `tensors`-attribute."
@@ -351,9 +350,12 @@ def _download_to_file(url: str, filename: str) -> None:
     filename : str
         Output filename for the downloaded content.
 
-    """
+    References
+    ----------
+    [1] https://stackoverflow.com/a/62113293
+    [2] https://stackoverflow.com/a/16696317
 
-    # Adapted  from: https://stackoverflow.com/a/62113293 & https://stackoverflow.com/a/16696317
+    """
     with requests.get(url, stream=True, timeout=3600) as r:
         r.raise_for_status()
         total_size = int(r.headers.get("content-length", 0))

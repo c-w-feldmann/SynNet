@@ -10,4 +10,4 @@ class NoSuitableReactantError(FailedReconstructionError):
 
 
 class StateEmbeddingError(FailedReconstructionError):
-    """Raise when State Embedding failed"""
+    """Raise when State Embedding failed."""
