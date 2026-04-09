@@ -64,7 +64,7 @@ from synnet.utils.custom_types import PathType
     is_flag=True,
     help="Flag to run in debug mode",
 )
-def compute_mean_reciprocal_ranking(
+def compute_mean_reciprocal_ranking(  # pylint: disable=too-many-locals
     ckpt_file: PathType,
     embeddings_file: PathType,
     feature_matrix_file: PathType,
@@ -112,7 +112,7 @@ def compute_mean_reciprocal_ranking(
     # Recall default: Morgan fingerprint with radius=2, nbits=256
     mol_embedder = MolecularEmbeddingManager.from_folder(embeddings_file)
     mol_embedder.init_balltree(metric=metric)
-    n, d = mol_embedder.embeddings.shape
+    n = mol_embedder.embeddings.shape[1]
 
     # Load data
     dataloader = xy_to_dataloader(
@@ -130,9 +130,9 @@ def compute_mean_reciprocal_ranking(
     rt1_net.to(device)
 
     rank_list = []
-    for X, y in tqdm(dataloader):
-        X, y = X.to(device), y.to(device)
-        y_hat = rt1_net(X)  # (batch_size,nbits)
+    for x, y in tqdm(dataloader):
+        x, y = x.to(device), y.to(device)
+        y_hat = rt1_net(x)  # (batch_size,nbits)
 
         ind_true = mol_embedder.kdtree.query(
             y.detach().cpu().numpy(), k=1, return_distance=False
@@ -141,18 +141,15 @@ def compute_mean_reciprocal_ranking(
             y_hat.detach().cpu().numpy(), k=n, return_distance=False
         )
 
-        irows, icols = np.nonzero(
-            ind == ind_true
-        )  # irows = range(batch_size), icols = ranks
-        rank_list.append(icols)
+        rank_list.append(np.nonzero(ind == ind_true)[1])
 
     ranks_array = np.asarray(rank_list, dtype=int).flatten()  # (nSamples,)
     rrs = 1 / (ranks_array + 1)  # +1 for offset 0-based indexing
 
     logger.info(f"Result using metric: {metric}")
     logger.info(f"The mean reciprocal ranking is: {rrs.mean():.3f}")
-    TOP_N_RANKS = (1, 3, 5, 10, 15, 30)
-    for i in TOP_N_RANKS:
+    top_n_ranks = (1, 3, 5, 10, 15, 30)
+    for i in top_n_ranks:
         n_recovered = sum(ranks_array < i)
         n = len(ranks_array)
         logger.info(

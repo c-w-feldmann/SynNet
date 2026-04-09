@@ -25,7 +25,7 @@ class TestSynTree(unittest.TestCase):
         syntree = SyntheticTree.from_dict(self.syntree_dict)
         self.assertEqual(syntree.actions, [0, 0, 2, 1, 3])
 
-    def test_create_small_syntree(self) -> None:
+    def test_create_small_syntree(self) -> None:  # pylint: diable=duplicate-code
         """Test creating a small syn_tree.
         This tree should be fairly representative as it has:
             - all 4 actions
