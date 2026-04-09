@@ -87,16 +87,16 @@ def compute_mean_reciprocal_ranking(
         Path to the feature matrix file.
     target_matrix_file : PathType
         Path to the target matrix file.
-    ncpu : int, optional
-        Number of cpus, by default MAX_PROCESSES
-    batch_size : int, optional
-        Batch size, by default 64
-    device : str, optional
-        Device to use for computation, by default "cuda:0"
-    distance : str, optional
-        Distance function for `BallTree`, by default "euclidean"
-    debug : bool, optional
-        Flag to run in debug mode, by default False
+    ncpu : int, default=MAX_PROCESSES.
+        Number of cpus.
+    batch_size : int, default=64
+        Batch size.
+    device : str, default="cuda:0"
+        Device to use for computation.
+    distance : str, default="euclidean"
+        Distance function for `BallTree`.
+    debug : bool, default=False
+        Flag to run in debug mode.
     """
     logger.info("Start.")
 

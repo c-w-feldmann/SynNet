@@ -38,7 +38,7 @@ def extract_smiles(input_file: str, output_file: str) -> None:
     Parameters
     ----------
     input_file : str
-        An `*.sdf` file
+        An `*.sdf` file.
     output_file : str
         Output file name for the resulting `pandas.DataFrame`.
     """

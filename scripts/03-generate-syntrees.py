@@ -128,7 +128,24 @@ def main() -> None:
 
     def stgen_with_fresh_seed(
         dummy: None, **stgen_kwargs: Any
-    ) -> tuple[Optional[SyntheticTree], Optional[Exception]]:
+    ) -> tuple[SyntheticTree | None, Exception | None]:
+        """Wrapper for to ensure a fresh random seed for each process.
+
+        Parameters
+        ----------
+        dummy : None
+            Dummy argument to allow for `pool.map` usage.
+        stgen_kwargs : dict
+            Keyword arguments for the SynTreeGenerator's `generate_safe` method.
+
+        Returns
+        -------
+        SyntheticTree | None
+            The generated synthetic tree, or None if generation failed.
+        Exception | None
+            The exception raised during generation, or None if generation succeeded.
+
+        """
         stgen.rng = np.random.default_rng()
         return stgen.generate_safe(
             max_depth=args.max_actions, min_actions=args.min_actions

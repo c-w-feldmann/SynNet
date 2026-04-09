@@ -27,7 +27,19 @@ from synnet.utils.parallel import chunked_parallel
 
 
 def parse_sdf_file(file: str) -> pd.DataFrame:
-    """Parse `*.sdf` file and return a pandas dataframe."""
+    """Parse `*.sdf` file and return a pandas dataframe.
+
+    Parameters
+    ----------
+    file : str
+        Path to the SDF file to parse.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing parsed SDF data with canonical SMILES.
+
+    """
     df = PandasTools.LoadSDF(
         file,
         idName="ID",
@@ -55,7 +67,22 @@ def parse_sdf_file(file: str) -> pd.DataFrame:
 
 
 class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
-    """Filter building blocks."""
+    """Filter building blocks.
+
+    Attributes
+    ----------
+    building_blocks : list[Union[str, AllChem.rdchem.Mol]]
+        List of building blocks to filter.
+    rxn_templates : list[str]
+        List of reaction template SMARTS strings.
+    rxns : list[Reaction]
+        List of initialized Reaction objects.
+    processes : int
+        Number of processes for parallel execution.
+    verbose : bool
+        Whether to print verbose output.
+
+    """
 
     building_blocks_filtered: list[str] = []
     rxns_initialised: bool = False
@@ -78,6 +105,7 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
         self.verbose = verbose
 
     def _match_mp(self) -> Self:
+        """Set available reactants for reactions using multiprocessing."""
         def __match(_rxn: Reaction, *, bblocks: list[str]) -> Reaction:
             return _rxn.set_available_reactants(bblocks)
 
@@ -87,7 +115,14 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
         return self
 
     def _filter_bblocks_for_rxns(self) -> Self:
-        """Initializes a `Reaction` with a list of possible reactants."""
+        """Initialize reactions with a list of possible reactants.
+
+        Returns
+        -------
+        Self
+            Returns self for method chaining.
+
+        """
 
         if self.processes == 1:
             self.rxns = [
@@ -100,7 +135,14 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
         return self
 
     def filter(self) -> Self:
-        """Filters out building blocks which do not match a reaction template."""
+        """Filter building blocks which do not match a reaction template.
+
+        Returns
+        -------
+        Self
+            Returns self for method chaining.
+
+        """
         if not self.rxns_initialised:
             self._filter_bblocks_for_rxns()
 
@@ -113,11 +155,32 @@ class BuildingBlockFileHandler:
     """Handler for building blocks files."""
 
     def load(self, file: PathType) -> list[str]:
-        """Load building blocks from file."""
+        """Load building blocks from file.
+
+        Parameters
+        ----------
+        file : PathType
+            Path to the file to load.
+
+        Returns
+        -------
+        list[str]
+            List of building block SMILES strings.
+
+        """
         return pd.read_csv(file)["SMILES"].to_list()
 
     def save(self, file: PathType, building_blocks: list[str]) -> None:
-        """Save building blocks to file."""
+        """Save building blocks to file.
+
+        Parameters
+        ----------
+        file : PathType
+            Path to the file to save.
+        building_blocks : list[str]
+            List of building block SMILES strings.
+
+        """
         if not isinstance(file, Path):
             file = Path(file)
         file.parent.mkdir(parents=True, exist_ok=True)
@@ -129,7 +192,19 @@ class ReactionTemplateFileHandler:
     """Handler for reaction templates files."""
 
     def load(self, file: str) -> list[str]:
-        """Load reaction templates from file."""
+        """Load reaction templates from file.
+
+        Parameters
+        ----------
+        file : str
+            Path to the file to load.
+
+        Returns
+        -------
+        list[str]
+            List of reaction template SMARTS strings.
+
+        """
         with open(file, "rt", encoding="UTF-8") as f:
             rxn_templates = f.readlines()
 
@@ -141,7 +216,16 @@ class ReactionTemplateFileHandler:
         return rxn_templates
 
     def save(self, file: str, rxn_templates: list[str]) -> None:
-        """Save reaction templates to file."""
+        """Save reaction templates to file.
+
+        Parameters
+        ----------
+        file : str
+            Path to the file to save.
+        rxn_templates : list[str]
+            List of reaction template SMARTS strings.
+
+        """
         with open(file, "wt", encoding="UTF-8") as f:
             f.writelines(t + "\n" for t in rxn_templates)
 
@@ -152,8 +236,20 @@ class ReactionTemplateFileHandler:
           - reaction is uni- or bimolecular
           - has only a single product
 
-        Note:
-          - only uses std-lib functions, very basic validation only
+        Parameters
+        ----------
+        rxn_template : str
+            The reaction template SMARTS string to validate.
+
+        Returns
+        -------
+        bool
+            True if template is valid, False otherwise.
+
+        Notes
+        -----
+            Only uses std-lib functions, very basic validation only.
+
         """
         reactants, _, products = rxn_template.split(">")
         is_uni_or_bimolecular = len(reactants) == 1 or len(reactants) == 2

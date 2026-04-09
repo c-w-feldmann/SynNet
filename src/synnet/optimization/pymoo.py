@@ -98,6 +98,23 @@ class SmilesGenerationProblem(Problem):
         *_args: Any,
         **_kwargs: Any,
     ) -> None:
+        """Evaluate the problem.
+
+        Parameters
+        ----------
+        embedded_representation: npt.NDArray[Any]
+            The matrix of embedded vectors to evaluate.
+        out: dict[str, Any]
+            The dictionary to store the results in.
+        *_args: Any
+            Additional arguments.
+        **_kwargs: Any
+            Additional keyword arguments.
+            Can contain "smiles_list", which is a list of SMILES strings corresponding
+            to the embedded representation. If not provided, the SMILES will be
+            generated using the decoder.
+
+        """
         smiles_list: Optional[list[Optional[str]]]
         smiles_list = _kwargs.get("smiles_list", None)
         if smiles_list is None:

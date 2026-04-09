@@ -120,20 +120,21 @@ class SynTreeWriter:
 
     def __init__(
         self,
-        prefixer: PrefixWriter = PrefixWriter(),
-        postfixer: PostfixWriter = PostfixWriter(),
+        prefixer: PrefixWriter | None = None,
+        postfixer: PostfixWriter | None = None,
     ) -> None:
         """Initialize the writer.
 
         Parameters
         ----------
-        prefixer : PrefixWriter, optional
-            The prefix writer, by default PrefixWriter()
-        postfixer : PostfixWriter, optional
-            The postfix writer, by default PostfixWriter()
+        prefixer : PrefixWriter | None, optional
+            The prefix writer. None defaults to PrefixWriter.
+        postfixer : PostfixWriter | None, optional
+            The postfix writer. None defaults to PostfixWriter.
+
         """
-        self.prefixer = prefixer
-        self.postfixer = postfixer
+        self.prefixer = prefixer or PrefixWriter()
+        self.postfixer = postfixer or PostfixWriter()
         self._text = None
 
     def write(self, out: list[str]) -> Self:
@@ -148,6 +149,7 @@ class SynTreeWriter:
         -------
         Self
             The writer.
+
         """
         out = self.prefixer.write() + out + self.postfixer.write()
         self._text = out
@@ -176,7 +178,8 @@ def subgraph(
 ) -> Callable[[Callable[[Any], Any]], Callable[[Any], Any]]:
     """Decorator that writes a named mermaid subparagraph.
 
-    Example output:
+    Example
+    -------
     ```
     subparagraph argument
         <output of function that is decorated>
@@ -185,13 +188,14 @@ def subgraph(
 
     Parameters
     ----------
-    argument : str, optional
-        The argument to the subgraph, by default ""
+    argument : str, default=""
+        The argument to the subgraph.
 
     Returns
     -------
     Callable[[Callable[[Any], Any]], Callable[[Any], Any]]
-        The decorator
+        The decorator.
+
     """
 
     def _subgraph(func: Callable[[Any], Any]) -> Callable[[Any], Any]:

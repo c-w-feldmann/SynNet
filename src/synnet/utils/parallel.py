@@ -26,15 +26,16 @@ def compute_chunksize(input_list: list[Any], cpus: int) -> int:
 
     Parameters
     ----------
-    input_list : list
-        List of inputs
-    cpus : int
-        Number of cpus
+    input_list : list[Any]
+        List of inputs.
+    cpus : int[Any]
+        Number of cpus.
 
     Returns
     -------
     int
-        Size of chunk
+        Size of chunk.
+
     """
     chunksize, extra = divmod(len(input_list), cpus * 4)
     if extra:
@@ -57,22 +58,23 @@ def simple_parallel(
     Parameters
     ----------
     input_list : list
-        List of inputs
+        List of inputs.
     function : Callable[[T], T2]
-        Function to apply to each input
-    max_cpu : int, optional
-        Max number of cpus, by default MAX_PROCESSES
-    timeout : int, optional
-        Timeout, by default 4000
-    max_retries : int, optional
-        Max number of retries, by default 3
-    verbose : bool, optional
-        Verbose, by default False
+        Function to apply to each input.
+    max_cpu : int, default=MAX_PROCESSES
+        Max number of cpus.
+    timeout : int, default=4000
+        Timeout in seconds for each async result.
+    max_retries : int, default=3
+        Max number of retries.
+    verbose : bool, default=False
+        Verbosity of the function.
 
     Returns
     -------
-    list
-        List of outputs
+    list[V]
+        List of outputs.
+
     """
     # originally from: https://github.com/samgoldman97
 
@@ -130,31 +132,34 @@ def chunked_parallel(
     Examples
     --------
     ```python
-    input_list = [1,2,3,4,5]
-    func = lambda x: x**10
-    res = chunked_parallel(input_list,func,verbose=True,max_cpu=4)
+        input_list = [1,2,3,4,5]
+        func = lambda x: x**10
+        res = chunked_parallel(input_list,func,verbose=True,max_cpu=4)
     ```
 
     Parameters
     ----------
     input_list: list[T]
-        list of objects to apply function
+        List of objects to apply function.
     function: Callable[[T], T2]
-        Callable with 1 input and returning a single value
+        Callable with 1 input and returning a single value.
     chunks: Optional[int]
-        number of chunks
+        Number of chunks.
     max_cpu: int
         Max num cpus to use.
-        Default is MAX_PROCESSES
+        Default is MAX_PROCESSES.
     timeout: int
-        Length of timeout in seconds
+        Length of timeout in seconds.
     max_retries: int
-        Num times to retry this
+        Num times to retry this.
+    verbose: bool
+        Whether to print progress bar.
 
     Returns
     -------
     list[T2]
-        List of outputs
+        List of outputs.
+
     """
     # originally from: https://github.com/samgoldman97
 
@@ -169,13 +174,14 @@ def chunked_parallel(
 
         Parameters
         ----------
-        list_inputs : list
-            List of inputs
+        list_inputs : list[Any]
+            List of inputs.
 
         Returns
         -------
-        list
-            List of outputs
+        list[Any]
+            List of outputs.
+
         """
         return [function(i) for i in list_inputs]
 

@@ -27,6 +27,14 @@ MAX_PROCESSES = 8
 
 
 def get_args() -> argparse.Namespace:
+    """Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+
+    """
     parser = argparse.ArgumentParser()
 
     # general
@@ -83,6 +91,7 @@ def get_args() -> argparse.Namespace:
 
 
 def train() -> None:
+    """Train the action model using CLI-provided configuration."""
     logger.info("Start.")
 
     # Parse input args

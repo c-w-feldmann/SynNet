@@ -56,6 +56,14 @@ def wrapper(
         The encoder.
     **kwargs : Any
         Additional keyword arguments for the decoder.
+
+    Returns
+    -------
+    SyntheticTree
+        Decoded synthetic tree.
+    float | None
+        Similarity score to the target.
+
     """
     try:
         z_target = mol_encoder.encode(target)
@@ -97,7 +105,7 @@ def print_stats(df: pd.DataFrame, data: str) -> None:
 
 def postprocess_results(
     tree_list: list[SyntheticTree],
-    similarity_array: Optional[list[Optional[float]]] = None,
+    similarity_array: list[float | None] | None = None,
 ) -> pd.DataFrame:
     """Postprocess the results.
 
@@ -105,8 +113,8 @@ def postprocess_results(
     ----------
     tree_list : list[SyntheticTree]
         List of decoded syntrees.
-    similarity_array : Optional[list[Optional[float]]], optional
-        List of similarities, by default None
+    similarity_array : list[float | None] | None, optional
+        List of similarities.
 
     Returns
     -------

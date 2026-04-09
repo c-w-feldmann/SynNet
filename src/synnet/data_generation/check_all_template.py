@@ -12,18 +12,22 @@ from rdkit.Chem import AllChem, rdChemReactions
 
 
 def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
-    """
-    Given SMILES reaction, splits into reactants, agents, and products
+    """Given SMILES reaction, splits into reactants, agents, and products.
 
     Parameters
     ----------
-    rxn (str):
+    rxn : str
         SMILES-encoded reaction.
 
     Returns
     -------
-    list
-        Contains sets of reactants, agents, and products as RDKit molecules.
+    Chem.Mol
+        Reactant molecule.
+    Chem.Mol
+        Agent molecule.
+    Chem.Mol
+        Product molecule.
+
     """
     rxn_parts = rxn.strip().split(">")
     rxn_reactants = set(rxn_parts[0].split("."))
@@ -51,7 +55,7 @@ def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
 def rxn_template(
     reaction_smarts: str,
     reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
-) -> Optional[str]:
+) -> str | None:
     """Check whether given reaction it matches any templates.
 
     Parameters
@@ -63,8 +67,9 @@ def rxn_template(
 
     Returns
     -------
-    Optional[str]
+    str | None
         Matching template name. If no templates matched, returns None.
+
     """
     reactants, agents, products = split_rxn_parts(reaction_smarts)
     temp_match = None

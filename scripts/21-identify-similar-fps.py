@@ -120,8 +120,8 @@ def compute_most_similar_smiles(
         The reference fingerprints.
     smiles_reference : list[str]
         The reference SMILES strings.
-    ncpu : int, optional
-        The number of cpus to use, by default MAX_PROCESSES
+    ncpu : int, default=MAX_PROCESSES
+        The number of cpus to use.
 
     Returns
     -------

@@ -75,7 +75,14 @@ class Reaction:
         self.available_reactants = available_reactants
 
     def __repr__(self) -> str:
-        """Return a string representation of the `Reaction` object."""
+        """Return a string representation of the `Reaction` object.
+
+        Returns
+        -------
+        str
+            String representation of the Reaction.
+
+        """
         return f"Reaction(smarts='{self.smirks}')"
 
     @property
@@ -377,7 +384,8 @@ class Reaction:
         Returns
         -------
         Union[str, None]
-            SMILES string representing the product or `None` if not reaction possible
+            SMILES string representing the product or `None` if not reaction possible.
+
         """
         if not self.can_run_reaction(first_reactant, second_reactant):
             raise ValueError("Reaction cannot be run with given reactants.")
@@ -410,7 +418,21 @@ class Reaction:
         return Chem.MolToSmiles(mol, isomericSmiles=False)
 
     def _filter_reactants(self, smiles_list: list[str]) -> tuple[list[str], list[str]]:
-        """Filters reactants which do not match the reaction."""
+        """Filter reactants which do not match the reaction.
+
+        Parameters
+        ----------
+        smiles_list : list[str]
+            List of SMILES strings to filter.
+
+        Returns
+        -------
+        list[str]
+            A list of the first reactants.
+        list[str]
+            A list of the second reactants.
+
+        """
 
         if self.num_reactant == 1:  # uni-molecular reaction
             reactants_1 = [smi for smi in smiles_list if self.is_reactant_first(smi)]
@@ -424,8 +446,18 @@ class Reaction:
         raise AssertionError("Reaction is neither uni- or bi-molecular!")
 
     def set_available_reactants(self, building_blocks: list[str]) -> Self:
-        """Finds applicable reactants from a list of building blocks.
-        Sets `self.available_reactants`.
+        """Find reactants from given building blocks and set available_reactants.
+
+        Parameters
+        ----------
+        building_blocks : list[str]
+            List of building block SMILES strings.
+
+        Returns
+        -------
+        Self
+            Returns self for method chaining.
+
         """
         _available_reactants = self._filter_reactants(building_blocks)
         # Ensure molecules are stored as `str`
@@ -447,7 +479,15 @@ class Reaction:
         )
 
     def has_available_reactants(self) -> bool:
-        """Returns False if no reactants are available for any reactant position otherwise True."""
+        """Check if reactants are available for all reactant positions.
+
+        Returns
+        -------
+        bool
+            False if no reactants are available for any reactant position,
+            True otherwise.
+
+        """
         if self.available_reactants is None:
             return False
         for reactants in self.available_reactants:
@@ -469,22 +509,76 @@ class ReactionSet:
     rxns: list[Reaction]
 
     def __init__(self, rxns: Optional[list[Reaction]] = None):
+        """Initialize a ReactionSet.
+
+        Parameters
+        ----------
+        rxns : Optional[list[Reaction]], optional
+            List of Reaction objects to initialize with, by default None.
+        """
         self.rxns = rxns or []
 
     def __repr__(self) -> str:
+        """Return a string representation of the ReactionSet.
+
+        Returns
+        -------
+        str
+            String representation of the ReactionSet.
+        """
         return f"ReactionSet ({len(self.rxns)} reactions.)"
 
     def __len__(self) -> int:
+        """Return the number of reactions in this set.
+
+        Returns
+        -------
+        int
+            Number of reactions.
+        """
         return len(self.rxns)
 
     def __getitem__(self, index: int) -> Reaction:
+        """Get a reaction by index.
+
+        Parameters
+        ----------
+        index : int
+            Index of the reaction.
+
+        Returns
+        -------
+        Reaction
+            The reaction at the given index.
+
+        Raises
+        ------
+        IndexError
+            If no reactions are stored.
+        """
         if self.rxns is None:
             raise IndexError("No Reactions.")
         return self.rxns[index]
 
     @classmethod
     def load(cls, file: PathType) -> Self:
-        """Load a collection of reactions from a `*.json.gz` file."""
+        """Load a collection of reactions from a `*.json.gz` file.
+
+        Parameters
+        ----------
+        file : PathType
+            Path to the file to load.
+
+        Returns
+        -------
+        Self
+            A loaded ReactionSet.
+
+        Raises
+        ------
+        ValueError
+            If the file extension is not `.json.gz`.
+        """
 
         if not str(file).endswith(".json.gz"):
             raise ValueError(f"Incompatible file extension for file {file}")
@@ -496,7 +590,22 @@ class ReactionSet:
         return cls(reactions)
 
     def save(self, file: str, skip_without_building_block: bool = True) -> None:
-        """Save a collection of reactions to a `*.json.gz` file."""
+        """Save a collection of reactions to a `.json.gz` file.
+
+        Parameters
+        ----------
+        file : str
+            The file to save the reactions to. Must end with `.json.gz`.
+        skip_without_building_block : bool, default=True
+            If True, only save reactions with available reactants.
+            If False, save all reactions.
+
+        Raises
+        ------
+        ValueError
+            If the file extension is not `.json.gz`.
+
+        """
         if not str(file).endswith(".json.gz"):
             raise ValueError(f"Incompatible file extension for file {file}")
         if skip_without_building_block:
@@ -510,7 +619,14 @@ class ReactionSet:
             f.write(json.dumps(rxns_as_json, indent=4).encode("utf-8"))
 
     def _print(self, n: int = 3) -> None:
-        """Debugging-helper method to print `n` reactions as json"""
+        """Debugging-helper method to print `n` reactions as json.
+
+        Parameters
+        ----------
+        n : int
+            Number of reactions to print, by default 3.
+
+        """
         for i, r in enumerate(self.rxns):
             if i >= n:
                 break
@@ -631,6 +747,13 @@ class SyntheticTree:
         }
 
     def __repr__(self) -> str:
+        """Return a string representation of this `SyntheticTree`.
+
+        Returns
+        -------
+        str
+            String representation of the SyntheticTree.
+        """
         return f"SynTree(num_actions={self.num_actions})"  # This is including the end action
 
     @classmethod
@@ -704,6 +827,7 @@ class SyntheticTree:
         -------
         int | None
             Index of the molecule in the tree.
+
         """
         # Info: reversed() is a prelim fix for a bug that caused three mols in the state!
         for node in reversed(self.chemicals):
@@ -720,7 +844,8 @@ class SyntheticTree:
         str | None
             The most recent root node.
         str | None
-            The second most recent root
+            The second most recent root.
+
         """
         root_state_list = [node.smiles for node in self.chemicals if node.is_root][::-1]
         if len(root_state_list) == 0:
@@ -739,13 +864,14 @@ class SyntheticTree:
         Parameters
         ----------
         mol1: str
-            First molecule as SMILES-string
+            First molecule as SMILES-string.
         mol2: str
-            Second molecule as SMILES-string
+            Second molecule as SMILES-string.
         rxn_id: int
-            id of the reaction
+            ID of the reaction.
         mol_product: str
-            Product of the reaction as SMILES-string
+            Product of the reaction as SMILES-string.
+
         """
         if mol1 is None or mol2 is None:
             raise AssertionError("Merging requires two molecules.")
@@ -799,13 +925,14 @@ class SyntheticTree:
         Parameters
         ----------
         mol1: Optional[str]
-            First reactant as SMILES-string
+            First reactant as SMILES-string.
         mol2: Optional[str]
-            Second reactant as SMILES-string
+            Second reactant as SMILES-string.
         rxn_id: int
-            id of the reaction
+            Id of the reaction.
         mol_product: str
-            Product of the reaction as SMILES-string
+            Product of the reaction as SMILES-string.
+
         """
         if mol1 is None:
             raise AssertionError("Molecule cannot be None.")
@@ -910,15 +1037,16 @@ class SyntheticTree:
         Parameters
         ----------
         action: int
-            action_id corresponding to the action taken. (ref `self.ACTIONS`)
+            ID corresponding to the action taken. (ref `self.ACTIONS`).
         rxn_id: int
-            id of the reaction
+            Id of the reaction.
         mol1: str
-            First reactant as SMILES-string
+            First reactant as SMILES-string.
         mol2: str
-            Second reactant as SMILES-string
+            Second reactant as SMILES-string.
         mol_product: str
-            Product of the reaction as SMILES-string
+            Product of the reaction as SMILES-string.
+
         """
         self.actions.append(int(action))
 
@@ -1028,48 +1156,22 @@ class SyntheticTree:
 
     @property
     def nodes_as_smiles(self) -> list[str]:
-        """Return all (leaf, inner, root) molecules in this tree as smiles.
-
-        Returns
-        -------
-        list[str]
-            All molecules in this tree as smiles.
-        """
+        """Return all (leaf, inner, root) molecules in this tree as smiles."""
         return [node.smiles for node in self.chemicals]
 
     @property
     def leafs_as_smiles(self) -> list[str]:
-        """Return all leaf molecules in this tree as smiles.
-
-        Returns
-        -------
-        list[str]
-            All leaf molecules in this tree as smiles.
-        """
+        """Return all leaf molecules in this tree as smiles."""
         return [node.smiles for node in self.chemicals if node.is_leaf]
 
     @property
     def nonleafs_as_smiles(self) -> list[str]:
-        """Return all non-leaf (inner + root) molecules in this tree as smiles.
-
-        Returns
-        -------
-        list[str]
-            All non-leaf molecules in this tree as smiles.
-        """
+        """Return all non-leaf (inner + root) molecules in this tree as smiles."""
         return [node.smiles for node in self.chemicals if not node.is_leaf]
 
     @property
     def is_valid(self) -> bool:
-        """Return if this tree is valid.
-
-        A Tree is valid if it has "actions" and has been ended properly with "end"-action.
-
-        Returns
-        -------
-        bool
-            Whether this tree is valid.
-        """
+        """Return if this tree is valid (has "actions" and ends with "end"-action)."""
         return self.num_actions > 0 and self.actions[-1] == 3
 
     @property
@@ -1081,10 +1183,6 @@ class SyntheticTree:
         The depth of a tree is not a perfect metric for complexity,
         as a 2nd subtree that gets merged only increases depth by 1.
 
-        Returns
-        -------
-        int
-            The number of actions in this tree.
         """
         return len(self.actions)
 
@@ -1094,13 +1192,14 @@ class SyntheticTreeSet:
 
     synthetic_tree_list: list[SyntheticTree]
 
-    def __init__(self, sts: Optional[list[SyntheticTree]] = None):
+    def __init__(self, sts: list[SyntheticTree] | None = None):
         """Initialize the SyntheticTreeSet.
 
         Parameters
         ----------
-        sts: Optional[list[SyntheticTree]]
+        sts: list[SyntheticTree] | None, optional
             List of synthetic trees to initialize the set with.
+
         """
         if sts is not None:
             self.synthetic_tree_list = sts
@@ -1108,11 +1207,24 @@ class SyntheticTreeSet:
             self.synthetic_tree_list = []
 
     def __repr__(self) -> str:
-        """Return a string representation of this SyntheticTreeSet."""
+        """Return a string representation of this SyntheticTreeSet.
+
+        Returns
+        -------
+        str
+            A string representation of this SyntheticTreeSet.
+
+        """
         return f"SyntheticTreeSet ({len(self.synthetic_tree_list)} syntrees.)"
 
     def __len__(self) -> int:
-        """Return the number of synthetic trees in this set."""
+        """Return the number of synthetic trees in this set.
+
+        Returns
+        -------
+        int
+            The number of synthetic trees in this set.
+        """
         return len(self.synthetic_tree_list)
 
     def __getitem__(self, index: int) -> SyntheticTree:

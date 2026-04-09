@@ -266,6 +266,19 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: PathType, weights_only: bool = False) ->
 
 
 def asdict(obj: Any) -> dict[str, Any]:
+    """Return an object as a dict.
+
+    Parameters
+    ----------
+    obj : Any
+        The object to be converted.
+
+    Returns
+    -------
+    dict[str, Any]
+        The object as a dict, excluding any attributes that start with "__".
+
+    """
     return {k: v for k, v in obj.__dict__.items() if not k.startswith("__")}
 
 

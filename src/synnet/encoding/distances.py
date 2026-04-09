@@ -46,8 +46,8 @@ def ce_distance(
         First vector.
     y_pred : npt.NDArray[np.float64]
         Second vector.
-    eps : float, optional
-        Small value, for numerical stability, by default 1e-15
+    eps : float, default=1e-15
+        Small value, for numerical stability.
 
     Returns
     -------
