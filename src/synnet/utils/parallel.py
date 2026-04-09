@@ -1,6 +1,6 @@
 """parallel.py"""
 
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, TypeVar
 
 from loguru import logger
 from tqdm import tqdm
@@ -121,7 +121,7 @@ def simple_parallel(
 def chunked_parallel(
     input_list: list[T],
     function: Callable[[T], V],
-    chunks: Optional[int] = None,
+    chunks: int | None = None,
     max_cpu: int = MAX_PROCESSES,
     timeout: int = 4000,
     max_retries: int = 3,
@@ -143,7 +143,7 @@ def chunked_parallel(
         List of objects to apply function.
     function: Callable[[T], T2]
         Callable with 1 input and returning a single value.
-    chunks: Optional[int]
+    chunks: int  | None
         Number of chunks.
     max_cpu: int
         Max num cpus to use.

@@ -3,7 +3,6 @@
 import uuid
 import warnings
 from pathlib import Path
-from typing import Union
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -79,12 +78,12 @@ class MolDrawer:
         """
         return self.lookup
 
-    def plot(self, smiles_list: Union[list[str], str]) -> Self:
+    def plot(self, smiles_list: list[str] | str) -> Self:
         """Plot smiles as 2d molecules and save to `self.path/subfolder/*.svg`.
 
         Parameters
         ----------
-        smiles_list : Union[list[str], str]
+        smiles_list : list[str] | str
             List of SMILES strings.
 
         Returns

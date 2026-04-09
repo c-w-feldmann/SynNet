@@ -2,7 +2,7 @@
 
 import abc
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -158,7 +158,7 @@ class MorganFingerprintEmbedding(MolecularEmbedder):
 class MolecularEmbeddingManager:
     """Class for computing and storing molecular embeddings."""
 
-    building_blocks: Union[list[str], npt.NDArray[np.int_]]
+    building_blocks: list[str] | npt.NDArray[np.int_]
     embeddings: npt.NDArray[np.int_]
     embedding_method: MolecularEmbedder
     kdtree: BallTree
@@ -167,9 +167,9 @@ class MolecularEmbeddingManager:
 
     def __init__(
         self,
-        smiles_list: Optional[Iterable[str]] = None,
-        embedding_method: Optional[MolecularEmbedder] = None,
-        precalculated_embeddings: Optional[npt.NDArray[np.int_]] = None,
+        smiles_list: Iterable[str] | None = None,
+        embedding_method: MolecularEmbedder | None = None,
+        precalculated_embeddings: npt.NDArray[np.int_] | None = None,
         kdtree_metric: MetricType = "euclidean",
         n_jobs: int = MAX_PROCESSES,
     ) -> None:
@@ -179,11 +179,11 @@ class MolecularEmbeddingManager:
 
         Parameters
         ----------
-        smiles_list: Iterable[str]
+        smiles_list: Iterable[str] | None
             List of SMILES strings.
-        embedding_method: Optional[MolecularEmbedder]
+        embedding_method: MolecularEmbedder | None
             Embedding method to use. If None, MorganFingerprintEmbedding is used.
-        precalculated_embeddings: Optional[npt.NDArray[np.int_]]
+        precalculated_embeddings: npt.NDArray[np.int_] | None
             Precalculated embeddings. If None, they are computed.
         kdtree_metric: str
             Metric used for the kdtree. Default is cosine.
@@ -241,7 +241,7 @@ class MolecularEmbeddingManager:
         cls,
         configuration_file: PathType,
         compound_list_file: PathType,
-        precalculated_embedding_file: Optional[PathType] = None,
+        precalculated_embedding_file: PathType | None = None,
     ) -> Self:
         """Create a new instance from a file.
 
@@ -251,7 +251,7 @@ class MolecularEmbeddingManager:
             File with the configuration.
         compound_list_file : PathType
             File with the list of compounds.
-        precalculated_embedding_file : Optional[PathType]
+        precalculated_embedding_file : PathType | None
             File with the precalculated embeddings.
 
         Returns
@@ -405,7 +405,7 @@ class MolecularEmbeddingManager:
 
     def init_balltree(
         self,
-        metric: Union[Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64], str],
+        metric: Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64] | str,
     ) -> Self:
         """Initialize the BallTree.
 
@@ -415,7 +415,7 @@ class MolecularEmbeddingManager:
 
         Parameters
         ----------
-        metric : Union[Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64], str]
+        metric : Callable[[npt.NDArray[Any], npt.NDArray[Any]], np.float64] | str
             Metric to use for the kdtree.
 
         Returns
@@ -434,7 +434,7 @@ class MolecularEmbeddingManager:
         self,
         configuration_file: PathType,
         compound_list_file: PathType,
-        precalculated_embedding_file: Optional[PathType] = None,
+        precalculated_embedding_file: PathType | None = None,
     ) -> None:
         """Save the instance to files.
 
@@ -444,7 +444,7 @@ class MolecularEmbeddingManager:
             File to save the configuration.
         compound_list_file : PathType
             File to save the list of compounds.
-        precalculated_embedding_file : Optional[PathType]
+        precalculated_embedding_file : PathType | None
             File to save the precalculated embeddings.
         """
         np.savetxt(compound_list_file, self.smiles_array, fmt="%s")

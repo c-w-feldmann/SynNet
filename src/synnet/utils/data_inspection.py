@@ -7,7 +7,7 @@ from __future__ import annotations
 import functools
 from collections import Counter
 from itertools import chain
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -166,7 +166,7 @@ def count_num_actions(sts: SyntheticTreeSet) -> Counter[int]:
 
 def plot_num_actions(
     sts: SyntheticTreeSet,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     **plt_kwargs: Any,
 ) -> plt.Axes:
     """Plot histogram-style bars for number of actions.
@@ -175,7 +175,7 @@ def plot_num_actions(
     ----------
     sts : SyntheticTreeSet
         Collection of synthetic trees.
-    ax : Optional[plt.Axes], optional
+    ax : plt.Axes | None, optional
         Existing axes to draw into.
     **plt_kwargs : Any
         Additional keyword arguments passed to ``ax.bar``.

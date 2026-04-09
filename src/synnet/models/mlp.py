@@ -3,7 +3,7 @@ Multi-layer perceptron (MLP) class.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import lightning
 import numpy as np
@@ -39,7 +39,7 @@ class MLP(lightning.LightningModule):
         optimizer: str,
         learning_rate: float,
         val_freq: int,
-        ncpu: Optional[int] = None,
+        ncpu: int | None = None,
         molembedder: MolecularEmbeddingManager | None = None,  # for knn-accuracy
         class_weights: npt.NDArray[np.float64] | None = None,
     ) -> None:
@@ -71,7 +71,7 @@ class MLP(lightning.LightningModule):
             Optimizer learning rate.
         val_freq : int
             Validation frequency in epochs.
-        ncpu : Optional[int], optional
+        ncpu : int | None, optional
             Number of CPU workers.
         molembedder : MolecularEmbeddingManager | None, optional
             Embedding manager used for nearest-neighbor validation.

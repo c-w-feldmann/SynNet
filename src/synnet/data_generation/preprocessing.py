@@ -2,7 +2,7 @@
 
 from functools import partial
 from pathlib import Path
-from typing import Iterable, List, Union
+from typing import Iterable, List
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -71,7 +71,7 @@ class BuildingBlockFilter:  # pylint: disable=too-few-public-methods
 
     Attributes
     ----------
-    building_blocks : list[Union[str, AllChem.rdchem.Mol]]
+    building_blocks : list[str | AllChem.rdchem.Mol]
         List of building blocks to filter.
     rxn_templates : list[str]
         List of reaction template SMARTS strings.
@@ -456,7 +456,7 @@ class BuildingBlockFilterMatchRxn:
     def match_bblocks(
         reaction: Reaction,
         *,
-        building_blocks: list[Union[str, AllChem.rdchem.Mol]],
+        building_blocks: list[str | AllChem.rdchem.Mol],
     ) -> Reaction:
         """Set the available reactants for a given reaction.
 
@@ -464,7 +464,7 @@ class BuildingBlockFilterMatchRxn:
         ----------
         reaction : Reaction
             Reaction object.
-        building_blocks : list[Union[str, AllChem.rdchem.Mol]]
+        building_blocks : list[str | AllChem.rdchem.Mol]
             List of building blocks.
 
         Returns

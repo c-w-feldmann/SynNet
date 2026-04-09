@@ -4,7 +4,7 @@ import shutil
 import tarfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -46,7 +46,7 @@ def init_save_dir(path: PathType, suffix: str = "") -> Path:
     return save_dir
 
 
-def load_config_file(file: PathType) -> dict[str, Union[str, int]]:
+def load_config_file(file: PathType) -> dict[str, str | int]:
     """Load a `*.yaml`-config file.
 
     Parameters
@@ -56,7 +56,7 @@ def load_config_file(file: PathType) -> dict[str, Union[str, int]]:
 
     Returns
     -------
-    dict[str, Union[str, int]]
+    dict[str, str | int]
         The config as a dictionary.
     """
     file = Path(file)
@@ -71,7 +71,7 @@ def xy_to_dataloader(
     X_file: PathType,
     y_file: PathType,
     task: str,
-    n: Optional[Union[int, float]] = 1.0,
+    n: int | float | None = 1.0,
     **kwargs: Any,
 ) -> torch_data.DataLoader:  # type: ignore[type-arg]
     """Load featurized ``X`` and ``y`` arrays into a ``DataLoader``.
@@ -84,7 +84,7 @@ def xy_to_dataloader(
         Path to sparse target matrix file.
     task : str
         Task type, either ``regression`` or classification.
-    n : Optional[Union[int, float]], optional
+    n : int | float | None, optional
         Number or fraction of samples to keep.
     **kwargs : Any
         Additional keyword arguments forwarded to ``torch_data.DataLoader``.

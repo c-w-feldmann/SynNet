@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Any, Callable, Optional, Self
+from typing import Any, Callable, Self
 
 from synnet.utils.custom_types import PathType
 
@@ -15,12 +15,12 @@ class PrefixWriter:  # pylint: disable=too-few-public-methods
 
     prefix: list[str]
 
-    def __init__(self, file: Optional[str] = None):
+    def __init__(self, file: str | None = None):
         """Initialize the writer.
 
         Parameters
         ----------
-        file : Optional[str], optional
+        file : str | None, optional
             The file to load the prefix from, by default None.
         """
         self.prefix = self._default_prefix() if file is None else self._load(file)
@@ -116,7 +116,7 @@ class SynTreeWriter:
 
     prefixer: PrefixWriter
     postfixer: PostfixWriter
-    _text: Optional[list[str]]
+    _text: list[str] | None
 
     def __init__(
         self,
@@ -155,14 +155,14 @@ class SynTreeWriter:
         self._text = out
         return self
 
-    def to_file(self, file: PathType, text: Optional[list[str]] = None) -> None:
+    def to_file(self, file: PathType, text: list[str] | None = None) -> None:
         """Write the text to a file.
 
         Parameters
         ----------
         file : PathType
             The file to write the text to.
-        text : Optional[list[str]], optional
+        text : list[str]  | None, optional
             The text to write, by default None.
         """
         text = text or self._text

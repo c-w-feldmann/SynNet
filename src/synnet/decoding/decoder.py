@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -108,12 +108,13 @@ class SynTreeDecoder:
     _device: str
     mol_encoder: MorganFingerprintEncoder
     rxn_collection: ReactionSet
-    similarity_fct: Optional[
+    similarity_fct: (
         Callable[
             [npt.NDArray[np.float64] | npt.NDArray[np.int_], list[str]],
             npt.NDArray[np.float64],
         ]
-    ]
+        | None
+    )
 
     def __init__(
         self,
@@ -126,12 +127,13 @@ class SynTreeDecoder:
         reactant2_net: ltg.LightningModule,
         rxn_encoder: OneHotEncoder = OneHotEncoder(91),
         mol_encoder: MorganFingerprintEncoder = MorganFingerprintEncoder(2, 4096),
-        similarity_fct: Optional[
+        similarity_fct: (
             Callable[
-                [Union[npt.NDArray[np.float64] | npt.NDArray[np.int_]], list[str]],
+                [npt.NDArray[np.float64] | npt.NDArray[np.int_], list[str]],
                 npt.NDArray[np.float64],
             ]
-        ] = None,
+            | None
+        ) = None,
         device: str = "cpu",
     ) -> None:
         """Initialize a SynTreeDecoder.
@@ -154,7 +156,7 @@ class SynTreeDecoder:
             Encoder for the reaction, by default OneHotEncoder(91).
         mol_encoder : MorganFingerprintEncoder
             Object for encoding molecules as vector, by default MorganFingerprintEncoder(2, 4096).
-        similarity_fct : Optional[Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]]], optional
+        similarity_fct : Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]] | None, optional
             Similarity function for the reactants, by default None.
         device : str, optional
             Device to move decoder networks to.
@@ -170,7 +172,7 @@ class SynTreeDecoder:
         self.mol_encoder = mol_encoder
 
         # Networks
-        self.nets: Dict[str, ltg.LightningModule] = {
+        self.nets: dict[str, ltg.LightningModule] = {
             "act": action_net,
             "rt1": reactant1_net,
             "rxn": rxn_net,
@@ -225,7 +227,7 @@ class SynTreeDecoder:
 
     def get_state_embedding(
         self,
-        state: tuple[Optional[str], Optional[str]],
+        state: tuple[str | None, str | None],
         z_target: npt.NDArray[np.float64],
     ) -> npt.NDArray[np.float64]:
         """Computes embeddings for all molecules in the input space.
@@ -234,7 +236,7 @@ class SynTreeDecoder:
 
         Parameters
         ----------
-        state : tuple[str, Optional[str]]
+        state : tuple[str | None, str | None]
             State of the syntree.
         z_target : npt.NDArray[np.float64]
             Embedding of the target molecule.
@@ -368,13 +370,14 @@ class SynTreeDecoder:
         return np.asarray(final_mask)
 
     def get_reaction_mask(
-        self, reactants: Union[str, tuple[str, str]]
+        self,
+        reactants: str | tuple[str, str],
     ) -> npt.NDArray[np.bool_]:
         """Get a mask of possible reactions for given reactants.
 
         Parameters
         ----------
-        reactants : Union[str, tuple[str, str]]
+        reactants : str | tuple[str, str]
             Reactant required for reaction.
 
         Returns
@@ -394,7 +397,7 @@ class SynTreeDecoder:
         max_depth: int = 15,
         debug: bool = False,
         **kwargs: Any,
-    ) -> tuple[SyntheticTree, Optional[float]]:
+    ) -> tuple[SyntheticTree, float | None]:
         """Decode a target molecule into a SyntheticTree.
 
         TODO: This needs to be refactored and rewritten to smaller methods.
@@ -416,7 +419,7 @@ class SynTreeDecoder:
         -------
         SyntheticTree
             SyntheticTrees
-        Optional[float]
+        float  | None
             Similarity of the target molecule and the final molecule.
         """
         if debug:
@@ -429,7 +432,7 @@ class SynTreeDecoder:
         act, rt1, rxn, rt2 = self.nets.values()
         z_target = np.squeeze(z_target)  # TODO: Fix shapes
         syntree = SyntheticTree()
-        mol_recent: Optional[str] = None  # most-recent root mol
+        mol_recent: str | None = None  # most-recent root mol
         i = 0
         while syntree.depth < self.max_depth:
             logger.debug(f"Iteration {i} | {syntree.depth=}")
@@ -465,7 +468,7 @@ class SynTreeDecoder:
                 )
                 # idxs.shape = (1,k)
                 idx = idxs[0][k - 1]
-                reactant_1: Optional[str] = self.bblocks_manager.smiles_array[idx]
+                reactant_1: str | None = self.bblocks_manager.smiles_array[idx]
                 logger.debug(f"  Selected 1st reactant ({idx=}): `{reactant_1}`")
             elif self.action_mapping[action_id] == "expand":
                 # We already have a 1st reactant.
@@ -678,7 +681,7 @@ class SynTreeDecoderGreedy:
         attempts: int = 3,
         objective: str = "best",  # "best", "best+shortest"
         debug: bool = False,
-    ) -> tuple[SyntheticTree, Optional[float]]:
+    ) -> tuple[SyntheticTree, float | None]:
         """Decode `z_target` at most `attempts`-times and return the most-similar one.
 
         Parameters

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import numpy.typing as npt
@@ -13,8 +13,8 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.DataStructs import TanimotoSimilarity
 
-DecoderFunction = Callable[[npt.NDArray[Any]], Optional[str]]
-ScorerFunction = Callable[[Optional[str]], float]
+DecoderFunction = Callable[[npt.NDArray[Any]], str | None]
+ScorerFunction = Callable[[str | None], float]
 
 
 class SmilesDuplicateElimination(ElementwiseDuplicateElimination):
@@ -205,7 +205,7 @@ class SmilesGenerationProblem(Problem):
             generated using the decoder.
 
         """
-        smiles_list: Optional[list[Optional[str]]]
+        smiles_list: list[str | None] | None
         smiles_list = _kwargs.get("smiles_list", None)
         if smiles_list is None:
             smiles_list = [

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Iterable, TypeVar
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -211,7 +211,7 @@ class SynTreeGenerator:
 
     def _sample_rxn(
         self, mask: npt.NDArray[np.bool_] | None = None
-    ) -> Tuple[Reaction, int]:
+    ) -> tuple[Reaction, int]:
         """Sample a reaction by index.
 
         Parameters
@@ -281,7 +281,7 @@ class SynTreeGenerator:
 
         # Sample 2nd reactant
         if rxn.num_reactant == 1:
-            reactant_2: Optional[str] = None
+            reactant_2: str | None = None
         else:
             # Sample a molecule from the available reactants of this reaction
             # That is, for a reaction A + B -> C,
@@ -308,7 +308,7 @@ class SynTreeGenerator:
             )
         return reactant_1, reactant_2, product, idx_rxn
 
-    def _merge(self, syntree: SyntheticTree) -> Tuple[str, Optional[str], str, int]:
+    def _merge(self, syntree: SyntheticTree) -> tuple[str, str | None, str, int]:
         """Merge the two root molecules in the synthetic tree.
 
         Parameters
@@ -329,8 +329,8 @@ class SynTreeGenerator:
 
         """
         # Identify suitable rxn
-        r1: Optional[str]
-        r2: Optional[str]
+        r1: str | None
+        r2: str | None
         r1, r2 = syntree.get_state()
         if r1 is None:
             raise NoMergeReactionPossibleError("Cannot merge empty tree.")
@@ -420,13 +420,13 @@ class SynTreeGenerator:
         return np.array((can_add, can_expand, can_merge, can_end), dtype=bool)
 
     def _get_rxn_mask(
-        self, reactants: tuple[Optional[str], Optional[str]], raise_exc: bool = True
+        self, reactants: tuple[str | None, str | None], raise_exc: bool = True
     ) -> npt.NDArray[np.bool_]:
         """Get a mask of possible reactions for two reactants.
 
         Parameters
         ----------
-        reactants : tuple[Optional[str], Optional[str]]
+        reactants : tuple[str  | None, str  | None]
             Pair of reactant SMILES.
         raise_exc : bool, optional
             Whether to raise when no bimolecular reaction is available.
@@ -535,7 +535,7 @@ class SynTreeGenerator:
 
         # Init
         syntree = SyntheticTree()
-        recent_mol: Optional[str] = None
+        recent_mol: str | None = None
         action = None
         for i in range(max_depth + 1):
             logger.debug(
@@ -794,13 +794,13 @@ class MorganFingerprintEncoder:
         return self._nbits
 
     def encode(
-        self, smi: Optional[str], allow_none: bool = True
+        self, smi: str | None, allow_none: bool = True
     ) -> npt.NDArray[np.float64]:
         """Encode one SMILES string.
 
         Parameters
         ----------
-        smi : Optional[str]
+        smi : str  | None
             Input SMILES string.
         allow_none : bool, optional
             If ``True``, invalid/``None`` inputs map to zero vectors.
@@ -811,7 +811,7 @@ class MorganFingerprintEncoder:
             Fingerprint row vector.
 
         """
-        mol: Optional[Chem.Mol] = None
+        mol: Chem.Mol | None = None
         if smi is not None:
             mol = Chem.MolFromSmiles(smi)
 
@@ -831,7 +831,7 @@ class MorganFingerprintEncoder:
         return fp.reshape((1, -1))  # (1,d)
 
     def encode_batch(
-        self, smis: Iterable[Optional[str]], allow_none: bool = True
+        self, smis: Iterable[str | None], allow_none: bool = True
     ) -> npt.NDArray[np.float64]:
         """Encode a batch.
 
@@ -839,7 +839,7 @@ class MorganFingerprintEncoder:
 
         Parameters
         ----------
-        smis : Iterable[Optional[str]]
+        smis : Iterable[str | None]
             Iterable of SMILES values.
         allow_none : bool, optional
             If ``True``, invalid/``None`` inputs map to zero vectors.
@@ -985,11 +985,11 @@ class SynTreeFeaturizer:
         z_target_mol = self.mol_embedder.encode(target_mol)
 
         # Recall: We can have at most 2 sub-trees, each with a root node.
-        mol1: Optional[str] = None
-        mol2: Optional[str] = None
+        mol1: str | None = None
+        mol2: str | None = None
         root_mol_1 = None
         root_mol_2 = None
-        rxn_node: Optional[NodeRxn] = None
+        rxn_node: NodeRxn | None = None
         for i, action in enumerate(syntree.actions):
             # 1. Encode "state"
             if root_mol_1 is None or root_mol_2 is None:
