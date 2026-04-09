@@ -134,12 +134,26 @@ def _fetch_molembedder(folder: PathType) -> MolecularEmbeddingManager:
     return molembedder
 
 
-def load_mlp_from_ckpt(ckpt_file: PathType) -> MLP:
-    """Load a model from a checkpoint for inference."""
+def load_mlp_from_ckpt(ckpt_file: PathType, weights_only: bool = False) -> MLP:
+    """Load a model from a checkpoint for inference.
+
+    Parameters
+    ----------
+    ckpt_file : PathType
+        Path to the checkpoint file.
+    weights_only : bool, default=False
+        Whether to load only the model weights (True) or the entire model (False).
+
+    Returns
+    -------
+    MLP
+        The model loaded from the file.
+
+    """
     try:
-        model = MLP.load_from_checkpoint(ckpt_file)
+        model = MLP.load_from_checkpoint(ckpt_file, weights_only=weights_only)
     except TypeError:
-        model = _load_mlp_from_iclr_ckpt(ckpt_file)
+        model = _load_mlp_from_iclr_ckpt(ckpt_file, weights_only=weights_only)
     return model.eval()
 
 
@@ -164,9 +178,24 @@ def find_best_model_ckpt(path: PathType) -> Path:
     return best_model_ckpt
 
 
-def _load_mlp_from_iclr_ckpt(ckpt_file: PathType) -> MLP:
+def _load_mlp_from_iclr_ckpt(ckpt_file: PathType, weights_only: bool = False) -> MLP:
     """Load a model from a checkpoint for inference.
-    Info: hparams were not saved, so we specify the ones needed for inference again."""
+
+    Info: hparams were not saved, so we specify the ones needed for inference again.
+
+    Parameters
+    ----------
+    ckpt_file : PathType
+        Path to the checkpoint file.
+    weights_only : bool, default=False
+        Whether to load only the model weights (True) or the entire model (False).
+
+    Returns
+    -------
+    MLP
+        The model loaded from the file.
+
+    """
     model_name = Path(ckpt_file).parent.name  # assume "<dirs>/<model>/<file>.ckpt"
     kwargs: dict[str, Any] = {
         "num_dropout_layers": 1,
@@ -185,6 +214,7 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: PathType) -> MLP:
             dropout=0.5,
             loss="cross_entropy",
             valid_loss="accuracy",
+            weights_only=weights_only,
             **kwargs,
         )
     elif model_name == "rt1":
@@ -198,6 +228,7 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: PathType) -> MLP:
             dropout=0.5,
             loss="mse",
             valid_loss="mse",  # Info: Used to be accuracy on kNN in embedding space, but that's very slow
+            weights_only=weights_only,
             **kwargs,
         )
     elif model_name == "rxn":
@@ -211,6 +242,7 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: PathType) -> MLP:
             dropout=0.5,
             loss="mse",
             valid_loss="mse",  # Info: Used to be accuracy on kNN in embedding space, but that's very slow
+            weights_only=weights_only,
             **kwargs,
         )
     elif model_name == "rt2":
@@ -224,6 +256,7 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: PathType) -> MLP:
             dropout=0.5,
             loss="mse",
             valid_loss="mse",  # Info: Used to be accuracy on kNN in embedding space, but that's very slow
+            weights_only=weights_only,
             **kwargs,
         )
 
