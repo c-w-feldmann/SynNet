@@ -28,3 +28,10 @@ dependencies = {file = "requirements.txt"}
 
 [tool.setuptools.package-data]
 "synnet" = ["py.typed"]
+
+[dependency-groups]
+dev = [
+    "black>=25.11.0",
+    "docsig>=0.71.0",
+    "ruff>=0.15.9",
+]

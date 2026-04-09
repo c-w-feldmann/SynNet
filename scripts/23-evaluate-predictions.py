@@ -18,7 +18,14 @@ from synnet.config import MAX_PROCESSES
 
 
 def get_args() -> argparse.Namespace:
-    """Parse command line arguments."""
+    """Parse command line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument(

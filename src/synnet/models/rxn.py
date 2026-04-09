@@ -21,6 +21,14 @@ logger = logging.getLogger(__file__)
 
 
 def get_args() -> argparse.Namespace:
+    """Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+
+    """
     parser = argparse.ArgumentParser()
 
     # general
@@ -77,6 +85,7 @@ def get_args() -> argparse.Namespace:
 
 
 def train() -> None:
+    """Train the reaction model using CLI configuration."""
     logger.info("Start.")
 
     # Parse input args

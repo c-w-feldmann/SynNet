@@ -1,16 +1,21 @@
 """Common methods and params shared by all models."""
 
+import shutil
+import tarfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
+import requests
 import torch
 import torch.utils.data as torch_data
 import yaml
 from loguru import logger
 from scipy import sparse
+from sklearn.utils.class_weight import compute_class_weight
+from tqdm import tqdm
 
 from synnet.encoding.embedding import MolecularEmbeddingManager
 from synnet.models.mlp import MLP
@@ -18,7 +23,22 @@ from synnet.utils.custom_types import PathType
 
 
 def init_save_dir(path: PathType, suffix: str = "") -> Path:
-    """Creates folder with timestamp: `$path/<timestamp>$suffix`."""
+    """Create folder with timestamp.
+
+    `$path/<timestamp>$suffix`.
+
+    Parameters
+    ----------
+    path : PathType
+        Path where to create the folder.
+    suffix : str, optional
+        Suffix to append to the timestamp, by default "".
+
+    Returns
+    -------
+    Path
+        The created folder.
+    """
     now = datetime.now().strftime("%Y_%m_%d-%H%M%S")
     save_dir = Path(path) / (now + suffix)
 
@@ -26,12 +46,23 @@ def init_save_dir(path: PathType, suffix: str = "") -> Path:
     return save_dir
 
 
-def load_config_file(file: PathType) -> dict[str, Union[str, int]]:
-    """Load a `*.yaml`-config file."""
+def load_config_file(file: PathType) -> dict[str, str | int]:
+    """Load a `*.yaml`-config file.
+
+    Parameters
+    ----------
+    file : PathType
+        Path to the config file.
+
+    Returns
+    -------
+    dict[str, str | int]
+        The config as a dictionary.
+    """
     file = Path(file)
-    if not file.suffix == ".yaml":
+    if file.suffix != ".yaml":
         raise NotImplementedError(f"Can only read config from yaml file, not {file}.")
-    with open(file, "r") as f:
+    with open(file, "r", encoding="UTF-8") as f:
         config = yaml.safe_load(f)
     return config
 
@@ -40,10 +71,30 @@ def xy_to_dataloader(
     X_file: PathType,
     y_file: PathType,
     task: str,
-    n: Optional[Union[int, float]] = 1.0,
+    n: int | float | None = 1.0,
     **kwargs: Any,
 ) -> torch_data.DataLoader:  # type: ignore[type-arg]
-    """Loads featurized X,y `*.npz`-data into a `DataLoader`"""
+    """Load featurized ``X`` and ``y`` arrays into a ``DataLoader``.
+
+    Parameters
+    ----------
+    X_file : PathType
+        Path to sparse feature matrix file.
+    y_file : PathType
+        Path to sparse target matrix file.
+    task : str
+        Task type, either ``regression`` or classification.
+    n : int | float | None, optional
+        Number or fraction of samples to keep.
+    **kwargs : Any
+        Additional keyword arguments forwarded to ``torch_data.DataLoader``.
+
+    Returns
+    -------
+    torch_data.DataLoader
+        Data loader yielding tensors for model training or evaluation.
+
+    """
     X = sparse.load_npz(X_file)
     y = sparse.load_npz(y_file)
     # Filer?
@@ -82,8 +133,21 @@ def xy_to_dataloader(
 def _compute_class_weights_from_dataloader(
     dataloader: torch_data.DataLoader, as_tensor: bool = False  # type: ignore[type-arg]
 ) -> npt.NDArray[np.float64]:
-    from sklearn.utils.class_weight import compute_class_weight
+    """Compute balanced class weights from a dataloader.
 
+    Parameters
+    ----------
+    dataloader : torch_data.DataLoader
+        Data loader whose dataset exposes target tensor in ``dataset.tensors``.
+    as_tensor : bool, optional
+        If ``True``, return weights as a tensor-like object.
+
+    Returns
+    -------
+    npt.NDArray[np.float64]
+        Balanced class weights.
+
+    """
     if not hasattr(dataloader.dataset, "tensors"):
         raise AssertionError(
             "Dataloader must have a dataset with a `tensors`-attribute."
@@ -98,6 +162,19 @@ def _compute_class_weights_from_dataloader(
 
 
 def _fetch_molembedder(folder: PathType) -> MolecularEmbeddingManager:
+    """Load a precomputed molecular embedding manager.
+
+    Parameters
+    ----------
+    folder : PathType
+        Folder containing serialized embedding manager assets.
+
+    Returns
+    -------
+    MolecularEmbeddingManager
+        Loaded embedding manager.
+
+    """
     logger.info(f"Try to load precomputed MolEmbedder from {folder}.")
     molembedder = MolecularEmbeddingManager.from_folder(folder)
     logger.info(f"Loaded MolEmbedder from {folder}.")
@@ -133,6 +210,17 @@ def find_best_model_ckpt(path: PathType) -> Path:
     Poor man's regex:
     somepath/act/ckpts.epoch=70-val_loss=0.03.ckpt
                                          ^^^^--extract this as float
+
+    Parameters
+    ----------
+    path : PathType
+        Root directory to search recursively for ``*.ckpt`` files.
+
+    Returns
+    -------
+    Path
+        Path to checkpoint with the smallest validation loss in filename.
+
     """
     ckpts = Path(path).rglob("*.ckpt")
     best_model_ckpt = None
@@ -236,15 +324,39 @@ def _load_mlp_from_iclr_ckpt(ckpt_file: PathType, weights_only: bool = False) ->
 
 
 def asdict(obj: Any) -> dict[str, Any]:
+    """Return an object as a dict.
+
+    Parameters
+    ----------
+    obj : Any
+        The object to be converted.
+
+    Returns
+    -------
+    dict[str, Any]
+        The object as a dict, excluding any attributes that start with "__".
+
+    """
     return {k: v for k, v in obj.__dict__.items() if not k.startswith("__")}
 
 
 def _download_to_file(url: str, filename: str) -> None:
-    import requests
-    from tqdm import tqdm
+    """Download a URL to a local file with a progress bar.
 
-    # Adapted  from: https://stackoverflow.com/a/62113293 & https://stackoverflow.com/a/16696317
-    with requests.get(url, stream=True) as r:
+    Parameters
+    ----------
+    url : str
+        Source URL to download.
+    filename : str
+        Output filename for the downloaded content.
+
+    References
+    ----------
+    [1] https://stackoverflow.com/a/62113293
+    [2] https://stackoverflow.com/a/16696317
+
+    """
+    with requests.get(url, stream=True, timeout=3600) as r:
         r.raise_for_status()
         total_size = int(r.headers.get("content-length", 0))
 
@@ -259,37 +371,32 @@ def _download_to_file(url: str, filename: str) -> None:
 
 def download_iclr_checkpoint() -> None:
     """Download checkpoints as described in ICLR submission."""
-    import shutil
-    import tarfile
-
-    from tqdm import tqdm
-
-    CHECKPOINT_URL = "https://figshare.com/ndownloader/files/31067692"
-    CHECKPOINT_FILE = "hb_fp_2_4096_256.tar.gz"
-    CHECKPOINTS_DIR = Path("checkpoints/iclr/")
+    checkpoint_url = "https://figshare.com/ndownloader/files/31067692"
+    checkpoint_file = "hb_fp_2_4096_256.tar.gz"
+    checkpoints_dir = Path("checkpoints/iclr/")
     # Download
-    if not Path(CHECKPOINT_FILE).exists():
-        _download_to_file(CHECKPOINT_URL, CHECKPOINT_FILE)
+    if not Path(checkpoint_file).exists():
+        _download_to_file(checkpoint_url, checkpoint_file)
 
     # Extract downloaded file
-    CHECKPOINTS_DIR.mkdir(exist_ok=True, parents=True)
-    with tarfile.open(CHECKPOINT_FILE) as tar:
-        for member in tqdm(tar.getmembers(), desc=f"Extracting {CHECKPOINT_FILE}"):
-            tar.extract(member, path=CHECKPOINTS_DIR)
+    checkpoints_dir.mkdir(exist_ok=True, parents=True)
+    with tarfile.open(checkpoint_file) as tar:
+        for member in tqdm(tar.getmembers(), desc=f"Extracting {checkpoint_file}"):
+            tar.extract(member, path=checkpoints_dir)
 
     # Rename files to match new scripts
-    for file in CHECKPOINTS_DIR.rglob("hb_fp_2_4096_256/*.ckpt"):
+    for file in checkpoints_dir.rglob("hb_fp_2_4096_256/*.ckpt"):
         model = file.stem
 
-        new_file = CHECKPOINTS_DIR / f"{model}/{model}-dummy-val_loss=0.03.ckpt"
+        new_file = checkpoints_dir / f"{model}/{model}-dummy-val_loss=0.03.ckpt"
         new_file.parent.mkdir(exist_ok=True, parents=True)
 
         shutil.copy(file, new_file)
 
     # Clenup
-    shutil.rmtree(CHECKPOINTS_DIR / "hb_fp_2_4096_256")
+    shutil.rmtree(checkpoints_dir / "hb_fp_2_4096_256")
 
-    print(f"Successfully downloaded files to {CHECKPOINTS_DIR}")
+    logger.success(f"Successfully downloaded files to {checkpoints_dir}")
 
 
 if __name__ == "__main__":

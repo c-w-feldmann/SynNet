@@ -8,7 +8,7 @@ from loguru import logger
 
 from synnet.utils.data_utils import NodeChemical, SyntheticTree
 
-BASE_PATH = Path(__file__).parent.absolute()
+BASE_PATH = Path(__file__).parents[2].absolute()
 SYNTREE_FILE = BASE_PATH / "assets/syntree-small.json"
 
 
@@ -16,7 +16,7 @@ class TestSynTree(unittest.TestCase):
     """Test the SyntheticTree class."""
 
     def setUp(self) -> None:
-        self.reference_hash = "56a21aa7ed31577f313401cb9945fc43"
+        """Set up the test."""
         with open(SYNTREE_FILE, "rt", encoding="UTF-8") as f:
             self.syntree_dict = json.load(f)
 

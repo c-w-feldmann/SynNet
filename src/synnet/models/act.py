@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Union
 
 import pytorch_lightning as pl
 import yaml
@@ -27,6 +26,14 @@ MAX_PROCESSES = 8
 
 
 def get_args() -> argparse.Namespace:
+    """Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+
+    """
     parser = argparse.ArgumentParser()
 
     # general
@@ -43,7 +50,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument("--script_name", default="src/synnet/models/act.py", type=str)
     parser.add_argument("--slurm_script", default="slurm.sh", type=str)
     parser.add_argument("--use_slurm", default="false", type=str)
-    parser.add_argument("--visible_devices", default=[0], type=list[Union[int, str]])
+    parser.add_argument("--visible_devices", default=[0], type=list[int | str])
     parser.add_argument("--ncpu", default=8, type=int)
     parser.add_argument("--debug", default=False, action="store_true")
     parser.add_argument("--fast_dev_run", default=False, action="store_true")
@@ -83,6 +90,7 @@ def get_args() -> argparse.Namespace:
 
 
 def train() -> None:
+    """Train the action model using CLI-provided configuration."""
     logger.info("Start.")
 
     # Parse input args

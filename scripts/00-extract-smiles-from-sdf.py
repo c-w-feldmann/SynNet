@@ -12,19 +12,19 @@ from synnet.data_generation.preprocessing import parse_sdf_file
 
 
 def extract_smiles(input_file: str, output_file: str) -> None:
-    """Extract chemicals as SMILES from a downloaded `*.sdf*` file.
+    """Extract chemicals as SMILES from a `.sdf` file.
 
     Parameters
     ----------
     input_file : str
-        An `*.sdf` file
+        An `*.sdf` file.
     output_file : str
         Output file name for the resulting `pandas.DataFrame`.
+
     """
     if input_file == output_file:
         raise ValueError("Input and output files must be different.")
     df = parse_sdf_file(input_file)
-    print(df.shape)
     df.to_csv(output_file, index=False)
 
 
@@ -35,6 +35,7 @@ def get_args() -> argparse.Namespace:
     -------
     argparse.Namespace
         Parsed arguments.
+
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-file", type=str, help="An `*.sdf` file")
@@ -46,7 +47,8 @@ def get_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Run the main function."""
     logger.info("Start.")
 
     # Parse input args
@@ -57,3 +59,7 @@ if __name__ == "__main__":
     extract_smiles(args.input_file, args.output_file)
 
     logger.info("Complete.")
+
+
+if __name__ == "__main__":
+    main()

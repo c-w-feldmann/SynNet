@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable
 
 try:
     from typing import Self  # type: ignore[attr-defined]
@@ -31,20 +31,61 @@ from synnet.utils.synnet_exceptions import NoSuitableReactantError, StateEmbeddi
 
 
 class HelperDataloader:
+    """Class to load data for the decoder from supported input formats."""
+
     @classmethod
     def _fetch_data_chembl(cls, file: PathType) -> list[str]:
+        """Load query SMILES from a ChEMBL TSV file.
+
+        Parameters
+        ----------
+        file : PathType
+            Input file with a ``smiles`` column.
+
+        Returns
+        -------
+        list[str]
+            List of SMILES strings.
+
+        """
         df = pd.read_csv(file, sep="\t")
         smis_query = df["smiles"].to_list()
         return smis_query
 
     @classmethod
     def _fetch_data_from_file(cls, file: PathType) -> list[str]:
+        """Load query SMILES from a plain text file.
+
+        Parameters
+        ----------
+        file : PathType
+            Input text file with one SMILES per line.
+
+        Returns
+        -------
+        list[str]
+            List of SMILES strings.
+
+        """
         with open(file, "rt", encoding="UTF-8") as f:
             smis_query = [line.strip() for line in f]
         return smis_query
 
     @classmethod
     def fetch_data(cls, file_str: PathType) -> list[str]:
+        """Load query SMILES from supported input formats.
+
+        Parameters
+        ----------
+        file_str : PathType
+            Path to a split file, ChEMBL file, or text file.
+
+        Returns
+        -------
+        list[str]
+            List of query SMILES strings.
+
+        """
         file_path = Path(file_str)
         if any(split in file_path.stem for split in ["train", "valid", "test"]):
             logger.info("Reading data from {}", file_path)
@@ -69,12 +110,13 @@ class SynTreeDecoder:
     _device: str
     mol_encoder: MorganFingerprintEncoder
     rxn_collection: ReactionSet
-    similarity_fct: Optional[
+    similarity_fct: (
         Callable[
             [npt.NDArray[np.float64] | npt.NDArray[np.int_], list[str]],
             npt.NDArray[np.float64],
         ]
-    ]
+        | None
+    )
 
     def __init__(
         self,
@@ -87,12 +129,13 @@ class SynTreeDecoder:
         reactant2_net: ltg.LightningModule,
         rxn_encoder: OneHotEncoder = OneHotEncoder(91),
         mol_encoder: MorganFingerprintEncoder = MorganFingerprintEncoder(2, 4096),
-        similarity_fct: Optional[
+        similarity_fct: (
             Callable[
-                [Union[npt.NDArray[np.float64] | npt.NDArray[np.int_]], list[str]],
+                [npt.NDArray[np.float64] | npt.NDArray[np.int_], list[str]],
                 npt.NDArray[np.float64],
             ]
-        ] = None,
+            | None
+        ) = None,
         device: str = "cpu",
     ) -> None:
         """Initialize a SynTreeDecoder.
@@ -112,15 +155,14 @@ class SynTreeDecoder:
         reactant2_net : ltg.LightningModule
             Network for predicting the second reactant.
         rxn_encoder : Encoder, optional
-            Encoder for the reaction, by default OneHotEncoder(91)
+            Encoder for the reaction, by default OneHotEncoder(91).
         mol_encoder : MorganFingerprintEncoder
-            Object for encoding molecules as vector, by default MorganFingerprintEncoder(2, 4096)
-        similarity_fct : Optional[Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]]], optional
-            Similarity function for the reactants, by default None
+            Object for encoding molecules as vector, by default MorganFingerprintEncoder(2, 4096).
+        similarity_fct : Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]] | None, optional
+            Similarity function for the reactants, by default None.
+        device : str, optional
+            Device to move decoder networks to.
 
-        Returns
-        -------
-        None
         """
         # Assets
         self.bblocks_manager = building_blocks_embedding_manager
@@ -132,7 +174,7 @@ class SynTreeDecoder:
         self.mol_encoder = mol_encoder
 
         # Networks
-        self.nets: Dict[str, ltg.LightningModule] = {
+        self.nets: dict[str, ltg.LightningModule] = {
             "act": action_net,
             "rt1": reactant1_net,
             "rxn": rxn_net,
@@ -151,7 +193,19 @@ class SynTreeDecoder:
 
     @classmethod
     def from_config_dict(cls, config: dict[str, Any]) -> Self:
-        """Instantiate a SynTreeDecoder from a config dict."""
+        """Instantiate a decoder from a configuration dictionary.
+
+        Parameters
+        ----------
+        config : dict[str, Any]
+            Keyword arguments for ``SynTreeDecoder`` initialization.
+
+        Returns
+        -------
+        Self
+            Instantiated decoder.
+
+        """
         return cls(**config)
 
     @property
@@ -161,23 +215,30 @@ class SynTreeDecoder:
 
     @device.setter
     def device(self, device: str) -> None:
-        """Set the device."""
+        """Set the device and move all component networks.
+
+        Parameters
+        ----------
+        device : str
+            Target device string.
+
+        """
         self._device = device
         for name, net in self.nets.items():
             self.nets[name] = net.to(device)
 
     def get_state_embedding(
         self,
-        state: tuple[Optional[str], Optional[str]],
+        state: tuple[str | None, str | None],
         z_target: npt.NDArray[np.float64],
     ) -> npt.NDArray[np.float64]:
-        """Computes embeddings for all molecules in the input space.
+        """Compute embeddings for all molecules in the input space.
 
         Embedding = [z_mol1, z_mol2, z_target]
 
         Parameters
         ----------
-        state : tuple[str, Optional[str]]
+        state : tuple[str | None, str | None]
             State of the syntree.
         z_target : npt.NDArray[np.float64]
             Embedding of the target molecule.
@@ -186,6 +247,7 @@ class SynTreeDecoder:
         -------
         npt.NDArray[np.float64]
             Embedding of the state.
+
         """
         if state[0] is None and state[1] is not None:
             raise StateEmbeddingError(
@@ -204,7 +266,19 @@ class SynTreeDecoder:
         return z_state  # (d,)
 
     def _get_action_mask(self, syntree: SyntheticTree) -> npt.NDArray[np.bool_]:
-        """Get a mask of possible action for a SyntheticTree"""
+        """Get a mask of valid actions for a synthetic tree state.
+
+        Parameters
+        ----------
+        syntree : SyntheticTree
+            Current synthetic tree.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Boolean mask for actions ``(add, expand, merge, end)``.
+
+        """
         # Recall: (Add, Expand, Merge, and End)
         can_add = False
         can_merge = False
@@ -235,8 +309,21 @@ class SynTreeDecoder:
         return np.array((can_add, can_expand, can_merge, can_end), dtype=bool)
 
     def _find_valid_bimolecular_rxns(
-        self, reactants: tuple[str, Optional[str]]
+        self, reactants: tuple[str, str | None]
     ) -> npt.NDArray[np.bool_]:
+        """Find valid bimolecular reactions for two reactants.
+
+        Parameters
+        ----------
+        reactants : tuple[str, str | None]
+            Pair of candidate reactants.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Boolean mask of valid reactions.
+
+        """
         reaction_mask: list[bool] = []
         for _rxn in self.rxn_collection.rxns:
             is_valid_reaction = _rxn.can_run_reaction(reactants[0], reactants[1])
@@ -244,6 +331,19 @@ class SynTreeDecoder:
         return np.asarray(reaction_mask)
 
     def _find_valid_unimolecular_rxns(self, reactant: str) -> npt.NDArray[np.bool_]:
+        """Find valid reactions starting from one reactant.
+
+        Parameters
+        ----------
+        reactant : str
+            Candidate reactant SMILES.
+
+        Returns
+        -------
+        npt.NDArray[np.bool_]
+            Boolean mask of valid reactions.
+
+        """
         reaction_mask: list[bool]
         reaction_mask = [rxn.is_reactant(reactant) for rxn in self.rxn_collection.rxns]
         final_mask = []
@@ -273,13 +373,14 @@ class SynTreeDecoder:
         return np.asarray(final_mask)
 
     def get_reaction_mask(
-        self, reactants: Union[str, tuple[str, str]]
+        self,
+        reactants: str | tuple[str, str],
     ) -> npt.NDArray[np.bool_]:
         """Get a mask of possible reactions for given reactants.
 
         Parameters
         ----------
-        reactants : Union[str, tuple[str, str]]
+        reactants : str | tuple[str, str]
             Reactant required for reaction.
 
         Returns
@@ -289,8 +390,7 @@ class SynTreeDecoder:
         """
         if isinstance(reactants, str):
             return self._find_valid_unimolecular_rxns(reactants)
-        else:
-            return self._find_valid_bimolecular_rxns(reactants)
+        return self._find_valid_bimolecular_rxns(reactants)
 
     def decode(
         self,
@@ -300,7 +400,7 @@ class SynTreeDecoder:
         max_depth: int = 15,
         debug: bool = False,
         **kwargs: Any,
-    ) -> tuple[SyntheticTree, Optional[float]]:
+    ) -> tuple[SyntheticTree, float | None]:
         """Decode a target molecule into a SyntheticTree.
 
         TODO: This needs to be refactored and rewritten to smaller methods.
@@ -310,11 +410,11 @@ class SynTreeDecoder:
         z_target : npt.NDArray[np.float64]
             Target molecule embedding.
         k_reactant1 : int, optional
-            Number of reactants to sample for the first reactant, by default 1
+            Number of reactants to sample for the first reactant, by default 1.
         max_depth : int, optional
-            Maximum depth of the synthetic tree, by default 15
+            Maximum depth of the synthetic tree, by default 15.
         debug : bool
-            Activate debug mode
+            Activate debug mode.
         **kwargs: Any
             Additional arguments to pass to the decoder.
 
@@ -322,7 +422,7 @@ class SynTreeDecoder:
         -------
         SyntheticTree
             SyntheticTrees
-        Optional[float]
+        float  | None
             Similarity of the target molecule and the final molecule.
         """
         if debug:
@@ -335,7 +435,7 @@ class SynTreeDecoder:
         act, rt1, rxn, rt2 = self.nets.values()
         z_target = np.squeeze(z_target)  # TODO: Fix shapes
         syntree = SyntheticTree()
-        mol_recent: Optional[str] = None  # most-recent root mol
+        mol_recent: str | None = None  # most-recent root mol
         i = 0
         while syntree.depth < self.max_depth:
             logger.debug(f"Iteration {i} | {syntree.depth=}")
@@ -371,7 +471,7 @@ class SynTreeDecoder:
                 )
                 # idxs.shape = (1,k)
                 idx = idxs[0][k - 1]
-                reactant_1: Optional[str] = self.bblocks_manager.smiles_array[idx]
+                reactant_1: str | None = self.bblocks_manager.smiles_array[idx]
                 logger.debug(f"  Selected 1st reactant ({idx=}): `{reactant_1}`")
             elif self.action_mapping[action_id] == "expand":
                 # We already have a 1st reactant.
@@ -542,17 +642,39 @@ class SynTreeDecoder:
         ],
         z_target: npt.NDArray[np.float64],
         syntree: SyntheticTree,
-    ) -> npt.NDArray[np.float64]:  # TODO: move to its own class?
-        """Computes the similarity to a `z_target` for all nodes, as
-        we can in theory truncate the tree to our liking.
+    ) -> npt.NDArray[np.float64]:
+        """Compute the similarity to a `z_target` for all nodes.
+
+        In theory the tree can be truncated to our liking.
+
+        Parameters
+        ----------
+        similarity_fct: Callable[[npt.NDArray[np.float64], list[str]], npt.NDArray[np.float64]]
+            Similarity function for the reactants.
+        z_target: npt.NDArray[np.float64]
+            Target molecule embedding.
+        syntree: SyntheticTree
+            Synthetic tree to evaluate.
+
+        Returns
+        -------
+        npt.NDArray[np.float64]
+            Similarity of the target molecule and the final molecule.
         """
-        return np.array(
-            similarity_fct(z_target, [smi for smi in syntree.nodes_as_smiles])
-        )
+        return np.array(similarity_fct(z_target, syntree.nodes_as_smiles))
 
 
 class SynTreeDecoderGreedy:
+    """Greedy search for decoding a molecular embedding."""
+
     def __init__(self, decoder: SynTreeDecoder) -> None:
+        """Initialize the SynTreeDecoderGreedy.
+
+        Parameters
+        ----------
+        decoder : SynTreeDecoder
+            Decoder for a molecular embedding.
+        """
         self.decoder = decoder  # composition over inheritance
 
     def decode(
@@ -560,11 +682,30 @@ class SynTreeDecoderGreedy:
         z_target: npt.NDArray[np.float64],
         *,
         attempts: int = 3,
-        objective: Optional[str] = "best",  # "best", "best+shortest"
+        objective: str = "best",  # "best", "best+shortest"
         debug: bool = False,
-    ) -> tuple[SyntheticTree, Optional[float]]:
-        """Decode `z_target` at most `attempts`-times and return the most-similar one."""
+    ) -> tuple[SyntheticTree, float | None]:
+        """Decode `z_target` at most `attempts`-times and return the most-similar one.
 
+        Parameters
+        ----------
+        z_target : npt.NDArray[np.float64]
+            Target molecule embedding.
+        attempts : int, default=3
+            Number of decoding attempt.
+        objective : str, default="best"
+            Method used to determine the most similar molecule.
+        debug : bool, default=False
+            Activate debug mode.
+
+        Returns
+        -------
+        SyntheticTree
+            Best decoded tree found across attempts.
+        float | None
+            Similarity score of the best decoded tree.
+
+        """
         best_similarity = -np.inf
         best_syntree = SyntheticTree()
         i = 0

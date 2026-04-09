@@ -1,29 +1,32 @@
-"""
-This file checks if a set of reactions are represented by a set of reaction
-templates. Originally written by Jake. Wenhao edited.
+"""Functions to validate reaction templates.
+
+Originally written by Jake. Wenhao edited.
+
 """
 
 from __future__ import annotations
-
-from typing import Optional
 
 import rdkit.Chem as Chem
 from rdkit.Chem import AllChem, rdChemReactions
 
 
 def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
-    """
-    Given SMILES reaction, splits into reactants, agents, and products
+    """Given SMILES reaction, splits into reactants, agents, and products.
 
     Parameters
     ----------
-    rxn (str):
+    rxn : str
         SMILES-encoded reaction.
 
     Returns
     -------
-    list
-        Contains sets of reactants, agents, and products as RDKit molecules.
+    Chem.Mol
+        Reactant molecule.
+    Chem.Mol
+        Agent molecule.
+    Chem.Mol
+        Product molecule.
+
     """
     rxn_parts = rxn.strip().split(">")
     rxn_reactants = set(rxn_parts[0].split("."))
@@ -51,7 +54,7 @@ def split_rxn_parts(rxn: str) -> tuple[Chem.Mol, Chem.Mol, Chem.Mol]:
 def rxn_template(
     reaction_smarts: str,
     reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
-) -> Optional[str]:
+) -> str | None:
     """Check whether given reaction it matches any templates.
 
     Parameters
@@ -63,8 +66,9 @@ def rxn_template(
 
     Returns
     -------
-    Optional[str]
+    str | None
         Matching template name. If no templates matched, returns None.
+
     """
     reactants, agents, products = split_rxn_parts(reaction_smarts)
     temp_match = None
@@ -109,15 +113,22 @@ def route_templates(
     reaction_template_name_dict: dict[AllChem.ChemicalReaction, str],
 ) -> list[str]:
     """Check if given synthesis route matches any templates.
+
     Given synthesis route, checks whether all reaction steps are in template list
 
-    Args:
-        synthesis_route (list): Contains reaction steps (str Reaction SMILES).
-        reaction_template_name_dict (dict): Maps RDKit reactions to template names.
+    Parameters
+    ----------
+    synthesis_route : list[str]
+        Contains reaction steps (str Reaction SMILES).
+    reaction_template_name_dict : dict[AllChem.ChemicalReaction, str]
+        Maps RDKit reactions to template names.
 
-    Returns:
+    Returns
+    -------
+    list[str]
         List of matching template names (as strings). If no templates matched,
             returns empty list.
+
     """
     synth_route: list[str] = []
     for rxn_step in synthesis_route:

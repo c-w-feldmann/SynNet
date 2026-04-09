@@ -1,6 +1,4 @@
-"""
-This file contains various utils for data preparation and preprocessing.
-"""
+"""This file contains various utils for data preparation and preprocessing."""
 
 import logging
 
@@ -20,9 +18,23 @@ def split_data_into_Xy(
 ) -> dict[str, dict[str, sparse.csc_matrix]]:
     """Split the featurized data into X,y-chunks for the {act,rt1,rxn,rt2}-networks.
 
-    Args:
-        num_rxn (int): Number of reactions in the dataset.
-        out_dim (int): Size of the output feature vectors (used in kNN-search for rt1,rt2)
+    Parameters
+    ----------
+    steps : sparse.csc_matrix
+        The embedded steps.
+    states : sparse.csc_matrix
+        The embedded states.
+    num_rxn : int
+        Number of reactions in the dataset.
+    d_knn_emb : int
+        Size of the output feature vectors (used in kNN-search for rt1,rt2).
+
+    Returns
+    -------
+    dict[str, dict[str, sparse.csc_matrix]]
+        A dictionary with keys "act", "rt1", "rxn", "rt2" and values dicts with keys
+        "X" and "y" containing the respective data.
+
     """
     # Deduce dimensionality (TODO: find more elegant way)
     d_act_emb = 1  # {0,1,2,3}

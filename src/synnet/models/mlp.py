@@ -1,9 +1,7 @@
-"""
-Multi-layer perceptron (MLP) class.
-"""
+"""Multi-layer perceptron (MLP) class."""
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import lightning
 import numpy as np
@@ -19,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 class MLP(lightning.LightningModule):
+    """Multi-layer perceptron (MLP) class."""
+
     TRAIN_LOSSES = "cross_entropy mse l1 huber cosine_distance".split()
     VALID_LOSSES = TRAIN_LOSSES + "accuracy nn_accuracy".split()
     OPTIMIZERS = "sgd adam".lower().split()
@@ -39,10 +39,46 @@ class MLP(lightning.LightningModule):
         optimizer: str,
         learning_rate: float,
         val_freq: int,
-        ncpu: Optional[int] = None,
-        molembedder: Optional[MolecularEmbeddingManager] = None,  # for knn-accuracy
-        class_weights: Optional[npt.NDArray[np.float64]] = None,
+        ncpu: int | None = None,
+        molembedder: MolecularEmbeddingManager | None = None,  # for knn-accuracy
+        class_weights: npt.NDArray[np.float64] | None = None,
     ) -> None:
+        """Initialize an MLP model.
+
+        Parameters
+        ----------
+        input_dim : int
+            Input feature dimension.
+        output_dim : int
+            Output feature dimension.
+        hidden_dim : int
+            Hidden layer dimension.
+        num_layers : int
+            Total number of linear layers.
+        dropout : float
+            Dropout probability.
+        num_dropout_layers : int
+            Number of hidden layers with dropout.
+        task : str
+            Training task type.
+        loss : str
+            Training loss name.
+        valid_loss : str
+            Validation loss or metric name.
+        optimizer : str
+            Optimizer name.
+        learning_rate : float
+            Optimizer learning rate.
+        val_freq : int
+            Validation frequency in epochs.
+        ncpu : int | None, optional
+            Number of CPU workers.
+        molembedder : MolecularEmbeddingManager | None, optional
+            Embedding manager used for nearest-neighbor validation.
+        class_weights : npt.NDArray[np.float64] | None, optional
+            Class weights for classification losses.
+
+        """
         if loss not in self.TRAIN_LOSSES:
             raise ValueError(f"Unsupported loss function {loss}")
         if valid_loss not in self.VALID_LOSSES:
@@ -91,7 +127,19 @@ class MLP(lightning.LightningModule):
         self.layers = nn.Sequential(*modules)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward step for inference only."""
+        """Run a forward pass.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Input tensor.
+
+        Returns
+        -------
+        torch.Tensor
+            Model output tensor.
+
+        """
         y_hat = self.layers(x)
 
         # During training, `cross_entropy` loss expects raw logits.
@@ -105,7 +153,21 @@ class MLP(lightning.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int,
     ) -> torch.Tensor:
-        """The complete training loop."""
+        """Run one training step.
+
+        Parameters
+        ----------
+        batch : tuple[torch.Tensor, torch.Tensor]
+            Tuple containing model inputs and targets.
+        batch_idx : int
+            Index of the current batch.
+
+        Returns
+        -------
+        torch.Tensor
+            Computed training loss for the batch.
+
+        """
         x, y = batch
         y_hat = self.layers(x)
         if self.loss == "cross_entropy":
@@ -136,7 +198,16 @@ class MLP(lightning.LightningModule):
         batch: tuple[torch.Tensor, torch.Tensor],
         batch_idx: int,
     ) -> None:
-        """The complete validation loop."""
+        """Run one validation step.
+
+        Parameters
+        ----------
+        batch : tuple[torch.Tensor, torch.Tensor]
+            Tuple containing model inputs and targets.
+        batch_idx : int
+            Index of the current batch.
+
+        """
         x, y = batch
         y_hat = self.layers(x)
         if self.valid_loss == "cross_entropy":
@@ -180,7 +251,14 @@ class MLP(lightning.LightningModule):
         )
 
     def configure_optimizers(self) -> dict[str, Any]:
-        """Define Optimerzers and LR schedulers."""
+        """Define optimizers and optional schedulers.
+
+        Returns
+        -------
+        dict[str, Any]
+            Optimizer configuration dictionary.
+
+        """
         optimizer: torch.optim.Optimizer
         if self.optimizer == "adam":
             optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
@@ -197,6 +275,21 @@ class MLP(lightning.LightningModule):
 def nn_search_list(
     y: npt.NDArray[np.float64], kdtree: skl_nn.KDTree
 ) -> npt.NDArray[np.int_]:
+    """Find nearest-neighbor indices for each row of ``y``.
+
+    Parameters
+    ----------
+    y : npt.NDArray[np.float64]
+        Query embeddings.
+    kdtree : skl_nn.KDTree
+        KDTree built on reference embeddings.
+
+    Returns
+    -------
+    npt.NDArray[np.int_]
+        Index array of nearest neighbors.
+
+    """
     y = np.atleast_2d(y)  # (n_samples, n_features)
     ind = kdtree.query(y, k=1, return_distance=False)  # (n_samples, 1)
     return ind

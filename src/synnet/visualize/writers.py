@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Any, Callable, Optional, Self
+from typing import Any, Callable, Self
 
 from synnet.utils.custom_types import PathType
 
@@ -15,10 +15,24 @@ class PrefixWriter:  # pylint: disable=too-few-public-methods
 
     prefix: list[str]
 
-    def __init__(self, file: Optional[str] = None):
+    def __init__(self, file: str | None = None):
+        """Initialize the writer.
+
+        Parameters
+        ----------
+        file : str | None, optional
+            The file to load the prefix from, by default None.
+        """
         self.prefix = self._default_prefix() if file is None else self._load(file)
 
     def _default_prefix(self) -> list[str]:
+        """Return the default prefix.
+
+        Returns
+        -------
+        list[str]
+            The default prefix.
+        """
         md = [
             "# Synthetic Tree Visualisation",
             "",
@@ -61,6 +75,11 @@ class PrefixWriter:  # pylint: disable=too-few-public-methods
         ----------
         file : PathType
             The file to load the prefix from.
+
+        Returns
+        -------
+        list[str]
+            The prefix.
         """
         with open(file, "rt", encoding="UTF-8") as f:
             out = [line.removesuffix("\n") for line in f]
@@ -97,31 +116,53 @@ class SynTreeWriter:
 
     prefixer: PrefixWriter
     postfixer: PostfixWriter
-    _text: Optional[list[str]]
+    _text: list[str] | None
 
     def __init__(
         self,
-        prefixer: PrefixWriter = PrefixWriter(),
-        postfixer: PostfixWriter = PostfixWriter(),
+        prefixer: PrefixWriter | None = None,
+        postfixer: PostfixWriter | None = None,
     ) -> None:
-        self.prefixer = prefixer
-        self.postfixer = postfixer
+        """Initialize the writer.
+
+        Parameters
+        ----------
+        prefixer : PrefixWriter | None, optional
+            The prefix writer. None defaults to PrefixWriter.
+        postfixer : PostfixWriter | None, optional
+            The postfix writer. None defaults to PostfixWriter.
+
+        """
+        self.prefixer = prefixer or PrefixWriter()
+        self.postfixer = postfixer or PostfixWriter()
         self._text = None
 
     def write(self, out: list[str]) -> Self:
-        """Write the text to the writer."""
+        """Write the text to the writer.
+
+        Parameters
+        ----------
+        out : list[str]
+            The text to write.
+
+        Returns
+        -------
+        Self
+            The writer.
+
+        """
         out = self.prefixer.write() + out + self.postfixer.write()
         self._text = out
         return self
 
-    def to_file(self, file: PathType, text: Optional[list[str]] = None) -> None:
+    def to_file(self, file: PathType, text: list[str] | None = None) -> None:
         """Write the text to a file.
 
         Parameters
         ----------
         file : PathType
             The file to write the text to.
-        text : Optional[list[str]], optional
+        text : list[str]  | None, optional
             The text to write, by default None.
         """
         text = text or self._text
@@ -135,19 +176,58 @@ class SynTreeWriter:
 def subgraph(
     argument: str = "",
 ) -> Callable[[Callable[[Any], Any]], Callable[[Any], Any]]:
-    """Decorator that writes a named mermaid subparagraph.
+    """Write as a named mermaid subparagraph.
 
-    Example output:
+    Example
+    -------
     ```
     subparagraph argument
         <output of function that is decorated>
     end
     ```
+
+    Parameters
+    ----------
+    argument : str, default=""
+        The argument to the subgraph.
+
+    Returns
+    -------
+    Callable[[Callable[[Any], Any]], Callable[[Any], Any]]
+        The decorator.
+
     """
 
     def _subgraph(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
+        """Put the decorated function in a subgraph.
+
+        Parameters
+        ----------
+        func : Callable[[Any], Any]
+            The function to decorate.
+
+        Returns
+        -------
+        Callable[[Any], Any]
+            The decorated function.
+        """
+
         @wraps(func)
-        def wrapper(*args: list[Any], **kwargs: dict[str, Any]) -> list[str]:
+        def wrapper(*args: Any, **kwargs: Any) -> list[str]:
+            """Wrap the function in a subgraph.
+
+            Parameters
+            ----------
+            args : Any
+                The arguments to the function.
+            kwargs : Any
+                The keyword arguments to the function.
+
+            Returns
+            -------
+            list[str]
+                The output of the function in a subgraph.
+            """
             out = f"subgraph {argument}"
             inner = func(*args, **kwargs)
             # add a tab to inner

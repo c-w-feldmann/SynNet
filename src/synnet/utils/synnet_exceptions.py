@@ -1,3 +1,6 @@
+"""Custom exceptions for the synnet package."""
+
+
 class FailedReconstructionError(Exception):
     """Raised when the no valid reactant ist found."""
 
@@ -7,4 +10,4 @@ class NoSuitableReactantError(FailedReconstructionError):
 
 
 class StateEmbeddingError(FailedReconstructionError):
-    """Raise when State Embedding failed"""
+    """Raise when State Embedding failed."""
