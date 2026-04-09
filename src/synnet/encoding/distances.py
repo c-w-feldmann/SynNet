@@ -76,7 +76,10 @@ def _tanimoto_similarity(
     float
         Tanimoto similarity.
     """
-    return np.sum(fp1 * fp2) / (np.sum(fp1) + np.sum(fp2) - np.sum(fp1 * fp2))
+    divisor = np.sum(fp1) + np.sum(fp2) - np.sum(fp1 * fp2)
+    if divisor == 0:
+        return 0.0
+    return np.sum(fp1 * fp2) / divisor
 
 
 def tanimoto_similarity(
