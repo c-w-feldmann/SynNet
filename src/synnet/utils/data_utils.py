@@ -395,15 +395,18 @@ class Reaction:
             raise ValueError("Reaction cannot be run with given reactants.")
 
         # If a second reactant is given also check if the other order might work
+        first_reactant_mol = self.get_mol(first_reactant)
         if second_reactant:
             second_reactant_mol = self.get_mol(second_reactant)
-            if not self._check_smarts_match(
-                self.get_mol(first_reactant), second_reactant_mol
-            ):
-                first_reactant, second_reactant = second_reactant, first_reactant
+            if self._check_smarts_match(first_reactant_mol, second_reactant_mol):
+                react_tuple = (first_reactant_mol, second_reactant_mol)
+            else:
+                react_tuple = (second_reactant_mol, first_reactant_mol)
+        else:
+            react_tuple = (first_reactant_mol,)
 
         # Run reaction with rdkit
-        reaction_result_list = self.rxn.RunReactants((first_reactant, second_reactant))
+        reaction_result_list = self.rxn.RunReactants(react_tuple)
         single_product_reactions = []
         for reaction_result in reaction_result_list:
             product_list = {Chem.MolToSmiles(p) for p in reaction_result}
