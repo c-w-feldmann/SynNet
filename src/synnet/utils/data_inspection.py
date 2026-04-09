@@ -359,9 +359,7 @@ def plot_reaction_heatmap(
     return ax
 
 
-def cnt_to_dataframe(
-    cnt: Counter[Any], index_name: str | None = None
-) -> pd.DataFrame:
+def cnt_to_dataframe(cnt: Counter[Any], index_name: str | None = None) -> pd.DataFrame:
     """Convert a counter to a dataframe with relative frequencies.
 
     Parameters

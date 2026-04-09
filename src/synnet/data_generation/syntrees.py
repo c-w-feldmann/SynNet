@@ -588,7 +588,7 @@ class SynTreeGenerator:
 
     def generate_safe(
         self, max_depth: int = 8, min_actions: int = 1
-    ) -> tuple[SyntheticTree | None, Exception  | None]:
+    ) -> tuple[SyntheticTree | None, Exception | None]:
         """Wrap ``generate`` and return caught exceptions instead of raising.
 
         Parameters
@@ -633,7 +633,7 @@ class SynTreeGeneratorPostProc:
 
     @staticmethod
     def parse_generate_safe(
-        results: list[tuple[SyntheticTree | None, Exception |None]],
+        results: list[tuple[SyntheticTree | None, Exception | None]],
     ) -> tuple[SyntheticTreeSet, dict[str, int]]:
         """Parses the result from `SynTreeGenerator.generate_safe`.
         In particular:
