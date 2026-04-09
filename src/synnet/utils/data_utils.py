@@ -39,6 +39,7 @@ class Reaction:
         self,
         template: str,
         name: str | None = None,
+        reference: Any = None,
         weight: float = 1.0,
         available_reactants: tuple[list[str], ...] | None = None,
     ) -> None:
@@ -46,17 +47,20 @@ class Reaction:
 
         Parameters
         ----------
-        template: str
+        template : str
             SMARTS string representing a chemical reaction.
-        name: str | None, optional
+        name : str | None, optional
             Name of the reaction for downstream analysis.
-        weight: float
+        reference : Any
+            Reference for the reaction.
+        weight : float
             Weight of the reaction, by default 1.0.
         available_reactants: tuple[list[str], ...] | None, optional
             A tuple of lists of available reactants for each reactant template.
         """
         self.smirks = template.strip()
         self.name = name
+        self.reference = reference
         self.weight = weight
 
         # Initialize reaction

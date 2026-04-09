@@ -11,7 +11,7 @@ authors = [
     {name = "Christian Ulmer"},
     {name = "Christian W. Feldmann"}
 ]
-version = "0.2.1"
+version = "0.2.2"
 description = "Synthetic tree generation using neural networks."
 readme = "README.md"
 requires-python = ">=3.9"
